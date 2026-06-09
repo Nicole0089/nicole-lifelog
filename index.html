@@ -38,6 +38,21 @@ body { background: #F0E8E6; background: var(--bg); color: #3D2828; color: var(--
 .page.active { display: block; }
 /* ── 今日總覽 & 週報 ── */
 .dash-header { padding: 16px 16px 8px; }
+.checkin-section { padding: 0 14px 24px; }
+.checkin-section-hdr { font-size: 14px; font-weight: 700; color: var(--tx); margin: 4px 0 12px; letter-spacing: 0.3px; }
+.checkin-group { margin-bottom: 14px; }
+.checkin-group-hdr { font-size: 12px; font-weight: 600; color: var(--tx2); margin-bottom: 7px; display: flex; align-items: center; gap: 5px; letter-spacing: 0.5px; }
+.checkin-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg3); border: 0.5px solid var(--bd); border-radius: 12px; margin-bottom: 6px; cursor: pointer; transition: background 0.15s; }
+.checkin-item:active { background: var(--acl); }
+.checkin-cb { font-size: 20px; flex-shrink: 0; color: var(--tx3); background: none; border: none; cursor: pointer; padding: 0; line-height: 1; }
+.checkin-label { flex: 1; font-size: 14px; color: var(--tx); line-height: 1.3; }
+.checkin-tag { font-size: 11px; padding: 2px 7px; border-radius: 8px; background: var(--acl); color: var(--acd); flex-shrink: 0; font-weight: 600; }
+.checkin-tag.urgent { background: #FDDBD8; color: #C0392B; }
+.checkin-water-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg3); border: 0.5px solid var(--bd); border-radius: 12px; }
+.checkin-water-bar { flex: 1; height: 7px; background: var(--bg2); border-radius: 4px; overflow: hidden; }
+.checkin-water-fill { height: 100%; background: #60A4C4; border-radius: 4px; transition: width 0.3s; }
+.checkin-quick-btn { background: var(--ac); color: #fff; border: none; border-radius: 20px; padding: 6px 14px; font-size: 13px; cursor: pointer; font-family: var(--font); flex-shrink: 0; }
+.checkin-all-done { text-align: center; padding: 18px 14px; color: var(--tx3); font-size: 14px; background: var(--bg3); border: 0.5px solid var(--bd); border-radius: 12px; }
 .dash-slogan-row { display: flex; align-items: center; gap: 6px; margin: 6px 0 4px; min-height: 28px; }
 .dash-slogan-text { flex: 1; font-size: 14px; color: var(--tx2); font-style: italic; cursor: pointer; }
 .dash-slogan-text.empty { color: var(--tx3); font-style: normal; }
@@ -1608,6 +1623,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         </div>
       </div>
       <div class="dash-grid" id="dash-grid"></div>
+    <div id="checkin-section" class="checkin-section"></div>
     </div>
 
     <!-- 📅 當週健康週報 -->
@@ -7451,6 +7467,89 @@ function renderDashboard() {
   }
   var seBtn = $('dash-slogan-edit-btn');
   if (seBtn) seBtn.onclick = function(){ openSloganEdit(); };
+  renderCheckin();
+}
+
+function renderCheckin() {
+  var sec = $('checkin-section');
+  if (!sec) return;
+  var today = todayKey();
+  var html = '<div class="checkin-section-hdr">📋 今日 Check-in</div>';
+  var hasAny = false;
+
+  /* ── 待辦 ── */
+  var priOrder = { urgent:1, important:2, normal:3 };
+  var priLabel = { urgent:'緊急', important:'重要' };
+  var todoPend = (state.todos||[]).filter(function(t){
+    return !t.done && (!t.dueDate || t.dueDate <= today);
+  }).slice().sort(function(a,b){
+    return (priOrder[a.priority||'normal']||3) - (priOrder[b.priority||'normal']||3);
+  });
+  if (todoPend.length) {
+    hasAny = true;
+    html += '<div class="checkin-group">';
+    html += '<div class="checkin-group-hdr">✅ 待完成待辦 <span style="font-weight:400;color:var(--tx3)">' + todoPend.length + ' 項</span></div>';
+    var show = todoPend.slice(0, 5);
+    show.forEach(function(t) {
+      var tag = (t.priority && t.priority !== 'normal')
+        ? '<span class="checkin-tag' + (t.priority==='urgent'?' urgent':'') + '">' + priLabel[t.priority] + '</span>' : '';
+      html += '<div class="checkin-item" onclick="toggleTodo('' + t.id + '');setTimeout(renderDashboard,80);">' +
+        '<button class="checkin-cb">○</button>' +
+        '<span class="checkin-label">' + esc(t.text) + '</span>' + tag + '</div>';
+    });
+    if (todoPend.length > 5) {
+      html += '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:4px 0 2px">還有 ' + (todoPend.length-5) + ' 項，前往待辦頁查看</div>';
+    }
+    html += '</div>';
+  }
+
+  /* ── 習慣 ── */
+  var goodHabits = (state.habits||[]).filter(function(h){ return (h.category||'good')==='good'; });
+  var unchecked = goodHabits.filter(function(h){ return !((h.logs||{})[today]); });
+  if (unchecked.length) {
+    hasAny = true;
+    var doneCount = goodHabits.length - unchecked.length;
+    html += '<div class="checkin-group">';
+    html += '<div class="checkin-group-hdr">🔄 習慣打卡 <span style="font-weight:400;color:var(--tx3)">' + doneCount + '/' + goodHabits.length + ' 已完成</span></div>';
+    unchecked.forEach(function(h) {
+      html += '<div class="checkin-item" onclick="toggleHabitDate('' + h.id + '','' + today + '');setTimeout(renderDashboard,80);">' +
+        '<button class="checkin-cb">○</button>' +
+        '<span class="checkin-label">' + esc(h.name||'習慣') + '</span></div>';
+    });
+    html += '</div>';
+  }
+
+  /* ── 飲水 ── */
+  var wTotal2 = (state.waterLogs||[]).filter(function(l){ return l.date===today; }).reduce(function(s,l){ return s+l.ml; }, 0);
+  var WGOAL2 = typeof WATER_GOAL !== 'undefined' ? WATER_GOAL : 2000;
+  if (wTotal2 < WGOAL2) {
+    hasAny = true;
+    var wPct2 = Math.min(100, Math.round(wTotal2/WGOAL2*100));
+    html += '<div class="checkin-group">';
+    html += '<div class="checkin-group-hdr">💧 飲水 <span style="font-weight:400;color:var(--tx3)">' + wTotal2 + '/' + WGOAL2 + 'ml　' + wPct2 + '%</span></div>';
+    html += '<div class="checkin-water-row">' +
+      '<div class="checkin-water-bar"><div class="checkin-water-fill" style="width:' + wPct2 + '%"></div></div>' +
+      '<button class="checkin-quick-btn" onclick="_waterViewDate=todayKey();addWater(250);setTimeout(renderDashboard,80);">+250ml</button></div>';
+    html += '</div>';
+  }
+
+  /* ── 日記 ── */
+  var diaryToday = (state.diaryEntries||[]).filter(function(e){ return e.date===today; });
+  if (!diaryToday.length) {
+    hasAny = true;
+    html += '<div class="checkin-group">';
+    html += '<div class="checkin-group-hdr">📖 日記</div>';
+    html += '<div class="checkin-item" onclick="switchPage('diary')">' +
+      '<button class="checkin-cb">○</button>' +
+      '<span class="checkin-label" style="color:var(--tx2)">今日還沒寫日記，點此前往記錄</span></div>';
+    html += '</div>';
+  }
+
+  if (!hasAny) {
+    html += '<div class="checkin-all-done">🎉 今日所有事項都完成了！</div>';
+  }
+
+  sec.innerHTML = html;
 }
 function openSloganEdit() {
   var cur = loadStorage('myapp_slogan', '');
