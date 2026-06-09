@@ -37,7 +37,26 @@ body { background: #F0E8E6; background: var(--bg); color: #3D2828; color: var(--
 .page { display: none; }
 .page.active { display: block; }
 /* ── 今日總覽 & 週報 ── */
+/* ── 趨勢圖 ── */
+.trend-section { background: var(--bg3); border: 0.5px solid var(--bd); border-radius: 14px; padding: 14px 14px 10px; margin: 12px 14px 6px; }
+.trend-title { font-size: 13px; font-weight: 700; color: var(--tx); margin-bottom: 4px; letter-spacing: 0.2px; }
+.trend-meta { font-size: 12px; color: var(--tx2); margin-bottom: 10px; }
+.trend-meta strong { color: var(--acd); }
+.trend-svg { display: block; width: 100%; }
+.trend-ref-legend { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--tx3); margin-top: 4px; }
+.trend-ref-dot { display: inline-block; width: 18px; height: 1px; border-top: 1.5px dashed var(--ac); margin-right: 2px; }
+.trend-habits-grid { padding: 0 14px 4px; }
+.trend-habit-card { background: var(--bg3); border: 0.5px solid var(--bd); border-radius: 12px; padding: 10px 12px 8px; margin-bottom: 8px; }
+.trend-habit-name { font-size: 13px; font-weight: 600; color: var(--tx); margin-bottom: 2px; }
+.trend-habit-stats { font-size: 11px; color: var(--tx2); margin-bottom: 6px; }
+.trend-habit-stats strong { color: var(--acd); }
+.trend-mini-svg { display: block; width: 100%; height: 40px; }
+.trend-empty { text-align: center; padding: 40px 16px; color: var(--tx3); font-size: 14px; }
 .dash-header { padding: 16px 16px 8px; }
+.habit-tabs { display: flex; border-bottom: 0.5px solid var(--bd); background: var(--bg); position: sticky; top: 44px; z-index: 4; }
+.habit-tab-btn { flex: 1; padding: 9px 6px 8px; font-size: 14px; color: var(--tx3); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
+.habit-tab-btn.active { color: var(--acd); font-weight: 600; }
+.habit-tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 2px; background: var(--ac); border-radius: 2px; }
 .checkin-section { padding: 0 14px 24px; }
 .checkin-section-hdr { font-size: 14px; font-weight: 700; color: var(--tx); margin: 4px 0 12px; letter-spacing: 0.3px; }
 .checkin-group { margin-bottom: 14px; }
@@ -1097,6 +1116,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         </div>
       </div>
     </div>
+    <div id="sleep-trend-view" style="display:none"></div>
 
     <!-- 🔄 習慣追蹤頁面 -->
     <div id="page-habits" class="page">
@@ -1104,6 +1124,11 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         <span class="habit-toolbar-title">習慣追蹤</span>
         <button class="habit-add-top-btn" id="habit-add-top-btn" aria-label="新增習慣">＋</button>
       </div>
+      <div class="habit-tabs">
+        <button class="habit-tab-btn active" data-tab="log" id="habit-tab-log">記錄</button>
+        <button class="habit-tab-btn" data-tab="trend" id="habit-tab-trend">趨勢圖</button>
+      </div>
+      <div id="habit-log-view">
       <div class="week-strip">
         <div class="ws-name-col"></div>
         <div class="ws-days-scroll-sync" id="ws-days-sync">
@@ -1112,6 +1137,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         <div class="ws-del-spacer"></div>
       </div>
       <div id="habit-list"></div>
+      </div><!-- /habit-log-view -->
+      <div id="habit-trend-view" style="display:none"></div>
     </div>
 
     <!-- 💧 飲水頁面 -->
@@ -1315,6 +1342,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <div class="sleep-tabs">
         <button class="sleep-tab active" data-tab="log" id="sleep-tab-log">記錄</button>
         <button class="sleep-tab" data-tab="stats" id="sleep-tab-stats">統計表</button>
+        <button class="sleep-tab" data-tab="trend" id="sleep-tab-trend">趨勢</button>
       </div>
       <!-- 記錄 view -->
       <div id="sleep-log-view">
@@ -5589,13 +5617,31 @@ var _sleepTblView = (function(){ var n=new Date(); return { year:n.getFullYear()
 function switchSleepTab(tab) {
   _sleepTab = tab;
   document.querySelectorAll('.sleep-tab').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===tab); });
-  var lv = $('sleep-log-view'), sv = $('sleep-stats-view');
+  var lv = $('sleep-log-view'), sv = $('sleep-stats-view'), tv = $('sleep-trend-view');
   if (lv) lv.style.display = tab==='log'   ? '' : 'none';
   if (sv) sv.style.display = tab==='stats' ? '' : 'none';
+  if (tv) tv.style.display = tab==='trend' ? '' : 'none';
   if (tab==='stats') renderSleepTable();
+  if (tab==='trend') renderSleepTrend();
 }
 document.querySelectorAll('.sleep-tab').forEach(function(b) {
   b.addEventListener('click', function(){ switchSleepTab(b.dataset.tab); });
+});
+
+/* Habit trend tabs */
+var _habitTab = 'log';
+function switchHabitTab(tab) {
+  _habitTab = tab;
+  document.querySelectorAll('.habit-tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===tab); });
+  var lv = $('habit-log-view'), tv = $('habit-trend-view');
+  if (lv) lv.style.display = tab==='log'   ? '' : 'none';
+  if (tv) tv.style.display = tab==='trend' ? '' : 'none';
+  if (tab==='trend') renderHabitTrend();
+}
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('habit-tab-btn') && e.target.dataset.tab) {
+    switchHabitTab(e.target.dataset.tab);
+  }
 });
 
 function renderSleepTable() {
@@ -7342,6 +7388,244 @@ function init() {
   if (!startPage || startPage === 'todos') renderTodos();
 }
 init();
+
+/* ═══════════════════════════════════════════════════
+   📈 通用折線圖引擎
+   ═══════════════════════════════════════════════════ */
+function drawLineChart(svgId, data, opts) {
+  var svg = $(svgId);
+  if (!svg) return;
+  var W = opts.width || 320, H = opts.height || 120;
+  var PL = 30, PR = 10, PT = 14, PB = 24;
+  var cW = W - PL - PR, cH = H - PT - PB;
+
+  var validData = data.filter(function(d) { return d.hasData; });
+  if (!validData.length) {
+    svg.innerHTML = '<text x="' + (W/2) + '" y="' + (H/2) + '" text-anchor="middle" fill="var(--tx3)" font-size="11">尚無資料</text>';
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    return;
+  }
+
+  var allY = validData.map(function(d) { return d.y; });
+  var yMin = opts.yMin !== undefined ? opts.yMin : Math.max(0, Math.min.apply(null, allY) - 0.5);
+  var yMax = opts.yMax !== undefined ? opts.yMax : (Math.max.apply(null, allY.concat([opts.refValue || 0])) + 0.5);
+  if (yMax <= yMin) yMax = yMin + 1;
+  var rng = yMax - yMin;
+
+  function vy(v) { return PT + cH * (1 - (v - yMin) / rng); }
+  function gx(i) { return PL + i * (cW / Math.max(1, data.length - 1)); }
+
+  var parts = [];
+
+  /* Y grid + labels */
+  var gridCount = 3;
+  for (var gi = 0; gi < gridCount; gi++) {
+    var gv = yMin + rng * gi / (gridCount - 1);
+    var gy = vy(gv).toFixed(1);
+    var glabel = opts.yUnit === '%' ? Math.round(gv) + '%' : (Math.round(gv * 10) / 10) + (opts.yUnit || '');
+    parts.push('<line x1="' + PL + '" y1="' + gy + '" x2="' + (PL + cW) + '" y2="' + gy + '" stroke="var(--bd)" stroke-width="0.5"/>');
+    parts.push('<text x="' + (PL - 3) + '" y="' + (parseFloat(gy) + 3).toFixed(1) + '" font-size="7" fill="var(--tx3)" text-anchor="end">' + glabel + '</text>');
+  }
+
+  /* Reference line */
+  if (opts.refValue !== undefined && opts.refValue >= yMin && opts.refValue <= yMax) {
+    var ry = vy(opts.refValue).toFixed(1);
+    parts.push('<line x1="' + PL + '" y1="' + ry + '" x2="' + (PL + cW) + '" y2="' + ry + '" stroke="var(--ac)" stroke-width="1" stroke-dasharray="3,3" opacity="0.65"/>');
+  }
+
+  /* Fill area under line */
+  if (opts.fillColor) {
+    var areaPath = '';
+    var firstValid = -1, lastValid = -1;
+    data.forEach(function(d, i) { if (d.hasData) { if (firstValid < 0) firstValid = i; lastValid = i; } });
+    if (firstValid >= 0) {
+      var segs = [];
+      data.forEach(function(d, i) { if (d.hasData) segs.push('L' + gx(i).toFixed(1) + ',' + vy(d.y).toFixed(1)); });
+      areaPath = 'M' + gx(firstValid).toFixed(1) + ',' + vy(yMin).toFixed(1) + ' ' + segs.join(' ') + ' L' + gx(lastValid).toFixed(1) + ',' + vy(yMin).toFixed(1) + ' Z';
+      parts.push('<path d="' + areaPath + '" fill="' + opts.fillColor + '" stroke="none"/>');
+    }
+  }
+
+  /* Line segments (handles gaps) */
+  var linePath = '';
+  var prevHad = false;
+  data.forEach(function(d, i) {
+    if (d.hasData) {
+      var pt = gx(i).toFixed(1) + ',' + vy(d.y).toFixed(1);
+      linePath += (prevHad ? ' L' : ' M') + pt;
+      prevHad = true;
+    } else {
+      prevHad = false;
+    }
+  });
+  if (linePath.trim()) {
+    parts.push('<path d="' + linePath.trim() + '" fill="none" stroke="' + (opts.color || 'var(--ac)') + '" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>');
+  }
+
+  /* Dots */
+  data.forEach(function(d, i) {
+    if (d.hasData) {
+      parts.push('<circle cx="' + gx(i).toFixed(1) + '" cy="' + vy(d.y).toFixed(1) + '" r="2.5" fill="' + (opts.color || 'var(--ac)') + '" stroke="var(--bg3)" stroke-width="1"/>');
+    }
+  });
+
+  /* X labels (up to ~6) */
+  var step = Math.max(1, Math.ceil(data.length / 6));
+  data.forEach(function(d, i) {
+    if (i % step === 0 || i === data.length - 1) {
+      parts.push('<text x="' + gx(i).toFixed(1) + '" y="' + (H - 5) + '" font-size="7" fill="var(--tx3)" text-anchor="middle">' + d.x + '</text>');
+    }
+  });
+
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.innerHTML = parts.join('');
+}
+
+function drawHabitMiniChart(svgId, data, color) {
+  var svg = $(svgId);
+  if (!svg) return;
+  var W = 280, H = 40;
+  var PL = 2, PR = 2, PT = 3, PB = 3;
+  var cW = W - PL - PR;
+  var n = data.length;
+  var bw = Math.max(2, Math.floor(cW / n * 0.72));
+
+  var parts = [];
+  data.forEach(function(d, i) {
+    var x = (PL + i * (cW / n) + (cW / n - bw) / 2).toFixed(1);
+    if (d.hasData) {
+      parts.push('<rect x="' + x + '" y="' + PT + '" width="' + bw + '" height="' + (H - PT - PB) + '" fill="' + color + '" rx="1.5" opacity="0.85"/>');
+    } else {
+      parts.push('<rect x="' + x + '" y="' + (H / 2 - 1) + '" width="' + bw + '" height="2" fill="var(--bg2)" rx="1"/>');
+    }
+  });
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.innerHTML = parts.join('');
+}
+
+/* ── 睡眠趨勢 ── */
+function renderSleepTrend() {
+  var sec = $('sleep-trend-view');
+  if (!sec) return;
+  var todayD = new Date();
+  var days = [];
+  for (var i = 29; i >= 0; i--) {
+    var dd = new Date(todayD); dd.setDate(dd.getDate() - i);
+    days.push(localDateStr(dd));
+  }
+  var logMap = {};
+  state.sleepLogs.forEach(function(s) {
+    if (s.date && parseFloat(s.sleepHours) > 0) logMap[s.date] = parseFloat(s.sleepHours);
+  });
+  var data = days.map(function(dk) {
+    var v = logMap[dk];
+    return { x: parseInt(dk.slice(5,7)) + '/' + parseInt(dk.slice(8,10)), y: v || 0, hasData: !!v };
+  });
+  var validData = data.filter(function(d) { return d.hasData; });
+
+  if (!validData.length) {
+    sec.innerHTML = '<div class="trend-empty">還沒有睡眠記錄<br><span style="font-size:12px">記錄後即可看到30天趨勢</span></div>';
+    return;
+  }
+
+  var avg = Math.round(validData.reduce(function(s, d) { return s + d.y; }, 0) / validData.length * 10) / 10;
+  var best = Math.max.apply(null, validData.map(function(d) { return d.y; }));
+  var html = '';
+  html += '<div class="trend-section">';
+  html += '<div class="trend-title">過去 30 天睡眠時數</div>';
+  html += '<div class="trend-meta">平均 <strong>' + avg + 'h</strong>　最長 <strong>' + best + 'h</strong>　共記錄 <strong>' + validData.length + '</strong> 天</div>';
+  html += '<svg class="trend-svg" id="sleep-trend-svg" viewBox="0 0 320 130"></svg>';
+  html += '<div class="trend-ref-legend"><span class="trend-ref-dot"></span>建議 8h</div>';
+  html += '</div>';
+  sec.innerHTML = html;
+
+  drawLineChart('sleep-trend-svg', data, {
+    width: 320, height: 130,
+    color: 'var(--ac)',
+    fillColor: 'rgba(160,120,120,0.10)',
+    refValue: 8,
+    yUnit: 'h'
+  });
+}
+
+/* ── 習慣趨勢 ── */
+function renderHabitTrend() {
+  var sec = $('habit-trend-view');
+  if (!sec) return;
+  var todayD = new Date();
+  var days = [];
+  for (var i = 29; i >= 0; i--) {
+    var dd = new Date(todayD); dd.setDate(dd.getDate() - i);
+    days.push(localDateStr(dd));
+  }
+  var goodHabits = (state.habits || []).filter(function(h) { return (h.category || 'good') === 'good'; });
+
+  if (!goodHabits.length) {
+    sec.innerHTML = '<div class="trend-empty">還沒有好習慣記錄<br><span style="font-size:12px">新增習慣後即可看到趨勢圖</span></div>';
+    return;
+  }
+
+  /* Overall completion rate per day */
+  var overallData = days.map(function(dk) {
+    var done = goodHabits.filter(function(h) { return !!(h.logs || {})[dk]; }).length;
+    var anyLogged = goodHabits.some(function(h) {
+      return Object.keys(h.logs || {}).some(function(k) { return k <= dk; });
+    });
+    var pct = goodHabits.length > 0 ? Math.round(done / goodHabits.length * 100) : 0;
+    return { x: parseInt(dk.slice(5,7)) + '/' + parseInt(dk.slice(8,10)), y: pct, hasData: anyLogged && done > 0 };
+  });
+
+  var validOverall = overallData.filter(function(d) { return d.hasData; });
+  var avgRate = validOverall.length ? Math.round(validOverall.reduce(function(s, d) { return s + d.y; }, 0) / validOverall.length) : 0;
+
+  var html = '';
+  html += '<div class="trend-section">';
+  html += '<div class="trend-title">過去 30 天整體習慣完成率</div>';
+  html += '<div class="trend-meta">平均完成率 <strong>' + avgRate + '%</strong>　共記錄 <strong>' + validOverall.length + '</strong> 天</div>';
+  html += '<svg class="trend-svg" id="habit-overall-svg" viewBox="0 0 320 120"></svg>';
+  html += '</div>';
+
+  /* Per-habit cards */
+  goodHabits.forEach(function(h, idx) {
+    var hData = days.map(function(dk) {
+      var done = !!(h.logs || {})[dk];
+      return { x: parseInt(dk.slice(5,7)) + '/' + parseInt(dk.slice(8,10)), y: done ? 1 : 0, hasData: done };
+    });
+    var streak = 0;
+    for (var si = days.length - 1; si >= 0; si--) { if (hData[si].hasData) streak++; else break; }
+    var total = hData.filter(function(d) { return d.hasData; }).length;
+    var rate = Math.round(total / 30 * 100);
+    html += '<div class="trend-habit-card">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">';
+    html += '<span style="font-size:16px">' + (h.icon || '🔄') + '</span>';
+    html += '<span class="trend-habit-name">' + esc(h.name || '習慣') + '</span>';
+    html += '<span style="margin-left:auto;font-size:12px;color:var(--acd);font-weight:600">' + rate + '%</span>';
+    html += '</div>';
+    html += '<div class="trend-habit-stats">本月打卡 <strong>' + total + '</strong> 天　連續 <strong>' + streak + '</strong> 天</div>';
+    html += '<svg class="trend-mini-svg" id="habit-mini-' + idx + '" viewBox="0 0 280 40"></svg>';
+    html += '</div>';
+  });
+
+  sec.innerHTML = html;
+
+  /* Draw overall chart */
+  drawLineChart('habit-overall-svg', overallData, {
+    width: 320, height: 120,
+    color: '#8A9A78',
+    fillColor: 'rgba(138,154,120,0.10)',
+    yMin: 0, yMax: 100,
+    yUnit: '%'
+  });
+
+  /* Draw per-habit mini charts */
+  goodHabits.forEach(function(h, idx) {
+    var hData = days.map(function(dk) {
+      var done = !!(h.logs || {})[dk];
+      return { x: '', y: done ? 1 : 0, hasData: done };
+    });
+    drawHabitMiniChart('habit-mini-' + idx, hData, h.color || 'var(--ac)');
+  });
+}
 
 /* ═══════════════════════════════════════════════════
    📊 今日總覽 Dashboard
