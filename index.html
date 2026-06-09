@@ -7489,11 +7489,10 @@ function renderCheckin() {
     hasAny = true;
     html += '<div class="checkin-group">';
     html += '<div class="checkin-group-hdr">✅ 待完成待辦 <span style="font-weight:400;color:var(--tx3)">' + todoPend.length + ' 項</span></div>';
-    var show = todoPend.slice(0, 5);
-    show.forEach(function(t) {
+    todoPend.slice(0,5).forEach(function(t) {
       var tag = (t.priority && t.priority !== 'normal')
         ? '<span class="checkin-tag' + (t.priority==='urgent'?' urgent':'') + '">' + priLabel[t.priority] + '</span>' : '';
-      html += '<div class="checkin-item" onclick="toggleTodo('' + t.id + '');setTimeout(renderDashboard,80);">' +
+      html += '<div class="checkin-item" data-tid="' + t.id + '" onclick="toggleTodo(this.dataset.tid);setTimeout(renderDashboard,80);">' +
         '<button class="checkin-cb">○</button>' +
         '<span class="checkin-label">' + esc(t.text) + '</span>' + tag + '</div>';
     });
@@ -7512,7 +7511,7 @@ function renderCheckin() {
     html += '<div class="checkin-group">';
     html += '<div class="checkin-group-hdr">🔄 習慣打卡 <span style="font-weight:400;color:var(--tx3)">' + doneCount + '/' + goodHabits.length + ' 已完成</span></div>';
     unchecked.forEach(function(h) {
-      html += '<div class="checkin-item" onclick="toggleHabitDate('' + h.id + '','' + today + '');setTimeout(renderDashboard,80);">' +
+      html += '<div class="checkin-item" data-hid="' + h.id + '" data-hdate="' + today + '" onclick="toggleHabitDate(this.dataset.hid,this.dataset.hdate);setTimeout(renderDashboard,80);">' +
         '<button class="checkin-cb">○</button>' +
         '<span class="checkin-label">' + esc(h.name||'習慣') + '</span></div>';
     });
@@ -7539,7 +7538,7 @@ function renderCheckin() {
     hasAny = true;
     html += '<div class="checkin-group">';
     html += '<div class="checkin-group-hdr">📖 日記</div>';
-    html += '<div class="checkin-item" onclick="switchPage('diary')">' +
+    html += '<div class="checkin-item" data-page="diary" onclick="switchPage(this.dataset.page);">' +
       '<button class="checkin-cb">○</button>' +
       '<span class="checkin-label" style="color:var(--tx2)">今日還沒寫日記，點此前往記錄</span></div>';
     html += '</div>';
