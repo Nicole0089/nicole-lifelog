@@ -650,6 +650,10 @@ input::placeholder { color: var(--tx3); }
 .food-multi-row input[type="number"] { width: 56px; font-size: 13px; padding: 7px 4px; text-align: center; }
 .food-multi-row select { font-size: 12px; color: var(--tx2); border: 1px solid var(--bd); border-radius: 6px; background: var(--bg3); padding: 6px 2px; flex-shrink: 0; }
 .food-multi-remove { flex-shrink: 0; border: none; background: none; color: var(--tx3); font-size: 16px; cursor: pointer; padding: 4px 6px; }
+.food-fav-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.food-fav-chip { padding: 5px 10px; border: 1px solid var(--bd); border-radius: 14px; background: var(--bg3); font-size: 12px; color: var(--tx2); cursor: pointer; white-space: nowrap; }
+.food-fav-chip.is-fav { border-color: var(--ac); background: var(--acl); color: var(--acd); }
+.food-edit-fav-btn.is-fav { border-color: var(--ac); background: var(--acl); color: var(--acd); }
 /* Calculator overlay */
 .food-calc-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 195; display: flex; align-items: flex-end; justify-content: center; }
 .food-calc-overlay.hidden { display: none; }
@@ -1959,6 +1963,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <span style="font-size:15px;font-weight:600;color:var(--tx)">新增飲食記錄</span>
       <button class="btn-primary" id="food-edit-save-btn" style="padding:7px 16px;font-size:13px">儲存</button>
     </div>
+    <div class="sf-row hidden" id="food-fav-row">
+      <label class="sf-label">⭐ 常用</label>
+      <div class="food-fav-chips" id="food-fav-chips"></div>
+    </div>
     <div class="sf-row" style="position:relative">
       <div class="food-edit-mode-label" id="food-edit-mode-lbl">新增飲食記錄</div>
     <input type="text" id="food-edit-name" placeholder="食物名稱（可搜尋食物資料庫）" maxlength="60" autocomplete="off" style="width:100%;font-size:16px">
@@ -1981,6 +1989,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         </select>
       </div>
       <div style="font-size:11px;color:var(--tx3);margin-top:4px" id="food-edit-qty-base"></div>
+      <button type="button" class="btn-ghost hidden food-edit-fav-btn" id="food-edit-fav-btn" style="margin-top:8px;font-size:12px">⭐ 加入常用清單</button>
     </div>
     <div class="sf-row" style="margin-top:12px">
       <div style="display:flex;align-items:center;justify-content:space-between">
@@ -5007,6 +5016,9 @@ function _resetFoodEditAutocomplete(){
   var mab=$('food-multi-add-row-btn'); if(mab) mab.classList.add('hidden');
   var msb=$('food-multi-sum-btn'); if(msb) msb.classList.add('hidden');
   var mtb=$('food-multi-toggle-btn'); if(mtb) mtb.textContent='➕ 加入食材';
+  /* 常用清單重置 */
+  _updateFoodFavBtn();
+  renderFoodFavChips();
 }
 function _foodEditSearchList(kw){
   kw=(kw||'').trim().toLowerCase();
@@ -5074,10 +5086,79 @@ function _foodEditApplyQty(){
       var qb=$('food-edit-qty-base');
       if(qb) qb.textContent='每'+(f.isPrivate?f.unit:'100g')+'：'+r1(f.cal)+'kcal · 蛋白'+r1(f.pro)+'g · 碳水'+r1(f.carb)+'g · 脂肪'+r1(f.fat)+'g';
       _foodEditApplyQty();
+      _updateFoodFavBtn();
     });
   }
   var qi=$('food-edit-qty'); if(qi) qi.addEventListener('input',_foodEditApplyQty);
   var us=$('food-edit-qty-unit'); if(us) us.addEventListener('change',_foodEditApplyQty);
+})();
+
+/* ── 常用/最愛清單（方案B） ── */
+function renderFoodFavChips(){
+  var row=$('food-fav-row'), box=$('food-fav-chips'); if(!row||!box) return;
+  var favNames = _favFoods.map(function(f){return f.name;});
+  var freq = {};
+  (state.foodLogs||[]).forEach(function(l){
+    var nm=(l.text||l.name||'').trim(); if(!nm) return;
+    if(!freq[nm]) freq[nm]={name:nm,count:0,cal:0,pro:0,carb:0,fat:0};
+    freq[nm].count++;
+    freq[nm].cal+=(+l.calories||0); freq[nm].pro+=(+l.protein||0); freq[nm].carb+=(+l.carbs||0); freq[nm].fat+=(+l.fat||0);
+  });
+  var freqList = Object.keys(freq).map(function(k){
+    var f=freq[k];
+    return {name:f.name,cal:r1(f.cal/f.count),pro:r1(f.pro/f.count),carb:r1(f.carb/f.count),fat:r1(f.fat/f.count),unit:'份',base:1,isPrivate:true};
+  }).filter(function(f){ return favNames.indexOf(f.name)===-1 && freq[f.name].count>=2; })
+    .sort(function(a,b){ return freq[b.name].count - freq[a.name].count; })
+    .slice(0,6);
+  var favList = _favFoods.map(function(f){
+    return {name:f.name,cal:+f.cal||0,pro:+f.pro||0,carb:+f.carb||0,fat:+f.fat||0,unit:f.unit||'份',base:f.base||1,isPrivate:f.isPrivate!==false,isFav:true};
+  });
+  var all = favList.concat(freqList);
+  if(!all.length){ row.classList.add('hidden'); box.innerHTML=''; box._list=null; return; }
+  row.classList.remove('hidden');
+  box.innerHTML = all.map(function(f,i){
+    return '<div class="food-fav-chip'+(f.isFav?' is-fav':'')+'" data-idx="'+i+'">'+(f.isFav?'⭐ ':'')+esc(f.name)+'</div>';
+  }).join('');
+  box._list = all;
+}
+function _updateFoodFavBtn(){
+  var btn=$('food-edit-fav-btn'); if(!btn) return;
+  if(!_foodEditPicked){ btn.classList.add('hidden'); return; }
+  btn.classList.remove('hidden');
+  var isFav=_favFoods.some(function(f){return f.name===_foodEditPicked.name;});
+  btn.textContent = isFav ? '★ 已加入常用（點擊移除）' : '⭐ 加入常用清單';
+  btn.classList.toggle('is-fav', isFav);
+}
+(function(){
+  var box=$('food-fav-chips');
+  if(box){
+    box.addEventListener('click',function(e){
+      var item=e.target.closest('.food-fav-chip'); if(!item) return;
+      var f=(this._list||[])[+item.dataset.idx]; if(!f) return;
+      _foodEditPicked={name:f.name,cal:f.cal,pro:f.pro,carb:f.carb,fat:f.fat,unit:f.unit,base:f.base,isPrivate:f.isPrivate};
+      $('food-edit-name').value=f.name;
+      var sg=$('food-edit-suggest'); if(sg){sg.classList.add('hidden'); sg.innerHTML='';}
+      var qr=$('food-edit-qty-row'); if(qr) qr.classList.remove('hidden');
+      var qi=$('food-edit-qty'); if(qi) qi.value=1;
+      var us=$('food-edit-qty-unit'); if(us) us.value=f.unit;
+      var qb=$('food-edit-qty-base');
+      if(qb) qb.textContent='每'+f.unit+'：'+r1(f.cal)+'kcal · 蛋白'+r1(f.pro)+'g · 碳水'+r1(f.carb)+'g · 脂肪'+r1(f.fat)+'g';
+      _foodEditApplyQty();
+      _updateFoodFavBtn();
+    });
+  }
+  var fb=$('food-edit-fav-btn');
+  if(fb){
+    fb.addEventListener('click',function(){
+      if(!_foodEditPicked) return;
+      var f=_foodEditPicked;
+      var i=_favFoods.findIndex(function(x){return x.name===f.name;});
+      if(i>=0){ _favFoods.splice(i,1); } else { _favFoods.push({name:f.name,cal:f.cal,pro:f.pro,carb:f.carb,fat:f.fat,unit:f.unit,base:f.base,isPrivate:f.isPrivate}); }
+      saveFavFoods();
+      _updateFoodFavBtn();
+      renderFoodFavChips();
+    });
+  }
 })();
 
 /* ── 多食材加總（方案C） ── */
@@ -5335,6 +5416,8 @@ var FOOD_DB = FOOD_DB_CATEGORIES.reduce(function(acc, cat) {
 var _calcSelected=null;
 var _customFoods = loadStorage('myapp_custom_foods', []);
 var _privateFoods = loadStorage('myapp_private_foods', []);
+var _favFoods = loadStorage('myapp_fav_foods', []);
+function saveFavFoods(){ saveStorage('myapp_fav_foods', _favFoods); }
 var _foodDayNotes = loadStorage('myapp_food_notes', {});
 var _foodDayCarbs  = loadStorage('myapp_food_carbs', {});
 var _bodyData     = loadStorage('myapp_body_data', {gender:'female',age:30,height:165,weight:55,activity:'light',goal:'cut'});
