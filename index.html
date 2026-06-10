@@ -7422,7 +7422,7 @@ function drawLineChart(svgId, data, opts) {
   for (var gi = 0; gi < gridCount; gi++) {
     var gv = yMin + rng * gi / (gridCount - 1);
     var gy = vy(gv).toFixed(1);
-    var glabel = opts.yUnit === '%' ? Math.round(gv) + '%' : (Math.round(gv * 10) / 10) + (opts.yUnit || '');
+    var glabel = opts.yFormatter ? opts.yFormatter(gv) : (opts.yUnit === '%' ? Math.round(gv) + '%' : (Math.round(gv * 10) / 10) + (opts.yUnit || ''));
     parts.push('<line x1="' + PL + '" y1="' + gy + '" x2="' + (PL + cW) + '" y2="' + gy + '" stroke="var(--bd)" stroke-width="0.5"/>');
     parts.push('<text x="' + (PL - 3) + '" y="' + (parseFloat(gy) + 3).toFixed(1) + '" font-size="7" fill="var(--tx3)" text-anchor="end">' + glabel + '</text>');
   }
@@ -7546,6 +7546,56 @@ function renderSleepTrend() {
     refValue: 8,
     yUnit: 'h'
   });
+
+  /* ── 就寢時間趨勢 ── */
+  var bedMap = {};
+  state.sleepLogs.forEach(function(s) {
+    if (s.date && s.bedtime) {
+      var parts = s.bedtime.split(':');
+      var hh = parseInt(parts[0], 10), mm = parseInt(parts[1], 10) || 0;
+      if (!isNaN(hh)) {
+        var v = hh + mm / 60;
+        if (v < 12) v += 24; /* 凌晨時段往後接續，避免折線從頂端跳到底部 */
+        bedMap[s.date] = v;
+      }
+    }
+  });
+  var bedData = days.map(function(dk) {
+    var v = bedMap[dk];
+    return { x: parseInt(dk.slice(5,7)) + '/' + parseInt(dk.slice(8,10)), y: (v===undefined?0:v), hasData: v !== undefined };
+  });
+  var validBed = bedData.filter(function(d) { return d.hasData; });
+
+  if (validBed.length) {
+    var avgBedV = validBed.reduce(function(s, d) { return s + d.y; }, 0) / validBed.length;
+    var avgBedH = Math.floor(avgBedV % 24);
+    var avgBedM = Math.round((avgBedV % 24 - avgBedH) * 60);
+    var avgBedLabel = (avgBedH < 10 ? '0' : '') + avgBedH + ':' + (avgBedM < 10 ? '0' : '') + avgBedM;
+
+    var html2 = '';
+    html2 += '<div class="trend-section">';
+    html2 += '<div class="trend-title">過去 30 天就寢時間</div>';
+    html2 += '<div class="trend-meta">平均就寢 <strong>' + avgBedLabel + '</strong>　共記錄 <strong>' + validBed.length + '</strong> 天</div>';
+    html2 += '<svg class="trend-svg" id="sleep-bedtime-svg" viewBox="0 0 320 130"></svg>';
+    html2 += '</div>';
+    sec.insertAdjacentHTML('beforeend', html2);
+
+    var bedYMin = Math.floor(Math.min.apply(null, validBed.map(function(d){return d.y;})) - 0.5);
+    var bedYMax = Math.ceil(Math.max.apply(null, validBed.map(function(d){return d.y;})) + 0.5);
+    drawLineChart('sleep-bedtime-svg', bedData, {
+      width: 320, height: 130,
+      color: '#7878A0',
+      fillColor: 'rgba(120,120,160,0.10)',
+      yMin: bedYMin,
+      yMax: bedYMax,
+      yFormatter: function(v) {
+        var h = Math.floor(v % 24);
+        var m = Math.round((v % 24 - h) * 60);
+        if (m === 60) { m = 0; h += 1; }
+        return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+      }
+    });
+  }
 }
 
 /* ── 習慣趨勢 ── */
