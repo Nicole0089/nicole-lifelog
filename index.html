@@ -7620,16 +7620,19 @@ function showTodayNotification(){
       todayPending.slice(0,5).map(function(t){return '• '+t.text;}).join('\n')+
       (todayPending.length>5?'\n…等共'+todayPending.length+'項':'');
   var opts = {body: body, icon: ''};
-  /* Mobile Chrome requires Service Worker showNotification()，但若沒有實際生效中的 Service Worker，
-     navigator.serviceWorker.ready 可能永遠不會 resolve，導致通知永遠不會顯示。
-     因此只有在確實有 controller 時才走 SW 路徑，否則直接用一般 Notification。 */
+  function _viaDirect(){ try{ new Notification(title, opts); }catch(e){} }
+  /* 手機版 Chrome 不允許用 `new Notification()`（會丟出 Illegal constructor），
+     必須透過 Service Worker 的 showNotification()；但若 SW 永遠沒有就緒，
+     navigator.serviceWorker.ready 可能永遠不 resolve，所以加上逾時保底，
+     逾時後改用一般 Notification（桌機可正常顯示）。 */
   if(_swReg){
     _swReg.showNotification(title, opts);
-  } else if('serviceWorker' in navigator && navigator.serviceWorker.controller){
-    navigator.serviceWorker.ready.then(function(reg){ reg.showNotification(title, opts); })
-      .catch(function(){ try{ new Notification(title, opts); }catch(e){} });
+  } else if('serviceWorker' in navigator){
+    var _done=false;
+    navigator.serviceWorker.ready.then(function(reg){ _done=true; reg.showNotification(title, opts); }).catch(_viaDirect);
+    setTimeout(function(){ if(!_done) _viaDirect(); }, 2000);
   } else {
-    try{ new Notification(title, opts); }catch(e){}
+    _viaDirect();
   }
   /* 標記「今日已推送」要放在實際嘗試顯示之後，避免顯示失敗卻被誤記為已推送 */
   saveStorage('myapp_notif_last_date', todayKey());
@@ -7694,7 +7697,7 @@ function init() {
   initModal(); initChoreModal();
   /* Register Service Worker for mobile notifications */
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('/sw.js').then(function(reg){
+    navigator.serviceWorker.register('sw.js').then(function(reg){
       _swReg = reg;
       scheduleTodayNotification();
     }).catch(function(){ scheduleTodayNotification(); });
