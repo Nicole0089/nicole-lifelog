@@ -7619,17 +7619,20 @@ function showTodayNotification(){
     : '今日待辦 '+todayPending.length+' 項：\n'+
       todayPending.slice(0,5).map(function(t){return '• '+t.text;}).join('\n')+
       (todayPending.length>5?'\n…等共'+todayPending.length+'項':'');
-  saveStorage('myapp_notif_last_date', todayKey());
   var opts = {body: body, icon: ''};
-  /* Mobile Chrome requires Service Worker showNotification() */
+  /* Mobile Chrome requires Service Worker showNotification()，但若沒有實際生效中的 Service Worker，
+     navigator.serviceWorker.ready 可能永遠不會 resolve，導致通知永遠不會顯示。
+     因此只有在確實有 controller 時才走 SW 路徑，否則直接用一般 Notification。 */
   if(_swReg){
     _swReg.showNotification(title, opts);
-  } else if('serviceWorker' in navigator){
+  } else if('serviceWorker' in navigator && navigator.serviceWorker.controller){
     navigator.serviceWorker.ready.then(function(reg){ reg.showNotification(title, opts); })
       .catch(function(){ try{ new Notification(title, opts); }catch(e){} });
   } else {
     try{ new Notification(title, opts); }catch(e){}
   }
+  /* 標記「今日已推送」要放在實際嘗試顯示之後，避免顯示失敗卻被誤記為已推送 */
+  saveStorage('myapp_notif_last_date', todayKey());
 }
 
 function scheduleTodayNotification(){
@@ -7659,6 +7662,12 @@ function scheduleTodayNotification(){
     }, 86400000);
   }, ms);
 }
+
+/* 當頁面從背景切回前景時（例如手機切換App或螢幕喚醒），瀏覽器原本排定的 setTimeout
+   常會被暫停而失效，因此切回前景時重新檢查一次是否需要補發今日提醒 */
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible'){ scheduleTodayNotification(); }
+});
 
 function updateNotifSettingsUI(){
   var permStatus = $('notif-perm-status');
