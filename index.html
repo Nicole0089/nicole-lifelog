@@ -1296,6 +1296,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <!-- Historical records -->
       <div class="food-history-section">
         <div class="food-history-title">歷史飲食記錄</div>
+        <div class="page-search-bar" style="padding:0 0 8px"><input class="page-search-input" id="food-history-search-input" type="text" placeholder="🔍 搜尋歷史飲食記錄..."></div>
         <div id="food-history-list"></div>
       </div>
     </div>
@@ -2473,6 +2474,8 @@ function localDateStr(d) {
 function todayKey() { return localDateStr(new Date()); }
 const WEEKDAYS = ['日','一','二','三','四','五','六'];
 const $ = id => document.getElementById(id);
+/* 四捨五入到小數點第一位（用於所有數值計算結果顯示） */
+function r1(v) { return Math.round((+v||0)*10)/10; }
 
 function calcStreak(logs, type) {
   var streak = 0;
@@ -2740,7 +2743,7 @@ function renderTodos() {
     var total=doneToday.length+pendToday.length;
     if(!total){ wrap.style.display='none'; return; }
     wrap.style.display='';
-    var pct=Math.round(doneToday.length/total*100);
+    var pct=r1(doneToday.length/total*100);
     var allDone=pendToday.length===0&&doneToday.length>0;
     if(allDone){
       wrap.innerHTML='<div class="todo-progress-done-msg">🎉 今日所有待辦已完成！</div>';
@@ -4170,7 +4173,7 @@ function renderWater() {
   var el = $('water-amount');
   if (el) el.textContent = total;
   var goal = $('water-goal-text');
-  if (goal) goal.textContent = '目標：' + WATER_GOAL + ' ml　' + Math.round(total/WATER_GOAL*100) + '%';
+  if (goal) goal.textContent = '目標：' + WATER_GOAL + ' ml　' + r1(total/WATER_GOAL*100) + '%';
   var lbl = $('water-date-label');
   if (lbl) lbl.textContent = _waterViewDate === todayKey() ? '今日' : _waterViewDate;
   var nextBtn = $('water-date-next');
@@ -4371,9 +4374,9 @@ function renderFoodNutritionSummary(items) {
   /* % from macros */
   var pPct=$('food-sum-pro-pct'), cPct=$('food-sum-carb-pct'), fPct=$('food-sum-fat-pct');
   var macroKcal = pro*4 + carb*4 + fat*9;
-  if (pPct) pPct.textContent = macroKcal>0 ? Math.round(pro*4/macroKcal*100)+'%' : '';
-  if (cPct) cPct.textContent = macroKcal>0 ? Math.round(carb*4/macroKcal*100)+'%' : '';
-  if (fPct) fPct.textContent = macroKcal>0 ? Math.round(fat*9/macroKcal*100)+'%' : '';
+  if (pPct) pPct.textContent = macroKcal>0 ? r1(pro*4/macroKcal*100)+'%' : '';
+  if (cPct) cPct.textContent = macroKcal>0 ? r1(carb*4/macroKcal*100)+'%' : '';
+  if (fPct) fPct.textContent = macroKcal>0 ? r1(fat*9/macroKcal*100)+'%' : '';
 }
 
 /* ── TDEE & Carb-Cycling Calculations ── */
@@ -4384,20 +4387,20 @@ function calcBMR(bd) {
 }
 function calcTDEE(bd) {
   var mults={sedentary:1.2,light:1.375,moderate:1.55,active:1.725};
-  return Math.round(calcBMR(bd)*(mults[bd.activity]||1.375));
+  return r1(calcBMR(bd)*(mults[bd.activity]||1.375));
 }
 function calcGoalCal(tdee,goal) {
-  return Math.round(tdee*({cut:0.82,recomp:1.0,maintain:1.0,bulk:1.1}[goal]||0.82));
+  return r1(tdee*({cut:0.82,recomp:1.0,maintain:1.0,bulk:1.1}[goal]||0.82));
 }
 function calcDayMacros(bd) {
   if (!bd||!bd.weight||!bd.height||!bd.age) return null;
   var tdee=calcTDEE(bd), goalCal=calcGoalCal(tdee,bd.goal), w=+(bd.weight)||55;
   /* 混合算法：蛋白質 1.8g/kg（recomp 2.0g/kg），碳水按日型熱量比例，脂肪補足 */
-  var pro = bd.goal==='recomp' ? Math.round(w*2.0) : Math.round(w*1.8);
+  var pro = bd.goal==='recomp' ? r1(w*2.0) : r1(w*1.8);
   function mk(calMult, carbPct) {
-    var cal  = Math.round(goalCal * calMult);
-    var carb = Math.max(40, Math.round(cal * carbPct / 4));   /* 最低 40g */
-    var fat  = Math.max(15, Math.round((cal - pro*4 - carb*4) / 9)); /* 最低 15g */
+    var cal  = r1(goalCal * calMult);
+    var carb = Math.max(40, r1(cal * carbPct / 4));   /* 最低 40g */
+    var fat  = Math.max(15, r1((cal - pro*4 - carb*4) / 9)); /* 最低 15g */
     return {cal:cal, pro:pro, carb:carb, fat:fat};
   }
   return {
@@ -4428,7 +4431,7 @@ function renderBodySettings() {
     if(macroBox) macroBox.innerHTML=''; return;
   }
   if(tdeeBox) {
-    var _diffPct = Math.round((macros.goalCal - macros.tdee) / macros.tdee * 100);
+    var _diffPct = r1((macros.goalCal - macros.tdee) / macros.tdee * 100);
     var _diffTag = _diffPct < 0
       ? '<span class="bd-diff cut">▼ ' + Math.abs(_diffPct) + '% 熱量赤字</span>'
       : _diffPct > 0
@@ -4501,17 +4504,33 @@ function renderProteinChart() {
 }
 
 /* ── history ── */
+var _foodHistSearch = '';
 function renderFoodHistory() {
   var box = $('food-history-list'); if (!box) return;
   var today = todayKey();
+  var kw = (_foodHistSearch||'').trim().toLowerCase();
   var grouped = {};
   state.foodLogs.forEach(function(l){
     if(l.date && l.date<today) { if(!grouped[l.date]) grouped[l.date]=[]; grouped[l.date].push(l); }
   });
-  var dates = Object.keys(grouped).sort(function(a,b){return a<b?1:-1;}).slice(0,30);
-  if(!dates.length){box.innerHTML='<div style="text-align:center;color:var(--tx3);font-size:12px;padding:16px">無歷史記錄</div>';return;}
+  var dates = Object.keys(grouped).sort(function(a,b){return a<b?1:-1;});
+  if(kw){
+    dates = dates.filter(function(dk){
+      return grouped[dk].some(function(l){
+        var hay=((l.text||l.name||'')+' '+(l.meal||'')+' '+(l.note||'')).toLowerCase();
+        return hay.indexOf(kw)!==-1;
+      });
+    });
+  } else {
+    dates = dates.slice(0,30);
+  }
+  if(!dates.length){box.innerHTML='<div style="text-align:center;color:var(--tx3);font-size:12px;padding:16px">'+(kw?'找不到符合「'+esc(_foodHistSearch)+'」的飲食記錄':'無歷史記錄')+'</div>';return;}
   box.innerHTML = dates.map(function(dk){
     var items=grouped[dk];
+    if(kw){ items = items.filter(function(l){
+      var hay=((l.text||l.name||'')+' '+(l.meal||'')+' '+(l.note||'')).toLowerCase();
+      return hay.indexOf(kw)!==-1;
+    }); }
     var cal=items.reduce(function(a,x){return a+(+x.calories||0);},0);
     var pro=items.reduce(function(a,x){return a+(+x.protein||0);},0);
     var carb=items.reduce(function(a,x){return a+(+x.carbs||0);},0);
@@ -4523,7 +4542,7 @@ function renderFoodHistory() {
         '<span class="food-history-totals">'+(totTxt||items.length+'項')+'</span>'+
         '<button class="food-hist-add-date-btn" data-hist-add="'+dk+'" title="補記飲食">＋補記</button>'+
       '</div>'+
-      '<div class="food-history-items" style="display:none">'+
+      '<div class="food-history-items"'+(kw?'':' style="display:none"')+'>'+
         items.map(function(l){
           var nutChips=(l.calories?'<span class="food-nut-chip">'+l.calories+'kcal</span>':'')+
                        (l.protein?'<span class="food-nut-chip"> 蛋白'+Math.round(+l.protein*10)/10+'g</span>':'');
@@ -4952,6 +4971,8 @@ function saveFoodEdit(){
   saveFood();closeFoodEdit();renderFood();
 }
 $('food-today-add-btn').addEventListener('click',openFoodEdit);
+var _foodHistSearchEl = $('food-history-search-input');
+if(_foodHistSearchEl){ _foodHistSearchEl.addEventListener('input',function(){ _foodHistSearch=this.value; renderFoodHistory(); }); }
 $('food-edit-save-btn').addEventListener('click',saveFoodEdit);
 $('food-edit-cancel-btn').addEventListener('click',closeFoodEdit);
 $('food-edit-overlay').addEventListener('click',function(e){if(e.target===$('food-edit-overlay'))closeFoodEdit();});
@@ -5717,7 +5738,7 @@ function renderSleepTable() {
   var summary = $('sleep-tbl-summary');
   if (summary) {
     var avgH = countDays ? (totalHrs/countDays).toFixed(1) : '─';
-    var goodPct = countDays ? Math.round(goodDays/countDays*100) : 0;
+    var goodPct = countDays ? r1(goodDays/countDays*100) : 0;
     var avgNap = napDays ? (totalNapHrs/napDays).toFixed(1) : '─';
     summary.innerHTML =
       '<div class="sleep-tbl-sum-item"><div class="sleep-tbl-sum-val">'+countDays+'</div><div class="sleep-tbl-sum-lbl">有記錄天數</div></div>' +
@@ -7621,12 +7642,12 @@ function renderHabitTrend() {
     var anyLogged = goodHabits.some(function(h) {
       return Object.keys(h.logs || {}).some(function(k) { return k <= dk; });
     });
-    var pct = goodHabits.length > 0 ? Math.round(done / goodHabits.length * 100) : 0;
+    var pct = goodHabits.length > 0 ? r1(done / goodHabits.length * 100) : 0;
     return { x: parseInt(dk.slice(5,7)) + '/' + parseInt(dk.slice(8,10)), y: pct, hasData: anyLogged && done > 0 };
   });
 
   var validOverall = overallData.filter(function(d) { return d.hasData; });
-  var avgRate = validOverall.length ? Math.round(validOverall.reduce(function(s, d) { return s + d.y; }, 0) / validOverall.length) : 0;
+  var avgRate = validOverall.length ? r1(validOverall.reduce(function(s, d) { return s + d.y; }, 0) / validOverall.length) : 0;
 
   var html = '';
   html += '<div class="trend-section">';
@@ -7644,7 +7665,7 @@ function renderHabitTrend() {
     var streak = 0;
     for (var si = days.length - 1; si >= 0; si--) { if (hData[si].hasData) streak++; else break; }
     var total = hData.filter(function(d) { return d.hasData; }).length;
-    var rate = Math.round(total / 30 * 100);
+    var rate = r1(total / 30 * 100);
     html += '<div class="trend-habit-card">';
     html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">';
     html += '<span style="font-size:16px">' + (h.icon || '🔄') + '</span>';
@@ -7695,7 +7716,7 @@ function renderDashboard() {
   var todoPend = state.todos.filter(function(t){ return !t.done && (!t.dueDate || t.dueDate <= today); });
   var todoDone = state.todos.filter(function(t){ return t.done && t.doneAt && t.doneAt >= todayStart && t.doneAt < todayEnd; });
   var todoTotal = todoPend.length + todoDone.length;
-  var todoRate = todoTotal > 0 ? Math.round(todoDone.length / todoTotal * 100) : 100;
+  var todoRate = todoTotal > 0 ? r1(todoDone.length / todoTotal * 100) : 100;
   cards.push({ icon:'✅', label:'今日待辦', value: todoDone.length+'/'+todoTotal,
     sub: todoRate + '% 完成', pct: todoRate, status: todoRate===100?'ok':(todoRate>=50?'':'warn'),
     page:'todos' });
@@ -7703,7 +7724,7 @@ function renderDashboard() {
   /* ── 飲水 ── */
   var wTotal = state.waterLogs.filter(function(l){ return l.date===today; }).reduce(function(s,l){ return s+l.ml; },0);
   var WGOAL = typeof WATER_GOAL !== 'undefined' ? WATER_GOAL : 2000;
-  var wPct = Math.min(100, Math.round(wTotal/WGOAL*100));
+  var wPct = Math.min(100, r1(wTotal/WGOAL*100));
   cards.push({ icon:'💧', label:'今日飲水', value: wTotal+'ml',
     sub: '目標 '+WGOAL+'ml　'+wPct+'%', pct: wPct, status: wPct>=100?'ok':(wPct>=50?'':'warn'),
     page:'water' });
@@ -7715,7 +7736,7 @@ function renderDashboard() {
     var logs = h.logs || {};
     if (logs[today] && logs[today] > 0) hDone++;
   });
-  var hPct = hTotal > 0 ? Math.round(hDone/hTotal*100) : 100;
+  var hPct = hTotal > 0 ? r1(hDone/hTotal*100) : 100;
   cards.push({ icon:'🔄', label:'好習慣完成', value: hDone+'/'+hTotal,
     sub: hPct + '% 完成', pct: hPct, status: hPct===100?'ok':(hPct>=50?'':'warn'),
     page:'habits' });
@@ -7725,7 +7746,7 @@ function renderDashboard() {
   var sleepHrs = sleep ? (parseFloat(sleep.sleepHours)||0) : null;
   var sleepStatus = sleepHrs===null?'':(sleepHrs>=7?'ok':(sleepHrs>=5?'warn':'bad'));
   cards.push({ icon:'🌙', label:'上次睡眠', value: sleepHrs!==null ? sleepHrs+'h' : '─',
-    sub: sleep ? sleep.date : '尚無記錄', pct: sleepHrs!==null?Math.min(100,Math.round(sleepHrs/9*100)):0,
+    sub: sleep ? sleep.date : '尚無記錄', pct: sleepHrs!==null?Math.min(100,r1(sleepHrs/9*100)):0,
     status: sleepStatus, page:'sleep' });
 
   /* ── 血壓 ── */
@@ -7760,13 +7781,13 @@ function renderDashboard() {
     fastVal = elapsedH + 'h ' + (elapsedM < 10 ? '0' : '') + elapsedM + 'm';
     fastSub = '⏱ 斷食進行中';
     fastStatus = 'ok';
-    fastPct = Math.min(100, Math.round(elapsedMs / (24*3600000) * 100));
+    fastPct = Math.min(100, r1(elapsedMs / (24*3600000) * 100));
   } else if (typeof _fastLogs !== 'undefined' && _fastLogs.length) {
     var lastFast = _fastLogs[_fastLogs.length - 1];
     fastVal = lastFast.hours + 'h';
     fastSub = '最近一次：' + (lastFast.date || '');
     fastStatus = lastFast.hours >= 16 ? 'ok' : (lastFast.hours >= 12 ? '' : 'warn');
-    fastPct = Math.min(100, Math.round(lastFast.hours / 24 * 100));
+    fastPct = Math.min(100, r1(lastFast.hours / 24 * 100));
   } else {
     fastVal = '─';
     fastSub = '尚無斷食記錄';
@@ -7857,7 +7878,7 @@ function renderCheckin() {
   var WGOAL2 = typeof WATER_GOAL !== 'undefined' ? WATER_GOAL : 2000;
   if (wTotal2 < WGOAL2) {
     hasAny = true;
-    var wPct2 = Math.min(100, Math.round(wTotal2/WGOAL2*100));
+    var wPct2 = Math.min(100, r1(wTotal2/WGOAL2*100));
     html += '<div class="checkin-group">';
     html += '<div class="checkin-group-hdr">💧 飲水 <span style="font-weight:400;color:var(--tx3)">' + wTotal2 + '/' + WGOAL2 + 'ml　' + wPct2 + '%</span></div>';
     html += '<div class="checkin-water-row">' +
@@ -7953,7 +7974,7 @@ function renderWeekly() {
     return state.waterLogs.filter(function(l){ return l.date===dk; }).reduce(function(s,l){return s+l.ml;},0);
   });
   var waterFilled = waterData.filter(function(x){ return x>0; });
-  var waterAvg = waterFilled.length ? Math.round(waterFilled.reduce(function(a,b){return a+b;},0)/waterFilled.length) : 0;
+  var waterAvg = waterFilled.length ? r1(waterFilled.reduce(function(a,b){return a+b;},0)/waterFilled.length) : 0;
   var waterGoalDays = waterData.filter(function(x){ return x>=WGOAL; }).length;
   html += '<div class="weekly-section">';
   html += '<div class="weekly-section-title">💧 飲水</div>';
@@ -8028,18 +8049,18 @@ function renderWeekly() {
       });
       if (!logs.length) return null;
       return {
-        sys: Math.round(logs.reduce(function(s,b){return s+b.sys;},0)/logs.length),
-        dia: Math.round(logs.reduce(function(s,b){return s+b.dia;},0)/logs.length),
-        pp:  Math.round(logs.reduce(function(s,b){return s+(b.sys-b.dia);},0)/logs.length)
+        sys: r1(logs.reduce(function(s,b){return s+b.sys;},0)/logs.length),
+        dia: r1(logs.reduce(function(s,b){return s+b.dia;},0)/logs.length),
+        pp:  r1(logs.reduce(function(s,b){return s+(b.sys-b.dia);},0)/logs.length)
       };
     });
     var bpFilled = bpData.filter(function(x){return x!==null;});
     html += '<div class="weekly-section">';
     html += '<div class="weekly-section-title">❤️ 血壓　<span style="font-weight:400;font-size:10px;letter-spacing:0">'+handLabel+'</span></div>';
     if (bpFilled.length) {
-      var avgSys = Math.round(bpFilled.reduce(function(s,b){return s+b.sys;},0)/bpFilled.length);
-      var avgDia = Math.round(bpFilled.reduce(function(s,b){return s+b.dia;},0)/bpFilled.length);
-      var avgPP  = Math.round(bpFilled.reduce(function(s,b){return s+b.pp;},0)/bpFilled.length);
+      var avgSys = r1(bpFilled.reduce(function(s,b){return s+b.sys;},0)/bpFilled.length);
+      var avgDia = r1(bpFilled.reduce(function(s,b){return s+b.dia;},0)/bpFilled.length);
+      var avgPP  = r1(bpFilled.reduce(function(s,b){return s+b.pp;},0)/bpFilled.length);
       html += '<div class="weekly-row"><span>平均收縮壓</span><span class="weekly-row-val">'+avgSys+' mmHg</span></div>';
       html += '<div class="weekly-row"><span>平均舒張壓</span><span class="weekly-row-val">'+avgDia+' mmHg</span></div>';
       html += '<div class="weekly-row"><span>平均脈壓差</span><span class="weekly-row-val">'+avgPP+' mmHg</span></div>';
@@ -8065,9 +8086,9 @@ function renderWeekly() {
         var logs = h.logs || {};
         if (logs[dk] && logs[dk]>0) done++;
       });
-      return state.habits.length > 0 ? Math.round(done/state.habits.length*100) : 0;
+      return state.habits.length > 0 ? r1(done/state.habits.length*100) : 0;
     });
-    var avgRate = Math.round(habitRates.reduce(function(a,b){return a+b;},0)/7);
+    var avgRate = r1(habitRates.reduce(function(a,b){return a+b;},0)/7);
     html += '<div class="weekly-section">';
     html += '<div class="weekly-section-title">🔄 習慣</div>';
     html += '<div class="weekly-row"><span>平均完成率</span><span class="weekly-row-val">'+avgRate+'%</span></div>';
