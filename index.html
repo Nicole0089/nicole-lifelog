@@ -644,6 +644,12 @@ input::placeholder { color: var(--tx3); }
 .food-edit-suggest-item:active, .food-edit-suggest-item:hover { background: var(--acl); }
 .food-edit-suggest-item .fes-sub { color: var(--tx3); font-size: 11px; white-space: nowrap; flex-shrink: 0; }
 .food-edit-qty-row select#food-edit-qty-unit-sel { font-size: 12px; color: var(--tx2); border: 1px solid var(--bd); border-radius: 6px; background: var(--bg3); padding: 6px; }
+.food-multi-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.food-multi-row { display: flex; gap: 6px; align-items: center; }
+.food-multi-row input[type="text"] { width: 100%; font-size: 13px; padding: 7px 8px; }
+.food-multi-row input[type="number"] { width: 56px; font-size: 13px; padding: 7px 4px; text-align: center; }
+.food-multi-row select { font-size: 12px; color: var(--tx2); border: 1px solid var(--bd); border-radius: 6px; background: var(--bg3); padding: 6px 2px; flex-shrink: 0; }
+.food-multi-remove { flex-shrink: 0; border: none; background: none; color: var(--tx3); font-size: 16px; cursor: pointer; padding: 4px 6px; }
 /* Calculator overlay */
 .food-calc-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 195; display: flex; align-items: flex-end; justify-content: center; }
 .food-calc-overlay.hidden { display: none; }
@@ -1975,6 +1981,15 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         </select>
       </div>
       <div style="font-size:11px;color:var(--tx3);margin-top:4px" id="food-edit-qty-base"></div>
+    </div>
+    <div class="sf-row" style="margin-top:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <label class="sf-label">多食材加總（選填）</label>
+        <button type="button" class="btn-ghost" id="food-multi-toggle-btn" style="padding:4px 10px;font-size:12px">➕ 加入食材</button>
+      </div>
+      <div class="food-multi-list hidden" id="food-multi-list"></div>
+      <button type="button" class="btn-ghost hidden" id="food-multi-add-row-btn" style="margin-top:6px;font-size:12px;width:100%">+ 新增一項食材</button>
+      <button type="button" class="btn-primary hidden" id="food-multi-sum-btn" style="margin-top:8px;font-size:13px;padding:7px;width:100%">加總並帶入上方欄位</button>
     </div>
     <div class="sf-row" style="margin-top:12px">
       <label class="sf-label">餐別</label>
@@ -4986,6 +5001,12 @@ function _resetFoodEditAutocomplete(){
   var qr=$('food-edit-qty-row'); if(qr) qr.classList.add('hidden');
   var qi=$('food-edit-qty'); if(qi) qi.value='';
   var qb=$('food-edit-qty-base'); if(qb) qb.textContent='';
+  /* 多食材加總重置 */
+  _foodMultiData = {};
+  var ml=$('food-multi-list'); if(ml){ml.innerHTML='';ml.classList.add('hidden');}
+  var mab=$('food-multi-add-row-btn'); if(mab) mab.classList.add('hidden');
+  var msb=$('food-multi-sum-btn'); if(msb) msb.classList.add('hidden');
+  var mtb=$('food-multi-toggle-btn'); if(mtb) mtb.textContent='➕ 加入食材';
 }
 function _foodEditSearchList(kw){
   kw=(kw||'').trim().toLowerCase();
@@ -5057,6 +5078,99 @@ function _foodEditApplyQty(){
   }
   var qi=$('food-edit-qty'); if(qi) qi.addEventListener('input',_foodEditApplyQty);
   var us=$('food-edit-qty-unit'); if(us) us.addEventListener('change',_foodEditApplyQty);
+})();
+
+/* ── 多食材加總（方案C） ── */
+var _foodMultiData = {};
+var _foodMultiIdx = 0;
+var _FOOD_MULTI_UNITS = ['g','ml','份','碗','杯','個','片','湯匙','茶匙'];
+function _foodMultiAddRow(){
+  var list=$('food-multi-list'); if(!list) return;
+  var idx=_foodMultiIdx++;
+  var div=document.createElement('div');
+  div.className='food-multi-row';
+  div.dataset.idx=idx;
+  div.innerHTML='<div style="position:relative;flex:1">'+
+      '<input type="text" class="food-multi-name" placeholder="食材名稱（可搜尋）" autocomplete="off">'+
+      '<div class="food-edit-suggest hidden"></div>'+
+    '</div>'+
+    '<input type="number" class="food-multi-qty" min="0" step="0.1" placeholder="100" value="100">'+
+    '<select class="food-multi-unit">'+_FOOD_MULTI_UNITS.map(function(u){return '<option value="'+u+'">'+u+'</option>';}).join('')+'</select>'+
+    '<button type="button" class="food-multi-remove" title="移除">✕</button>';
+  list.appendChild(div);
+  list.classList.remove('hidden');
+  var nameEl=div.querySelector('.food-multi-name');
+  var sugEl=div.querySelector('.food-edit-suggest');
+  function _renderSug(){
+    var l=_foodEditSearchList(nameEl.value);
+    if(!l.length){sugEl.classList.add('hidden');sugEl.innerHTML='';sugEl._list=null;return;}
+    sugEl.innerHTML=l.map(function(f,i){
+      var sub=f.isPrivate?('每'+f.unit+' '+r1(f.cal)+'kcal'):('每100g '+r1(f.cal)+'kcal');
+      return '<div class="food-edit-suggest-item" data-idx="'+i+'"><span>'+esc(f.name)+'</span><span class="fes-sub">'+sub+'</span></div>';
+    }).join('');
+    sugEl._list=l;
+    sugEl.classList.remove('hidden');
+  }
+  nameEl.addEventListener('input',function(){ delete _foodMultiData[idx]; _renderSug(); });
+  nameEl.addEventListener('focus',function(){ if(this.value.trim()) _renderSug(); });
+  nameEl.addEventListener('blur',function(){ setTimeout(function(){sugEl.classList.add('hidden');sugEl.innerHTML='';},150); });
+  sugEl.addEventListener('click',function(e){
+    var item=e.target.closest('.food-edit-suggest-item'); if(!item) return;
+    var l=this._list||[]; var f=l[+item.dataset.idx]; if(!f) return;
+    nameEl.value=f.name;
+    _foodMultiData[idx]=f;
+    div.querySelector('.food-multi-qty').value=f.isPrivate?1:100;
+    div.querySelector('.food-multi-unit').value=f.unit;
+    this.classList.add('hidden'); this.innerHTML='';
+  });
+  div.querySelector('.food-multi-remove').addEventListener('click',function(){
+    delete _foodMultiData[idx];
+    div.remove();
+  });
+  setTimeout(function(){nameEl.focus();},50);
+}
+function _foodMultiSum(){
+  var list=$('food-multi-list'); if(!list) return;
+  var rows=list.querySelectorAll('.food-multi-row');
+  if(!rows.length) return;
+  var totalCal=0,totalPro=0,totalCarb=0,totalFat=0; var names=[];
+  rows.forEach(function(div){
+    var idx=+div.dataset.idx;
+    var name=(div.querySelector('.food-multi-name').value||'').trim();
+    var qty=parseFloat(div.querySelector('.food-multi-qty').value)||0;
+    var unit=div.querySelector('.food-multi-unit').value;
+    if(name) names.push(name+(qty?(qty+unit):''));
+    var f=_foodMultiData[idx];
+    if(f && unit===f.unit){
+      var ratio=f.isPrivate?qty:(qty/100);
+      totalCal+=f.cal*ratio; totalPro+=f.pro*ratio; totalCarb+=f.carb*ratio; totalFat+=f.fat*ratio;
+    }
+  });
+  if(!names.length) return;
+  $('food-edit-name').value=names.join('+');
+  $('food-edit-cal').value=r1(totalCal);
+  $('food-edit-pro').value=r1(totalPro);
+  $('food-edit-carb').value=r1(totalCarb);
+  $('food-edit-fat').value=r1(totalFat);
+  _foodEditPicked=null;
+  var qr=$('food-edit-qty-row'); if(qr) qr.classList.add('hidden');
+  var sg=$('food-edit-suggest'); if(sg){sg.classList.add('hidden');sg.innerHTML='';}
+}
+(function(){
+  var tb=$('food-multi-toggle-btn');
+  if(tb) tb.addEventListener('click',function(){
+    var list=$('food-multi-list'), addBtn=$('food-multi-add-row-btn'), sumBtn=$('food-multi-sum-btn');
+    if(list.classList.contains('hidden')){
+      list.classList.remove('hidden'); addBtn.classList.remove('hidden'); sumBtn.classList.remove('hidden');
+      if(!list.children.length) _foodMultiAddRow();
+      this.textContent='收合多食材加總';
+    } else {
+      list.classList.add('hidden'); addBtn.classList.add('hidden'); sumBtn.classList.add('hidden');
+      this.textContent='➕ 加入食材';
+    }
+  });
+  var ab=$('food-multi-add-row-btn'); if(ab) ab.addEventListener('click',_foodMultiAddRow);
+  var sb=$('food-multi-sum-btn'); if(sb) sb.addEventListener('click',_foodMultiSum);
 })();
 function closeFoodEdit(){$('food-edit-overlay').classList.add('hidden');}
 function saveFoodEdit(){
