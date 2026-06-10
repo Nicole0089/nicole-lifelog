@@ -638,6 +638,12 @@ input::placeholder { color: var(--tx3); }
 .food-nut-input-row { display: flex; align-items: center; gap: 6px; }
 .food-nut-input-row input { flex: 1; text-align: center; font-size: 15px; padding: 8px; }
 .food-nut-input-row span { font-size: 12px; color: var(--tx3); white-space: nowrap; }
+.food-edit-suggest { position: absolute; left: 0; right: 0; top: 100%; margin-top: 2px; background: var(--bg3); border: 1px solid var(--bd); border-radius: 10px; max-height: 180px; overflow-y: auto; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.10); }
+.food-edit-suggest-item { padding: 8px 12px; font-size: 13px; color: var(--tx); border-bottom: 1px solid var(--bd); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.food-edit-suggest-item:last-child { border-bottom: none; }
+.food-edit-suggest-item:active, .food-edit-suggest-item:hover { background: var(--acl); }
+.food-edit-suggest-item .fes-sub { color: var(--tx3); font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+.food-edit-qty-row select#food-edit-qty-unit-sel { font-size: 12px; color: var(--tx2); border: 1px solid var(--bd); border-radius: 6px; background: var(--bg3); padding: 6px; }
 /* Calculator overlay */
 .food-calc-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 195; display: flex; align-items: flex-end; justify-content: center; }
 .food-calc-overlay.hidden { display: none; }
@@ -1947,9 +1953,28 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <span style="font-size:15px;font-weight:600;color:var(--tx)">新增飲食記錄</span>
       <button class="btn-primary" id="food-edit-save-btn" style="padding:7px 16px;font-size:13px">儲存</button>
     </div>
-    <div class="sf-row">
+    <div class="sf-row" style="position:relative">
       <div class="food-edit-mode-label" id="food-edit-mode-lbl">新增飲食記錄</div>
-    <input type="text" id="food-edit-name" placeholder="食物名稱" maxlength="60" autocomplete="off" style="width:100%;font-size:16px">
+    <input type="text" id="food-edit-name" placeholder="食物名稱（可搜尋食物資料庫）" maxlength="60" autocomplete="off" style="width:100%;font-size:16px">
+    <div class="food-edit-suggest hidden" id="food-edit-suggest"></div>
+    </div>
+    <div class="sf-row food-edit-qty-row hidden" id="food-edit-qty-row" style="margin-top:10px">
+      <label class="sf-label">份量</label>
+      <div class="food-nut-input-row" style="max-width:160px">
+        <input type="number" id="food-edit-qty" min="0" step="0.1" placeholder="100">
+        <select id="food-edit-qty-unit">
+          <option value="g">g</option>
+          <option value="ml">ml</option>
+          <option value="份">份</option>
+          <option value="碗">碗</option>
+          <option value="杯">杯</option>
+          <option value="個">個</option>
+          <option value="片">片</option>
+          <option value="湯匙">湯匙</option>
+          <option value="茶匙">茶匙</option>
+        </select>
+      </div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:4px" id="food-edit-qty-base"></div>
     </div>
     <div class="sf-row" style="margin-top:12px">
       <label class="sf-label">餐別</label>
@@ -4535,7 +4560,7 @@ function renderFoodHistory() {
     var pro=items.reduce(function(a,x){return a+(+x.protein||0);},0);
     var carb=items.reduce(function(a,x){return a+(+x.carbs||0);},0);
     var lbl=foodDateLabel(dk);
-    var totTxt=(cal>0?cal+'kcal':'')+( pro>0?' · 蛋白質'+Math.round(pro*10)/10+'g':'')+( carb>0?' · 碳水'+Math.round(carb*10)/10+'g':'');
+    var totTxt=(cal>0?r1(cal)+'kcal':'')+( pro>0?' · 蛋白質'+r1(pro)+'g':'')+( carb>0?' · 碳水'+r1(carb)+'g':'');
     return '<div class="food-history-group">'+
       '<div class="food-history-group-hdr" data-dk="'+dk+'">'+
         '<span class="food-history-date">'+lbl.main+'</span>'+
@@ -4544,8 +4569,8 @@ function renderFoodHistory() {
       '</div>'+
       '<div class="food-history-items"'+(kw?'':' style="display:none"')+'>'+
         items.map(function(l){
-          var nutChips=(l.calories?'<span class="food-nut-chip">'+l.calories+'kcal</span>':'')+
-                       (l.protein?'<span class="food-nut-chip"> 蛋白'+Math.round(+l.protein*10)/10+'g</span>':'');
+          var nutChips=(l.calories?'<span class="food-nut-chip">'+r1(l.calories)+'kcal</span>':'')+
+                       (l.protein?'<span class="food-nut-chip"> 蛋白'+r1(l.protein)+'g</span>':'');
           return '<div class="food-log-item" data-id="'+l.id+'">'+
             '<div class="food-log-body">'+
               '<div class="food-log-text">'+esc(l.text||l.name||'')+'</div>'+
@@ -4620,9 +4645,9 @@ function renderFood() {
   else { if(fWarn)fWarn.remove(); }
   if(!items.length){list.innerHTML='<div style="text-align:center;color:var(--tx3);font-size:12px;padding:16px">今日尚無飲食記錄</div>';return;}
   list.innerHTML=items.slice().reverse().map(function(l){
-    var nutChips=(l.calories?'<span class="food-nut-chip">'+l.calories+'kcal</span>':'')+
-                 (l.protein?'<span class="food-nut-chip"> 蛋白'+Math.round(+l.protein*10)/10+'g</span>':'')+
-                 (l.carbs?'<span class="food-nut-chip"> 碳水'+Math.round(+l.carbs*10)/10+'g</span>':'');
+    var nutChips=(l.calories?'<span class="food-nut-chip">'+r1(l.calories)+'kcal</span>':'')+
+                 (l.protein?'<span class="food-nut-chip"> 蛋白'+r1(l.protein)+'g</span>':'')+
+                 (l.carbs?'<span class="food-nut-chip"> 碳水'+r1(l.carbs)+'g</span>':'');
     return '<div class="food-log-item" data-id="'+l.id+'">'+
       '<div class="food-log-body">'+
         '<div class="food-log-text">'+esc(l.text||l.name||'')+'</div>'+
@@ -4937,6 +4962,7 @@ function openFoodEdit(){
   ['cal','pro','carb','fat'].forEach(function(k){var el=$('food-edit-'+k);if(el)el.value='';}); var _fn3=$('food-edit-note');if(_fn3)_fn3.value='';
   var lbl=$('food-edit-mode-lbl');if(lbl)lbl.textContent='新增飲食記錄';
   document.querySelectorAll('#food-meal-btns .food-meal-btn').forEach(function(b){b.classList.toggle('sel',b.dataset.meal==='早餐');});
+  _resetFoodEditAutocomplete();
   $('food-edit-overlay').classList.remove('hidden');
   setTimeout(function(){var n=$('food-edit-name');if(n)n.focus();},150);
 }
@@ -4949,8 +4975,89 @@ function openFoodEditById(id){
   var lbl=$('food-edit-mode-lbl');if(lbl)lbl.textContent='修改飲食記錄';
   var _fn2=$('food-edit-note');if(_fn2)_fn2.value=l.note||'';
   document.querySelectorAll('#food-meal-btns .food-meal-btn').forEach(function(b){b.classList.toggle('sel',b.dataset.meal===_foodEditMeal);});
+  _resetFoodEditAutocomplete();
   $('food-edit-overlay').classList.remove('hidden');
 }
+/* ── 食物資料庫自動帶入（方案A） ── */
+var _foodEditPicked = null;
+function _resetFoodEditAutocomplete(){
+  _foodEditPicked = null;
+  var sg=$('food-edit-suggest'); if(sg){sg.classList.add('hidden'); sg.innerHTML='';}
+  var qr=$('food-edit-qty-row'); if(qr) qr.classList.add('hidden');
+  var qi=$('food-edit-qty'); if(qi) qi.value='';
+  var qb=$('food-edit-qty-base'); if(qb) qb.textContent='';
+}
+function _foodEditSearchList(kw){
+  kw=(kw||'').trim().toLowerCase();
+  if(!kw) return [];
+  var results=[];
+  (_privateFoods||[]).forEach(function(f){
+    if((f.name||'').toLowerCase().indexOf(kw)!==-1){
+      results.push({name:f.name,cal:+f.cal||0,pro:+f.pro||0,carb:+f.carb||0,fat:+f.fat||0,unit:f.unit||'份',base:1,isPrivate:true});
+    }
+  });
+  (FOOD_DB||[]).forEach(function(f){
+    if((f.name||'').toLowerCase().indexOf(kw)!==-1){
+      results.push({name:f.name,cal:+f.cal||0,pro:+f.pro||0,carb:+f.carb||0,fat:+f.fat||0,unit:'g',base:100,isPrivate:false});
+    }
+  });
+  return results.slice(0,8);
+}
+function renderFoodEditSuggest(){
+  var box=$('food-edit-suggest'); if(!box) return;
+  var kw=$('food-edit-name').value;
+  var list=_foodEditSearchList(kw);
+  if(!list.length){box.classList.add('hidden');box.innerHTML='';box._list=null;return;}
+  box.innerHTML=list.map(function(f,i){
+    var sub=f.isPrivate?('每'+f.unit+' '+r1(f.cal)+'kcal'):('每100g '+r1(f.cal)+'kcal');
+    return '<div class="food-edit-suggest-item" data-idx="'+i+'"><span>'+esc(f.name)+'</span><span class="fes-sub">'+sub+'</span></div>';
+  }).join('');
+  box._list=list;
+  box.classList.remove('hidden');
+}
+function _foodEditApplyQty(){
+  if(!_foodEditPicked) return;
+  var unitSel=$('food-edit-qty-unit'); var unit=unitSel?unitSel.value:_foodEditPicked.unit;
+  /* 只有當單位與資料庫基準單位一致時才自動換算 */
+  if(unit!==_foodEditPicked.unit) return;
+  var qty=parseFloat($('food-edit-qty').value)||0;
+  var f=_foodEditPicked;
+  var ratio=f.isPrivate?qty:(qty/100);
+  $('food-edit-cal').value=r1(f.cal*ratio);
+  $('food-edit-pro').value=r1(f.pro*ratio);
+  $('food-edit-carb').value=r1(f.carb*ratio);
+  $('food-edit-fat').value=r1(f.fat*ratio);
+}
+(function(){
+  var nameEl=$('food-edit-name');
+  if(nameEl){
+    nameEl.addEventListener('input',function(){
+      _foodEditPicked=null;
+      var qr=$('food-edit-qty-row'); if(qr) qr.classList.add('hidden');
+      renderFoodEditSuggest();
+    });
+    nameEl.addEventListener('focus',function(){ if(this.value.trim()) renderFoodEditSuggest(); });
+    nameEl.addEventListener('blur',function(){ setTimeout(function(){ var sg=$('food-edit-suggest'); if(sg){sg.classList.add('hidden'); sg.innerHTML='';} },150); });
+  }
+  var sg=$('food-edit-suggest');
+  if(sg){
+    sg.addEventListener('click',function(e){
+      var item=e.target.closest('.food-edit-suggest-item'); if(!item) return;
+      var list=this._list||[]; var f=list[+item.dataset.idx]; if(!f) return;
+      _foodEditPicked=f;
+      $('food-edit-name').value=f.name;
+      this.classList.add('hidden'); this.innerHTML='';
+      var qr=$('food-edit-qty-row'); if(qr) qr.classList.remove('hidden');
+      var qi=$('food-edit-qty'); if(qi) qi.value=f.isPrivate?1:100;
+      var us=$('food-edit-qty-unit'); if(us) us.value=f.unit;
+      var qb=$('food-edit-qty-base');
+      if(qb) qb.textContent='每'+(f.isPrivate?f.unit:'100g')+'：'+r1(f.cal)+'kcal · 蛋白'+r1(f.pro)+'g · 碳水'+r1(f.carb)+'g · 脂肪'+r1(f.fat)+'g';
+      _foodEditApplyQty();
+    });
+  }
+  var qi=$('food-edit-qty'); if(qi) qi.addEventListener('input',_foodEditApplyQty);
+  var us=$('food-edit-qty-unit'); if(us) us.addEventListener('change',_foodEditApplyQty);
+})();
 function closeFoodEdit(){$('food-edit-overlay').classList.add('hidden');}
 function saveFoodEdit(){
   var name=($('food-edit-name').value||'').trim();
