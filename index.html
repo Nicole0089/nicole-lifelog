@@ -1167,9 +1167,9 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .recipe-tab.active { color: var(--acd); font-weight: 600; }
 .recipe-tab.active::after { content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 2px; background: var(--ac); border-radius: 1px; }
 /* Modal */
-.recipe-modal-overlay { position: fixed; inset: 0; background: rgba(61,40,40,0.55); z-index: 400; overflow-y: auto; padding: 16px 10px 32px; display: none; }
+.recipe-modal-overlay { position: fixed; inset: 0; background: rgba(61,40,40,0.55); z-index: 400; overflow-y: auto; padding: 16px 10px 32px; display: none; cursor: pointer; }
 .recipe-modal-overlay.open { display: block; }
-.recipe-modal { background: var(--bg); border-radius: 16px; max-width: 460px; margin: 0 auto; overflow: hidden; }
+.recipe-modal { background: var(--bg); border-radius: 16px; max-width: 460px; margin: 0 auto; overflow: hidden; cursor: default; }
 .recipe-modal-top { background: var(--ac); color: #fff; padding: 14px 14px 10px; position: relative; }
 .recipe-modal-top.dessert { background: #9A6898; }
 .recipe-modal-num { font-size: 22px; font-weight: 900; opacity: .85; }
@@ -1956,7 +1956,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         </div>
         <div class="recipe-grid" id="dessert-grid"></div>
       </div>
-    </div>
 
       <!-- 🔢 試算頁籤 -->
       <div id="recipe-view-calc" style="display:none; padding-bottom:80px;">
@@ -2009,7 +2008,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
     </div>
 
     <!-- 食譜 Modal -->
-    <div class="recipe-modal-overlay" id="recipe-modal-overlay" onclick="closeRecipeModal(event)">
+    <div class="recipe-modal-overlay" id="recipe-modal-overlay">
       <div class="recipe-modal" id="recipe-modal-content"></div>
     </div>
 
@@ -8129,6 +8128,13 @@ function updateNotifSettingsUI(){
 function init() {
   $('hdr-title').textContent = CONFIG.appName;
   initModal(); initChoreModal();
+  /* 食譜 Modal 關閉：用 addEventListener 取代 inline onclick，iOS 更可靠 */
+  (function(){
+    var ov = document.getElementById('recipe-modal-overlay');
+    if (ov) ov.addEventListener('click', function(e){
+      if (e.target === ov || !e.target.closest('.recipe-modal')) closeRecipeModal();
+    });
+  })();
   /* Register Service Worker for mobile notifications */
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').then(function(reg){
@@ -8614,7 +8620,7 @@ function openRecipeModal(num, isDessert) {
   var content = document.getElementById('recipe-modal-content');
   content.innerHTML =
     '<div class="'+topClass+'">' +
-      '<button class="recipe-modal-close" onclick="closeRecipeModal()">✕</button>' +
+      '<button class="recipe-modal-close" onclick="event.stopPropagation();closeRecipeModal()">✕</button>' +
       '<div class="recipe-modal-num">'+data.num+'</div>' +
       '<div class="recipe-modal-name">'+data.name+'</div>' +
       '<div class="recipe-modal-meta">' +
@@ -8636,7 +8642,6 @@ function openRecipeModal(num, isDessert) {
 
   var overlay = document.getElementById('recipe-modal-overlay');
   if (overlay) overlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
 }
 
 /* ── 飲食記錄儲存選擇彈窗 ── */
@@ -8770,7 +8775,6 @@ function closeRecipeModal(e) {
   if (e && e.target && e.target.closest && e.target.closest('.recipe-modal')) return;
   var overlay = document.getElementById('recipe-modal-overlay');
   if (overlay) overlay.classList.remove('open');
-  document.body.style.overflow = '';
   _modalData = null;
   _modalServings = 1;
   _logMeal = guessCurrentMeal ? guessCurrentMeal() : '午餐';
@@ -8836,124 +8840,151 @@ function rcalcAddToLog() {
 }
 
 function rcalcRenderDB(keyword) {
-  var db = document.getElementById('rcalc-db'); if (!db) return;
+  var db = document.getElementById('rcalc-db');
+  if (!db) return;
   keyword = (keyword || '').trim();
-  var htmlStr = '';
+  var out = '';
 
-  function isDeleted(cat, name) {
-    return (typeof _deletedStdFoods !== 'undefined') && _deletedStdFoods.some(function(d){ return d.cat === cat && d.name === name; });
+  function isDel(cat, name) {
+    return (typeof _deletedStdFoods !== 'undefined') &&
+      _deletedStdFoods.some(function(d){ return d.cat===cat && d.name===name; });
   }
   function itemHtml(f) {
-    var isPriv = !!f.isPrivate;
-    var vals = isPriv
-      ? '每' + (f.unit || '份') + '：' + f.cal + 'kcal / 蛋白' + f.pro + 'g / 碳水' + f.carb + 'g'
-      : '每100g：' + f.cal + 'kcal / 蛋白' + f.pro + 'g / 碳水' + f.carb + 'g';
-    return '<div class="food-calc-db-item rcalc-item" style="cursor:pointer" data-rcalc-name="' + esc(f.name) + '" data-rcalc-priv="' + (isPriv ? '1' : '0') + '">' +
-      '<div class="food-calc-db-name">' + esc(f.name) + '</div>' +
-      '<div class="food-calc-db-vals">' + vals + '</div></div>';
+    var priv = !!f.isPrivate;
+    var sub  = priv
+      ? '每'+(f.unit||'份')+'：'+f.cal+'kcal / 蛋白'+f.pro+'g / 碳水'+f.carb+'g'
+      : '每100g：'+f.cal+'kcal / 蛋白'+f.pro+'g / 碳水'+f.carb+'g';
+    return '<div class="food-calc-db-item rcalc-item" style="cursor:pointer"' +
+      ' data-rcalc-name="'+esc(f.name)+'" data-rcalc-priv="'+(priv?'1':'0')+'">' +
+      '<div class="food-calc-db-name">'+esc(f.name)+'</div>' +
+      '<div class="food-calc-db-vals">'+sub+'</div></div>';
   }
 
   if (keyword) {
-    // 搜尋模式：全庫比對，直接列出結果
-    var allFoods = [];
+    // ── 搜尋模式 ────────────────────────────────────────────
+    var all = [];
     if (typeof FOOD_DB_CATEGORIES !== 'undefined') {
       FOOD_DB_CATEGORIES.forEach(function(cat) {
-        cat.items.filter(function(item){ return !isDeleted(cat.cat, item.name); })
-          .forEach(function(item){ allFoods.push(Object.assign({ cat: cat.cat }, item)); });
+        cat.items.filter(function(i){ return !isDel(cat.cat,i.name); })
+          .forEach(function(i){ all.push(Object.assign({cat:cat.cat},i)); });
       });
     }
-    if (typeof _customFoods !== 'undefined') _customFoods.forEach(function(f){ allFoods.push(Object.assign({}, f)); });
-    if (typeof _privateFoods !== 'undefined') _privateFoods.forEach(function(f){ allFoods.push(Object.assign({ isPrivate: true }, f)); });
-    var list = allFoods.filter(function(f){ return f.name.indexOf(keyword) >= 0; });
-    if (list.length) {
-      htmlStr = '<div class="food-calc-cat-grid">' + list.map(itemHtml).join('') + '</div>';
-    } else {
-      htmlStr = '<div style="text-align:center;padding:32px 20px;color:var(--tx3);font-size:13px">找不到「' + esc(keyword) + '」<br><span style="font-size:11px">試試其他關鍵字</span></div>';
-    }
+    if (typeof _customFoods  !== 'undefined') _customFoods.forEach(function(f){ all.push(Object.assign({},f)); });
+    if (typeof _privateFoods !== 'undefined') _privateFoods.forEach(function(f){ all.push(Object.assign({isPrivate:true},f)); });
+    var res = all.filter(function(f){ return f.name.indexOf(keyword)>=0; });
+    out = res.length
+      ? '<div class="food-calc-cat-grid">'+res.map(itemHtml).join('')+'</div>'
+      : '<div style="text-align:center;padding:24px;color:var(--tx3);font-size:13px">找不到「'+esc(keyword)+'」</div>';
+
   } else {
-    // 瀏覽模式：分類標題 + 可折疊列表
+    // ── 瀏覽模式 ────────────────────────────────────────────
     // 私人菜單
     if (typeof _privateFoods !== 'undefined' && _privateFoods.length) {
-      var privOpen = _calcCatOpen['__private__'] === true; // 預設收起
-      htmlStr += '<button class="food-calc-cat-toggle rcalc-cat-toggle" data-cat="__private__">' +
-        '<span>🍱 私人菜單</span><span class="cat-arrow">' + (privOpen ? '▲' : '▼') + '</span></button>';
-      if (privOpen) {
-        htmlStr += '<div class="food-calc-cat-grid">' +
-          _privateFoods.map(function(f){ return itemHtml(Object.assign({ isPrivate: true }, f)); }).join('') + '</div>';
+      var pOpen = _calcCatOpen['__private__'] === true;
+      out += '<button class="food-calc-cat-toggle rcalc-cat-toggle" data-cat="__private__">' +
+        '<span>🍱 私人菜單 <span style="font-size:10px;color:var(--tx3)">('+_privateFoods.length+')</span></span>' +
+        '<span class="cat-arrow">'+(pOpen?'▲':'▼')+'</span></button>';
+      if (pOpen) {
+        out += '<div class="food-calc-cat-grid">'+
+          _privateFoods.map(function(f){ return itemHtml(Object.assign({isPrivate:true},f)); }).join('')+
+          '</div>';
       }
     }
-    // 標準分類：全部展開顯示，可點選分類標題折疊
+
+    // 標準分類
     if (typeof FOOD_DB_CATEGORIES !== 'undefined' && FOOD_DB_CATEGORIES.length) {
-      FOOD_DB_CATEGORIES.forEach(function(cat, catIdx) {
-        var visItems = cat.items.filter(function(item){ return !isDeleted(cat.cat, item.name); });
-        var customs = (typeof _customFoods !== 'undefined') ? _customFoods.filter(function(f){ return (f.cat || '') === cat.cat; }) : [];
-        var total = visItems.length + customs.length;
-        if (!total) return;
-        // 第一個分類預設展開，其餘收起；使用者點過後記住狀態
-        var catOpen = (typeof _calcCatOpen[cat.cat] === 'undefined')
-          ? (catIdx === 0)
-          : (_calcCatOpen[cat.cat] === true);
-        htmlStr += '<button class="food-calc-cat-toggle rcalc-cat-toggle" data-cat="' + esc(cat.cat) + '">' +
-          '<span>' + cat.cat + ' <span style="font-size:10px;color:var(--tx3)">(' + total + ')</span></span>' +
-          '<span class="cat-arrow">' + (catOpen ? '▲' : '▼') + '</span></button>';
-        if (catOpen) {
-          htmlStr += '<div class="food-calc-cat-grid">';
-          htmlStr += visItems.map(function(item){ return itemHtml(Object.assign({ cat: cat.cat }, item)); }).join('');
-          if (customs.length) htmlStr += customs.map(function(f){ return itemHtml(f); }).join('');
-          htmlStr += '</div>';
+      FOOD_DB_CATEGORIES.forEach(function(cat, ci) {
+        var items   = cat.items.filter(function(i){ return !isDel(cat.cat,i.name); });
+        var customs = typeof _customFoods !== 'undefined'
+          ? _customFoods.filter(function(f){ return (f.cat||'')===cat.cat; }) : [];
+        if (!items.length && !customs.length) return;
+
+        // 第一個分類預設展開，其餘收起
+        if (typeof _calcCatOpen[cat.cat] === 'undefined') {
+          _calcCatOpen[cat.cat] = (ci === 0);
+        }
+        var open = _calcCatOpen[cat.cat] === true;
+
+        out += '<button class="food-calc-cat-toggle rcalc-cat-toggle" data-cat="'+esc(cat.cat)+'">' +
+          '<span>'+cat.cat+' <span style="font-size:10px;color:var(--tx3)">'+(items.length+customs.length)+'</span></span>' +
+          '<span class="cat-arrow">'+(open?'▲':'▼')+'</span></button>';
+
+        if (open) {
+          out += '<div class="food-calc-cat-grid">';
+          out += items.map(function(i){ return itemHtml(Object.assign({cat:cat.cat},i)); }).join('');
+          out += customs.map(function(f){ return itemHtml(f); }).join('');
+          out += '</div>';
         }
       });
     } else {
-      htmlStr = '<div style="text-align:center;padding:32px 20px;color:var(--tx3);font-size:13px">⏳ 食物資料庫載入中…</div>';
+      out = '<div style="text-align:center;padding:24px;color:var(--tx3);font-size:13px">⏳ 載入中…</div>';
     }
-    // 若產生的 htmlStr 只有 toggle 按鈕（沒有展開內容），加提示
-    if (!htmlStr) {
-      htmlStr = '<div style="text-align:center;padding:32px 20px;color:var(--tx3);font-size:13px">點擊分類標題展開食物列表</div>';
+
+    // 自訂食物（未分類）
+    if (typeof _customFoods !== 'undefined') {
+      var cats = typeof FOOD_DB_CATEGORIES !== 'undefined'
+        ? FOOD_DB_CATEGORIES.map(function(c){ return c.cat; }) : [];
+      var unc = _customFoods.filter(function(f){ return !f.cat || cats.indexOf(f.cat)<0; });
+      if (unc.length) {
+        var uOpen = _calcCatOpen['__other__'] === true;
+        out += '<button class="food-calc-cat-toggle rcalc-cat-toggle" data-cat="__other__">' +
+          '<span>⭐ 其他自訂 <span style="font-size:10px;color:var(--tx3)">('+unc.length+')</span></span>' +
+          '<span class="cat-arrow">'+(uOpen?'▲':'▼')+'</span></button>';
+        if (uOpen) out += '<div class="food-calc-cat-grid">'+unc.map(itemHtml).join('')+'</div>';
+      }
     }
   }
 
-  db.innerHTML = htmlStr;
+  db.innerHTML = out;
 
-  // 類別折疊/展開 toggle
+  // toggle 折疊
   db.querySelectorAll('.rcalc-cat-toggle').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      var cat = btn.dataset.cat;
-      _calcCatOpen[cat] = !_calcCatOpen[cat];
-      rcalcRenderDB(document.getElementById('rcalc-search') ? document.getElementById('rcalc-search').value.trim() : '');
+      _calcCatOpen[btn.dataset.cat] = !_calcCatOpen[btn.dataset.cat];
+      rcalcRenderDB((document.getElementById('rcalc-search')||{}).value||'');
     });
   });
 
-  // 點選食物項目
+  // 點選食物
   db.querySelectorAll('.rcalc-item').forEach(function(el) {
     el.addEventListener('click', function() {
-      var name = el.dataset.rcalcName;
+      var name  = el.dataset.rcalcName;
       var isPriv = el.dataset.rcalcPriv === '1';
+      var found = null;
       if (isPriv) {
-        _rcalcSelected = Object.assign({}, (_privateFoods || []).find(function(f){ return f.name === name; }), { isPrivate: true });
-        var ul = document.getElementById('rcalc-unit-label'); if (ul) ul.textContent = _rcalcSelected.unit || '份';
-        var gi = document.getElementById('rcalc-grams'); if (gi) gi.value = 1;
+        found = (_privateFoods||[]).find(function(f){ return f.name===name; });
+        if (found) found = Object.assign({}, found, {isPrivate:true});
       } else {
-        var allFoods = [];
-        if (typeof FOOD_DB_CATEGORIES !== 'undefined') {
-          FOOD_DB_CATEGORIES.forEach(function(cat) {
-            cat.items.filter(function(item){ return !isDeleted(cat.cat, item.name); })
-              .forEach(function(item){ allFoods.push(Object.assign({ cat: cat.cat }, item)); });
+        var pool = [];
+        if (typeof FOOD_DB_CATEGORIES !== 'undefined')
+          FOOD_DB_CATEGORIES.forEach(function(cat){
+            cat.items.forEach(function(i){ pool.push(Object.assign({cat:cat.cat},i)); });
           });
-        }
-        if (typeof _customFoods !== 'undefined') _customFoods.forEach(function(f){ allFoods.push(Object.assign({}, f)); });
-        _rcalcSelected = allFoods.find(function(f){ return f.name === name; }) || null;
-        var ul2 = document.getElementById('rcalc-unit-label'); if (ul2) ul2.textContent = 'g';
-        var gi2 = document.getElementById('rcalc-grams');
-        if (gi2 && parseFloat(gi2.value) < 2) gi2.value = 100;
+        if (typeof _customFoods !== 'undefined')
+          _customFoods.forEach(function(f){ pool.push(Object.assign({},f)); });
+        found = pool.find(function(f){ return f.name===name; }) || null;
       }
-      // 高亮選中項目
-      db.querySelectorAll('.rcalc-item').forEach(function(i){ i.style.borderColor = ''; i.style.background = ''; });
+      if (!found) return;
+      _rcalcSelected = found;
+      var ul = document.getElementById('rcalc-unit-label');
+      var gi = document.getElementById('rcalc-grams');
+      if (isPriv) {
+        if (ul) ul.textContent = found.unit || '份';
+        if (gi) gi.value = 1;
+      } else {
+        if (ul) ul.textContent = 'g';
+        if (gi && parseFloat(gi.value) < 2) gi.value = 100;
+      }
+      db.querySelectorAll('.rcalc-item').forEach(function(i){
+        i.style.borderColor=''; i.style.background='';
+      });
       el.style.borderColor = 'var(--ac)';
-      el.style.background = 'var(--acl)';
+      el.style.background  = 'var(--acl)';
       rcalcUpdateResult();
     });
   });
 }
+
 
 function rcalcRenderTodayBar() {
   var bar = document.getElementById('rcalc-today-bar'); if (!bar) return;
@@ -9056,12 +9087,9 @@ function renderRecipeCalc() {
   _rcalcSelected = null;
   var res = document.getElementById('rcalc-result'); if (res) res.style.display = 'none';
   var si = document.getElementById('rcalc-search'); if (si) si.value = '';
-  // 確保第一個分類是展開的
+  // 確保第一個分類是展開的（強制，不論之前是否被飲食頁關閉）
   if (typeof FOOD_DB_CATEGORIES !== 'undefined' && FOOD_DB_CATEGORIES.length) {
-    var firstCat = FOOD_DB_CATEGORIES[0].cat;
-    if (typeof _calcCatOpen[firstCat] === 'undefined') {
-      _calcCatOpen[firstCat] = true;
-    }
+    _calcCatOpen[FOOD_DB_CATEGORIES[0].cat] = true;
   }
   rcalcRenderTodayBar();
   rcalcRenderTodayFoods();
