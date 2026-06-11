@@ -355,6 +355,11 @@ input::placeholder { color: var(--tx3); }
 .repeat-wd-btn.sel { border-color: var(--ac); background: var(--ac); color: #fff; font-weight: 600; }
 .repeat-time-row { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
 .repeat-time-label { font-size: 14px; color: var(--tx2); width: 60px; flex-shrink: 0; }
+.repeat-end-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; padding: 1px 6px; border-radius: 8px; font-weight: 600; }
+.repeat-end-badge.date { background: #EEF3FF; color: #4A6ACA; }
+.repeat-end-badge.count { background: #FFF3E8; color: #B07030; }
+.repeat-end-badge.urgent { background: #FFE8E8; color: #C03030; }
+.repeat-end-badge.ended { background: var(--bg3); color: var(--tx3); }
 .repeat-time-row input[type=time] { flex: 1; }
 .repeat-section-label { font-size: 11px; color: var(--ac); letter-spacing: 2px; margin-bottom: 12px; border-top: 0.5px solid var(--bd); padding-top: 16px; }
 .repeat-end-option { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 0.5px solid var(--bd); }
@@ -658,7 +663,7 @@ input::placeholder { color: var(--tx3); }
 .food-multi-row input[type="number"] { width: 56px; font-size: 13px; padding: 7px 4px; text-align: center; }
 .food-multi-row select { font-size: 12px; color: var(--tx2); border: 1px solid var(--bd); border-radius: 6px; background: var(--bg3); padding: 6px 2px; flex-shrink: 0; }
 .food-multi-remove { flex-shrink: 0; border: none; background: none; color: var(--tx3); font-size: 16px; cursor: pointer; padding: 4px 6px; }
-.food-fav-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.food-fav-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; align-items: center; }
 .food-fav-chip-wrap { position: relative; display: inline-flex; align-items: center; }
 .food-fav-chip { padding: 5px 20px 5px 10px; border: 1px solid var(--bd); border-radius: 14px; background: var(--bg3); font-size: 12px; color: var(--tx2); cursor: pointer; white-space: nowrap; }
 .food-fav-chip.is-fav { border-color: var(--ac); background: var(--acl); color: var(--acd); }
@@ -706,9 +711,23 @@ input::placeholder { color: var(--tx3); }
 .bd-num { width: 64px; padding: 6px 8px; border: 0.5px solid var(--bd); border-radius: var(--r); background: var(--bg); color: var(--tx); font-size: 14px; font-family: var(--font); }
 .bd-num:focus { outline: none; border-color: var(--ac); }
 .bd-unit { font-size: 12px; color: var(--tx3); }
-.bd-section-lbl { font-size: 12px; color: var(--tx2); margin-bottom: 6px; }
-.bd-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.bd-chip { padding: 6px 12px; border-radius: 20px; border: 1px solid var(--bd); background: var(--bg3); color: var(--tx2); font-size: 13px; font-family: var(--font); cursor: pointer; transition: all 0.15s; }
+/* ── 身體數據 grid 排版 ── */
+.bd-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.bd-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.bd-field { min-width: 0; }
+.bd-lbl { font-size: 12px; color: var(--tx2); display: block; margin-bottom: 5px; font-weight: 500; }
+.bd-gender-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.bd-gender-btn { padding: 8px 4px; border-radius: var(--rr); border: 1px solid var(--bd); background: var(--bg3); color: var(--tx2); font-size: 14px; font-family: var(--font); cursor: pointer; text-align: center; transition: all 0.15s; width: 100%; }
+.bd-gender-btn.sel { background: var(--acl); border-color: var(--ac); color: var(--acd); font-weight: 600; }
+.bd-input-row { display: flex; align-items: center; gap: 4px; }
+.bd-num { flex: 1; min-width: 0; padding: 8px 4px; border: 1px solid var(--bd); border-radius: var(--rr); background: var(--bg3); color: var(--tx); font-size: 14px; font-family: var(--font); text-align: center; -moz-appearance: textfield; box-sizing: border-box; width: 100%; }
+.bd-num::-webkit-inner-spin-button, .bd-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.bd-num:focus { outline: none; border-color: var(--ac); background: var(--bg); }
+.bd-bmi-box { padding: 8px 4px; border: 1px solid var(--bd); border-radius: var(--rr); background: var(--bg3); font-size: 14px; font-weight: 700; text-align: center; display: flex; align-items: center; justify-content: center; gap: 3px; width: 100%; box-sizing: border-box; }
+.bd-unit { font-size: 12px; color: var(--tx3); flex-shrink: 0; }
+.bd-section-lbl { font-size: 12px; color: var(--tx2); margin-bottom: 6px; font-weight: 500; margin-top: 12px; }
+.bd-chips { display: flex; gap: 6px; }
+.bd-chip { flex: 1; padding: 8px 6px; border-radius: var(--rr); border: 1px solid var(--bd); background: var(--bg3); color: var(--tx2); font-size: 13px; font-family: var(--font); cursor: pointer; transition: all 0.15s; text-align: center; white-space: nowrap; }
 .bd-chip.sel { background: var(--acl); border-color: var(--ac); color: var(--acd); font-weight: 600; }
 .bd-tdee-box { background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); padding: 10px 14px; margin-top: 12px; }
 .bd-tdee-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; }
@@ -1008,6 +1027,15 @@ input::placeholder { color: var(--tx3); }
 .nav-order-btn:active { background: var(--acl); color: var(--acd); }
 
 /* food log edit btn */
+.food-save-pf-btn { background: none; border: none; cursor: pointer; color: var(--tx3); font-size: 15px; padding: 2px 4px; flex-shrink: 0; }
+/* 儲存選擇浮動選單 */
+.food-save-popup { position: fixed; z-index: 500; background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r); box-shadow: 0 4px 16px rgba(0,0,0,0.18); padding: 6px 0; min-width: 180px; }
+.food-save-popup-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: 14px; color: var(--tx); cursor: pointer; }
+.food-save-popup-item:hover { background: var(--acl); }
+.food-save-popup-item .fsp-icon { font-size: 18px; flex-shrink: 0; }
+.food-save-popup-item .fsp-label { flex: 1; }
+.food-save-popup-item .fsp-sub { font-size: 11px; color: var(--tx3); display: block; margin-top: 1px; }
+.food-save-popup-sep { height: 0.5px; background: var(--bd); margin: 4px 0; }
 .food-edit-btn { background: none; border: none; cursor: pointer; color: var(--tx3); font-size: 16px; padding: 4px 6px; }
 .food-edit-btn:active { color: var(--ac); }
 /* food-edit sheet title for edit mode */
@@ -1670,31 +1698,45 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <!-- 🧬 身體數據 & TDEE -->
       <div class="settings-section" style="margin-top:8px">
         <div class="settings-section-title">🧬 身體數據 & TDEE</div>
-        <div class="bd-row">
+        <!-- 第一排：性別 + 年齡（各佔 1/2） -->
+        <div class="bd-row-2">
           <div class="bd-field">
             <label class="bd-lbl">性別</label>
-            <div class="bd-chips" id="bd-gender-chips">
-              <button class="bd-chip" data-val="female">女</button>
-              <button class="bd-chip" data-val="male">男</button>
+            <div class="bd-gender-row" id="bd-gender-chips">
+              <button class="bd-gender-btn" data-val="female">女</button>
+              <button class="bd-gender-btn" data-val="male">男</button>
             </div>
           </div>
           <div class="bd-field">
             <label class="bd-lbl">年齡</label>
-            <div class="bd-input-row"><input type="number" class="bd-num" id="bd-age" min="10" max="100" placeholder="30"><span class="bd-unit">歲</span></div>
+            <div class="bd-input-row">
+              <input type="number" class="bd-num" id="bd-age" min="10" max="100" placeholder="30">
+              <span class="bd-unit">歲</span>
+            </div>
           </div>
         </div>
-        <div class="bd-row">
+        <!-- 第二排：身高 + 體重 + BMI（各佔 1/3） -->
+        <div class="bd-row-3">
           <div class="bd-field">
             <label class="bd-lbl">身高</label>
-            <div class="bd-input-row"><input type="number" class="bd-num" id="bd-height" min="100" max="250" placeholder="165"><span class="bd-unit">cm</span></div>
+            <div class="bd-input-row">
+              <input type="number" class="bd-num" id="bd-height" min="100" max="250" placeholder="165">
+              <span class="bd-unit">cm</span>
+            </div>
           </div>
           <div class="bd-field">
             <label class="bd-lbl">體重</label>
-            <div class="bd-input-row"><input type="number" class="bd-num" id="bd-weight" min="30" max="250" step="0.1" placeholder="55"><span class="bd-unit">kg</span></div>
+            <div class="bd-input-row">
+              <input type="number" class="bd-num" id="bd-weight" min="30" max="250" step="0.1" placeholder="55">
+              <span class="bd-unit">kg</span>
+            </div>
           </div>
           <div class="bd-field">
             <label class="bd-lbl">BMI</label>
-            <div class="bd-input-row"><span class="bd-num" id="bd-bmi" style="display:flex;align-items:center;font-weight:700;color:var(--ac);min-width:52px">—</span><span class="bd-unit" id="bd-bmi-label"></span></div>
+            <div class="bd-bmi-box" id="bd-bmi">
+              <span id="bd-bmi-val">—</span>
+              <span id="bd-bmi-label" style="font-size:11px;font-weight:500"></span>
+            </div>
           </div>
         </div>
         <div class="bd-section-lbl">活動量</div>
@@ -1704,12 +1746,12 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
           <button class="bd-chip" data-val="moderate">中度</button>
           <button class="bd-chip" data-val="active">積極</button>
         </div>
-        <div class="bd-section-lbl" style="margin-top:10px">目標</div>
-        <div class="bd-chips" id="bd-goal-chips">
-          <button class="bd-chip" data-val="cut">🔻 減脂</button>
-          <button class="bd-chip" data-val="recomp">🔄 增肌減脂</button>
-          <button class="bd-chip" data-val="maintain">⚖️ 維持</button>
-          <button class="bd-chip" data-val="bulk">💪 增肌</button>
+        <div class="bd-section-lbl">目標</div>
+        <div class="bd-chips" id="bd-goal-chips" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <button class="bd-chip" data-val="cut" style="flex:none">🔻 減脂</button>
+          <button class="bd-chip" data-val="recomp" style="flex:none">🔄 增肌減脂</button>
+          <button class="bd-chip" data-val="maintain" style="flex:none">⚖️ 維持</button>
+          <button class="bd-chip" data-val="bulk" style="flex:none">💪 增肌</button>
         </div>
         <div class="bd-tdee-box" id="bd-tdee-box"><div class="bd-hint">請填入身體數據以計算 TDEE</div></div>
         <div class="bd-macros-box" id="bd-macros-box"></div>
@@ -1925,7 +1967,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
           <div id="rcalc-today-foods" style="display:flex;gap:5px;flex-wrap:wrap;flex:1"></div>
         </div>
         <!-- 搜尋列 -->
-        <div style="display:flex;gap:8px;padding:10px 12px 8px;background:var(--bg);border-bottom:0.5px solid var(--bd);position:sticky;top:44px;z-index:5;">
+        <div style="display:flex;gap:8px;padding:10px 12px 8px;background:var(--bg);border-bottom:0.5px solid var(--bd);">
           <div style="position:relative;flex:1">
             <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.5;pointer-events:none">🔍</span>
             <input type="text" id="rcalc-search" placeholder="搜尋食物…"
@@ -1962,7 +2004,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
           </div>
         </div>
         <!-- 食物資料庫列表 -->
-        <div id="rcalc-db" style="padding:0 12px 12px;"></div>
+        <div id="rcalc-db" style="padding:6px 12px 20px;"></div>
       </div>
     </div>
 
@@ -3190,8 +3232,26 @@ function buildTodoHTML(t) {
   var metaHtml = '';
   if (chipTxt) metaHtml += '<span class="todo-due-chip ' + chipCls + '">📅 ' + chipTxt + '</span>';
   if (t.repeat && t.repeat.unit) {
-    var rpLabel = '🔁 ' + (t.repeat.interval||1) + {'day':'天','week':'週','month':'月','year':'年'}[t.repeat.unit];
+    var rp = t.repeat;
+    var unitMap = {'day':'天','week':'週','month':'月','year':'年'};
+    var rpLabel = '🔁 ' + (rp.interval||1) + unitMap[rp.unit];
     metaHtml += '<span class="repeat-chip">' + rpLabel + '</span>';
+
+    // 顯示結束日期 / 剩餘次數
+    if (rp.endType === 'date' && rp.endDate) {
+      var today0 = new Date(todayKey());
+      var endD0  = new Date(rp.endDate);
+      var diffDays0 = Math.ceil((endD0 - today0) / 86400000);
+      var badgeCls = diffDays0 <= 0 ? 'ended' : diffDays0 <= 7 ? 'urgent' : 'date';
+      var badgeTxt = diffDays0 < 0 ? '已結束' : diffDays0 === 0 ? '今日到期' : '至 ' + rp.endDate + '（剩 ' + diffDays0 + ' 天）';
+      metaHtml += '<span class="repeat-end-badge ' + badgeCls + '">📅 ' + badgeTxt + '</span>';
+    } else if (rp.endType === 'count' && rp.endCount) {
+      var done0   = rp.doneCount || 0;
+      var remain0 = rp.endCount - done0;
+      var badgeCls2 = remain0 <= 0 ? 'ended' : remain0 <= 3 ? 'urgent' : 'count';
+      var badgeTxt2 = remain0 <= 0 ? '已完成全部 ' + rp.endCount + ' 次' : '已完成 ' + done0 + '/' + rp.endCount + ' 次（剩 ' + remain0 + ' 次）';
+      metaHtml += '<span class="repeat-end-badge ' + badgeCls2 + '">🔢 ' + badgeTxt2 + '</span>';
+    }
   }
   if (pri !== 'normal') {
     metaHtml += '<span class="priority-badge ' + pri + '">' + (pri === 'urgent' ? '緊急' : '重要') + '</span>';
@@ -4762,11 +4822,11 @@ function calcDayMacros(bd) {
 
 /* ── renderBodySettings ── */
 function renderBodySettings() {
-  function syncChips(cid,val) {
+  function syncChips(cid,val,cls) {
     var el=$(cid); if(!el) return;
-    el.querySelectorAll('.bd-chip').forEach(function(b){ b.classList.toggle('sel',b.dataset.val===val); });
+    el.querySelectorAll('.'+(cls||'bd-chip')).forEach(function(b){ b.classList.toggle('sel',b.dataset.val===val); });
   }
-  syncChips('bd-gender-chips',_bodyData.gender||'female');
+  syncChips('bd-gender-chips',_bodyData.gender||'female','bd-gender-btn');
   syncChips('bd-activity-chips',_bodyData.activity||'light');
   syncChips('bd-goal-chips',_bodyData.goal||'cut');
   var ageEl=$('bd-age'), htEl=$('bd-height'), wtEl=$('bd-weight');
@@ -4802,20 +4862,23 @@ function renderBodySettings() {
   }
   if(macroBox) macroBox.innerHTML=mRow('🔴 高碳日',macros.high)+mRow('🟡 低碳日',macros.low)+mRow('⚫ 休息日',macros.rest);
   // 自動計算 BMI
-  var bmiEl = $('bd-bmi'), bmiLblEl = $('bd-bmi-label');
-  if (bmiEl) {
+  var bmiValEl = $('bd-bmi-val'), bmiLblEl = $('bd-bmi-label'), bmiBox = $('bd-bmi');
+  if (bmiValEl) {
     var bd = _bodyData;
     if (bd.weight && bd.height) {
       var h = bd.height / 100;
       var bmi = Math.round(bd.weight / (h * h) * 10) / 10;
       var bmiLabel = bmi < 18.5 ? '過輕' : bmi < 24 ? '正常' : bmi < 27 ? '過重' : bmi < 30 ? '輕度肥胖' : '肥胖';
       var bmiColor = bmi < 18.5 ? '#5A9888' : bmi < 24 ? 'var(--ac)' : bmi < 27 ? '#C87A30' : '#C04030';
-      bmiEl.textContent = bmi;
-      bmiEl.style.color = bmiColor;
+      bmiValEl.textContent = bmi;
+      bmiValEl.style.color = bmiColor;
       if (bmiLblEl) { bmiLblEl.textContent = bmiLabel; bmiLblEl.style.color = bmiColor; }
+      if (bmiBox) bmiBox.style.borderColor = bmiColor;
     } else {
-      bmiEl.textContent = '—';
+      bmiValEl.textContent = '—';
+      bmiValEl.style.color = '';
       if (bmiLblEl) bmiLblEl.textContent = '';
+      if (bmiBox) bmiBox.style.borderColor = '';
     }
   }
 }
@@ -5034,6 +5097,14 @@ function renderFood() {
     btn.addEventListener('click',function(e){e.stopPropagation();
       state.foodLogs=state.foodLogs.filter(function(l){return l.id!==btn.dataset.id;});
       saveFood();renderFood();renderFoodHistory();
+    });
+  });
+  list.querySelectorAll('.food-save-pf-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var log = state.foodLogs.find(function(l){ return l.id === btn.dataset.id; });
+      if (!log) return;
+      showFoodSavePopup(e, log, btn);
     });
   });
   list.querySelectorAll('.food-edit-btn').forEach(function(btn){
@@ -5284,7 +5355,7 @@ if(_foodCollapseBtn)_foodCollapseBtn.addEventListener('click',function(){
 });
 
 /* Body data event listeners */
-document.querySelectorAll('#bd-gender-chips .bd-chip').forEach(function(btn){
+document.querySelectorAll('#bd-gender-chips .bd-gender-btn').forEach(function(btn){
   btn.addEventListener('click',function(){ _bodyData.gender=btn.dataset.val; saveStorage('myapp_body_data',_bodyData); renderBodySettings(); });
 });
 document.querySelectorAll('#bd-activity-chips .bd-chip').forEach(function(btn){
@@ -8568,9 +8639,135 @@ function openRecipeModal(num, isDessert) {
   document.body.style.overflow = 'hidden';
 }
 
+/* ── 飲食記錄儲存選擇彈窗 ── */
+var _foodSavePopup = null;
+
+function closeFoodSavePopup() {
+  if (_foodSavePopup && _foodSavePopup.parentNode) {
+    _foodSavePopup.parentNode.removeChild(_foodSavePopup);
+  }
+  _foodSavePopup = null;
+  document.removeEventListener('click', closeFoodSavePopup);
+}
+
+// 試算工具分類清單
+var CALC_SAVE_CATS = [
+  { cat:'🍗 肉類・海鮮',   icon:'🍗' },
+  { cat:'🥚 蛋・乳・豆',   icon:'🥚' },
+  { cat:'🌾 主食・穀物',   icon:'🌾' },
+  { cat:'🥦 蔬菜',         icon:'🥦' },
+  { cat:'🍎 水果',         icon:'🍎' },
+  { cat:'🥜 堅果・油脂',   icon:'🥜' },
+  { cat:'🧃 飲料・補充品', icon:'🧃' },
+  { cat:'🍽️ 外食',        icon:'🍽️' },
+];
+
+function showFoodSavePopup(e, log, triggerBtn) {
+  closeFoodSavePopup();
+  var name = (log.text || log.name || '').trim();
+  if (!name) return;
+  var foodData = {
+    name: name,
+    cal:  +(r1(log.calories || 0)),
+    pro:  +(r1(log.protein  || 0)),
+    carb: +(r1(log.carbs    || 0)),
+    fat:  +(r1(log.fat      || 0)),
+  };
+
+  var popup = document.createElement('div');
+  popup.className = 'food-save-popup';
+  popup.style.maxHeight = (window.innerHeight * 0.75) + 'px';
+  popup.style.overflowY = 'auto';
+
+  function addItem(icon, label, sub, onClick) {
+    var el = document.createElement('div');
+    el.className = 'food-save-popup-item';
+    el.innerHTML = '<span class="fsp-icon">' + icon + '</span>' +
+      '<div class="fsp-label">' + label +
+      (sub ? '<span class="fsp-sub">' + sub + '</span>' : '') + '</div>';
+    el.addEventListener('click', function(ev) { ev.stopPropagation(); closeFoodSavePopup(); onClick(); });
+    popup.appendChild(el);
+  }
+  function addSep() {
+    var s = document.createElement('div'); s.className = 'food-save-popup-sep'; popup.appendChild(s);
+  }
+  function doSaveToFav() {
+    if (_favFoods.some(function(f){ return f.name === foodData.name; })) {
+      showToast('「' + foodData.name + '」已在常用清單'); return;
+    }
+    _favFoods.push({ name:foodData.name, cal:foodData.cal, pro:foodData.pro, carb:foodData.carb, fat:foodData.fat, unit:'份', base:1, isPrivate:true });
+    saveFavFoods();
+    showToast('⭐ 已加入常用清單：' + foodData.name);
+    triggerBtn.textContent = '✅'; triggerBtn.style.color = 'var(--ac)';
+    setTimeout(function(){ triggerBtn.textContent = '📥'; triggerBtn.style.color = ''; }, 1500);
+  }
+  function doSaveToPrivate() {
+    if (_privateFoods.some(function(f){ return f.name === foodData.name; })) {
+      showToast('「' + foodData.name + '」已在私人菜單'); return;
+    }
+    _privateFoods.push({ id:genId(), name:foodData.name, cal:foodData.cal, pro:foodData.pro, carb:foodData.carb, fat:foodData.fat, unit:'份', base:1 });
+    savePrivateFoods();
+    showToast('🍱 已加入私人菜單：' + foodData.name);
+    triggerBtn.textContent = '✅'; triggerBtn.style.color = 'var(--ac)';
+    setTimeout(function(){ triggerBtn.textContent = '📥'; triggerBtn.style.color = ''; }, 1500);
+  }
+  function doSaveToCustomCat(cat) {
+    if (_customFoods.some(function(f){ return f.name === foodData.name && (f.cat||'') === cat; })) {
+      showToast('已在「' + cat + '」分類中'); return;
+    }
+    _customFoods.push({ id:genId(), name:foodData.name, cal:foodData.cal, pro:foodData.pro, carb:foodData.carb, fat:foodData.fat, unit:'份', base:1, cat:cat });
+    saveCustomFoods();
+    showToast('✅ 已加入「' + cat + '」：' + foodData.name);
+    triggerBtn.textContent = '✅'; triggerBtn.style.color = 'var(--ac)';
+    setTimeout(function(){ triggerBtn.textContent = '📥'; triggerBtn.style.color = ''; }, 1500);
+  }
+
+  // 標題
+  var titleEl = document.createElement('div');
+  titleEl.style.cssText = 'padding:8px 16px 6px;font-size:12px;font-weight:600;color:var(--tx3)';
+  titleEl.textContent = '「' + name + '」存到…';
+  popup.appendChild(titleEl);
+  addSep();
+
+  // ⭐ 常用清單
+  addItem('⭐', '常用清單', '新增飲食時快速選用', doSaveToFav);
+  addSep();
+
+  // 試算工具分類
+  var catTitle = document.createElement('div');
+  catTitle.style.cssText = 'padding:6px 16px 3px;font-size:11px;font-weight:600;color:var(--tx3)';
+  catTitle.textContent = '加入試算工具';
+  popup.appendChild(catTitle);
+
+  // 🍱 私人菜單
+  addItem('🍱', '私人菜單', '不分類，自訂食物', doSaveToPrivate);
+
+  // 各分類
+  CALC_SAVE_CATS.forEach(function(c) {
+    addItem(c.icon, c.cat, '', function(){ doSaveToCustomCat(c.cat); });
+  });
+
+  // 定位
+  document.body.appendChild(popup);
+  _foodSavePopup = popup;
+  var rect = triggerBtn.getBoundingClientRect();
+  var popW = 210;
+  var left = rect.right - popW;
+  var top  = rect.bottom + 4;
+  if (left < 8) left = 8;
+  if (left + popW > window.innerWidth - 8) left = window.innerWidth - popW - 8;
+  if (top + 300 > window.innerHeight - 8) top = rect.top - Math.min(300, window.innerHeight * 0.6) - 4;
+  popup.style.left = left + 'px';
+  popup.style.top  = top + 'px';
+
+  setTimeout(function(){
+    document.addEventListener('click', closeFoodSavePopup);
+  }, 0);
+}
+
 function closeRecipeModal(e) {
-  // 有 event 時：只有點到 overlay 背景本身才關閉（不是點到 modal 內容）
-  if (e && e.target && e.target.id !== 'recipe-modal-overlay') return;
+  // 有 event 時：點到 modal 卡片內容就不關閉，點到卡片外的 overlay 背景才關閉
+  if (e && e.target && e.target.closest && e.target.closest('.recipe-modal')) return;
   var overlay = document.getElementById('recipe-modal-overlay');
   if (overlay) overlay.classList.remove('open');
   document.body.style.overflow = '';
@@ -8687,13 +8884,15 @@ function rcalcRenderDB(keyword) {
     }
     // 標準分類：全部展開顯示，可點選分類標題折疊
     if (typeof FOOD_DB_CATEGORIES !== 'undefined' && FOOD_DB_CATEGORIES.length) {
-      FOOD_DB_CATEGORIES.forEach(function(cat) {
+      FOOD_DB_CATEGORIES.forEach(function(cat, catIdx) {
         var visItems = cat.items.filter(function(item){ return !isDeleted(cat.cat, item.name); });
         var customs = (typeof _customFoods !== 'undefined') ? _customFoods.filter(function(f){ return (f.cat || '') === cat.cat; }) : [];
         var total = visItems.length + customs.length;
         if (!total) return;
-        // 預設全部收起（只有明確設 true 才展開）
-        var catOpen = _calcCatOpen[cat.cat] === true;
+        // 第一個分類預設展開，其餘收起；使用者點過後記住狀態
+        var catOpen = (typeof _calcCatOpen[cat.cat] === 'undefined')
+          ? (catIdx === 0)
+          : (_calcCatOpen[cat.cat] === true);
         htmlStr += '<button class="food-calc-cat-toggle rcalc-cat-toggle" data-cat="' + esc(cat.cat) + '">' +
           '<span>' + cat.cat + ' <span style="font-size:10px;color:var(--tx3)">(' + total + ')</span></span>' +
           '<span class="cat-arrow">' + (catOpen ? '▲' : '▼') + '</span></button>';
@@ -8706,6 +8905,10 @@ function rcalcRenderDB(keyword) {
       });
     } else {
       htmlStr = '<div style="text-align:center;padding:32px 20px;color:var(--tx3);font-size:13px">⏳ 食物資料庫載入中…</div>';
+    }
+    // 若產生的 htmlStr 只有 toggle 按鈕（沒有展開內容），加提示
+    if (!htmlStr) {
+      htmlStr = '<div style="text-align:center;padding:32px 20px;color:var(--tx3);font-size:13px">點擊分類標題展開食物列表</div>';
     }
   }
 
@@ -8853,6 +9056,13 @@ function renderRecipeCalc() {
   _rcalcSelected = null;
   var res = document.getElementById('rcalc-result'); if (res) res.style.display = 'none';
   var si = document.getElementById('rcalc-search'); if (si) si.value = '';
+  // 確保第一個分類是展開的
+  if (typeof FOOD_DB_CATEGORIES !== 'undefined' && FOOD_DB_CATEGORIES.length) {
+    var firstCat = FOOD_DB_CATEGORIES[0].cat;
+    if (typeof _calcCatOpen[firstCat] === 'undefined') {
+      _calcCatOpen[firstCat] = true;
+    }
+  }
   rcalcRenderTodayBar();
   rcalcRenderTodayFoods();
   rcalcRenderDB('');
