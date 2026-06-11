@@ -1121,7 +1121,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .recipe-search-input { width: 100%; padding: 9px 32px 9px 34px; background: var(--bg3); border: 0.5px solid var(--bd); border-radius: var(--rr); font-size: 15px; color: var(--tx); font-family: var(--font); }
 .recipe-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 15px; opacity: .5; pointer-events: none; }
 .recipe-search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--tx3); cursor: pointer; font-size: 16px; display: none; }
-.recipe-filter-row { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.recipe-filter-row { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; touch-action: pan-x; }
 .recipe-filter-row::-webkit-scrollbar { display: none; }
 .recipe-chip { flex-shrink: 0; padding: 5px 11px; border-radius: 14px; font-size: 13px; font-weight: 600; background: var(--bg3); border: 0.5px solid var(--bd); color: var(--tx2); cursor: pointer; white-space: nowrap; font-family: var(--font); }
 .recipe-chip.active { background: var(--ac); border-color: var(--ac); color: #fff; }
@@ -1129,7 +1129,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .recipe-sort-label { font-size: 11px; color: var(--tx3); flex-shrink: 0; }
 .recipe-sort-btn { padding: 4px 10px; border-radius: 10px; font-size: 13px; font-weight: 600; background: var(--bg3); border: 0.5px solid var(--bd); color: var(--tx2); cursor: pointer; font-family: var(--font); }
 .recipe-sort-btn.active { background: var(--acd); border-color: var(--acd); color: #fff; }
-.recipe-stats-bar { display: flex; background: var(--bg2); border-bottom: 0.5px solid var(--bd); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
+.recipe-stats-bar { display: flex; background: var(--bg2); border-bottom: 0.5px solid var(--bd); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; touch-action: pan-x; }
 .recipe-stats-bar::-webkit-scrollbar { display: none; }
 .recipe-stat { flex: none; padding: 6px 14px; text-align: center; border-right: 0.5px solid var(--bd); min-width: 64px; }
 .recipe-stat:last-child { border-right: none; }
@@ -1162,7 +1162,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .rtag-免開火{ background: #E0EEF5; color: #3A6888; }
 .rtag-高蛋白{ background: #FDDBD8; color: #A03030; }
 /* 分頁標籤 */
-.recipe-page-tabs { display: flex; background: var(--bg); border-bottom: 0.5px solid var(--bd); position: sticky; top: 0; z-index: 4; overflow-x: auto; scrollbar-width: none; }
+.recipe-page-tabs { display: flex; background: var(--bg); border-bottom: 0.5px solid var(--bd); position: sticky; top: 0; z-index: 4; overflow-x: auto; scrollbar-width: none; touch-action: pan-x; }
 .recipe-tab { flex: 1; padding: 10px 4px 9px; font-size: 14px; color: var(--tx3); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; white-space: nowrap; }
 .recipe-tab.active { color: var(--acd); font-weight: 600; }
 .recipe-tab.active::after { content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 2px; background: var(--ac); border-radius: 1px; }
@@ -2008,7 +2008,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
     </div>
 
     <!-- 食譜 Modal -->
-    <div class="recipe-modal-overlay" id="recipe-modal-overlay">
+    <div class="recipe-modal-overlay" id="recipe-modal-overlay" role="button" tabindex="-1">
       <div class="recipe-modal" id="recipe-modal-content"></div>
     </div>
 
@@ -8128,11 +8128,19 @@ function updateNotifSettingsUI(){
 function init() {
   $('hdr-title').textContent = CONFIG.appName;
   initModal(); initChoreModal();
-  /* 食譜 Modal 關閉：用 addEventListener 取代 inline onclick，iOS 更可靠 */
+  /* 食譜 Modal 關閉：click + touchend 雙保險，判斷點擊在 modal 外才關閉 */
   (function(){
     var ov = document.getElementById('recipe-modal-overlay');
-    if (ov) ov.addEventListener('click', function(e){
-      if (e.target === ov || !e.target.closest('.recipe-modal')) closeRecipeModal();
+    if (!ov) return;
+    function handleOverlayClose(e) {
+      if (e.target && e.target.closest && e.target.closest('.recipe-modal')) return;
+      closeRecipeModal();
+    }
+    ov.addEventListener('click', handleOverlayClose);
+    ov.addEventListener('touchend', function(e) {
+      if (e.target && e.target.closest && e.target.closest('.recipe-modal')) return;
+      e.preventDefault();
+      closeRecipeModal();
     });
   })();
   /* Register Service Worker for mobile notifications */
@@ -8770,9 +8778,7 @@ function showFoodSavePopup(e, log, triggerBtn) {
   }, 0);
 }
 
-function closeRecipeModal(e) {
-  // 有 event 時：點到 modal 卡片內容就不關閉，點到卡片外的 overlay 背景才關閉
-  if (e && e.target && e.target.closest && e.target.closest('.recipe-modal')) return;
+function closeRecipeModal() {
   var overlay = document.getElementById('recipe-modal-overlay');
   if (overlay) overlay.classList.remove('open');
   _modalData = null;
