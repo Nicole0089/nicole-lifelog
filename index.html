@@ -1160,6 +1160,26 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .recipe-step-txt { line-height: 1.55; }
 .recipe-tip-box { background: var(--acl); border-left: 3px solid var(--ac); border-radius: 0 var(--r) var(--r) 0; padding: 8px 10px; font-size: 12px; color: var(--tx); margin-bottom: 8px; }
 .recipe-tip-lbl { font-weight: 700; color: var(--acd); margin-bottom: 2px; font-size: 11px; }
+/* 份量調整器 */
+.serving-adjuster { display: flex; align-items: center; gap: 8px; background: var(--bg2); border: 0.5px solid var(--bd); border-radius: var(--rr); padding: 8px 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.serving-label { font-size: 12px; color: var(--tx2); flex-shrink: 0; font-weight: 600; }
+.serving-presets { display: flex; gap: 4px; }
+.serving-preset-btn { padding: 5px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; background: var(--bg3); border: 0.5px solid var(--bd); color: var(--tx2); cursor: pointer; font-family: var(--font); white-space: nowrap; }
+.serving-preset-btn.active { background: var(--ac); border-color: var(--ac); color: #fff; }
+.serving-custom-wrap { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.serving-stepper { background: var(--bg3); border: 0.5px solid var(--bd); border-radius: 50%; width: 26px; height: 26px; font-size: 17px; font-weight: 700; color: var(--ac); cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; font-family: var(--font); }
+.serving-stepper:active { background: var(--acl); }
+.serving-num { font-size: 16px; font-weight: 800; color: var(--tx); min-width: 24px; text-align: center; }
+.serving-unit { font-size: 11px; color: var(--tx3); }
+.recipe-ing-amt.changed { color: var(--acd); font-weight: 700; }
+.nutr-base { font-size: 10px; color: var(--tx3); margin-top: 1px; display: block; }
+.serving-note { font-size: 11px; color: var(--tx3); width: 100%; padding-top: 2px; }
+/* 食譜 → 飲食串聯按鈕 */
+.recipe-log-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; background: var(--ac); color: #fff; border: none; border-radius: var(--rr); font-size: 14px; font-weight: 700; font-family: var(--font); cursor: pointer; margin-top: 4px; margin-bottom: 8px; }
+.recipe-log-btn:active { background: var(--acd); }
+.recipe-log-meal-row { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.recipe-log-meal-btn { flex: 1; padding: 7px 6px; border-radius: var(--rr); font-size: 12px; font-weight: 600; background: var(--bg3); border: 1.5px solid var(--bd); color: var(--tx2); cursor: pointer; font-family: var(--font); text-align: center; white-space: nowrap; }
+.recipe-log-meal-btn.sel { background: var(--acl); border-color: var(--ac); color: var(--acd); }
 /* 排行榜 */
 .recipe-rank-section { padding: 10px 12px 4px; }
 .recipe-rank-title { font-size: 13px; font-weight: 700; color: var(--tx); margin-bottom: 8px; }
@@ -2865,7 +2885,7 @@ function switchPage(page) {
   if (page === 'settings')  renderSettings();
   if (page === 'dashboard') renderDashboard();
   if (page === 'weekly')    renderWeekly();
-  if (page === 'recipes')   renderRecipePage();
+  if (page === 'recipes' && typeof renderRecipePage === 'function') renderRecipePage();
 }
 
 /* ═══════════════════════════════════════════════════
@@ -7903,8 +7923,806 @@ function init() {
   if (startPage === 'bp')       renderBP();
   if (startPage === 'diary')    renderDiary();
   if (startPage === 'settings') renderSettings();
+  if (startPage === 'recipes')  { setTimeout(function(){ if(typeof renderRecipePage==='function') renderRecipePage(); }, 0); }
   if (!startPage || startPage === 'todos') renderTodos();
 }
+// ── 份量調整狀態 ────────────────────────────────────────────
+var _modalData = null;
+var _modalDessert = false;
+var _modalServings = 1; // 當前份數（支援小數，如0.5）
+
+// 解析食材字串中的數字：回傳 { num, unit, prefix, suffix }
+// 例：'2塊（260g）' → { num: 2, unit: '塊', suffix: '（260g）', prefix: '' }
+// 例：'150g' → { num: 150, unit: 'g', suffix: '', prefix: '' }
+// 例：'1大匙（13g）' → { num: 1, unit: '大匙', suffix: '（13g）', prefix: '' }
+// 例：'3–6片' → { num: 3, unit: '–6片', ... } ← 保留原始
+function parseIngAmt(str) {
+  if (!str) return { raw: str, parseable: false };
+  // 試著抓第一個數字（含小數）
+  var m = str.match(/^([\d.\/]+)\s*(.*)$/);
+  if (!m) return { raw: str, parseable: false };
+  var num = parseFloat(m[1]);
+  if (isNaN(num) || num === 0) return { raw: str, parseable: false };
+  // 後面部分
+  var rest = m[2];
+  // 去掉括號內說明（不縮放），保留
+  var parenMatch = rest.match(/^([^（(]*)(.*)$/);
+  var unit = parenMatch ? parenMatch[1].trim() : rest.trim();
+  var suffix = parenMatch ? parenMatch[2] : '';
+  return { raw: str, parseable: true, num: num, unit: unit, suffix: suffix };
+}
+
+function formatScaled(parsed, scale) {
+  if (!parsed.parseable) return parsed.raw;
+  var scaled = parsed.num * scale;
+  // 格式化數字
+  var disp;
+  if (Number.isInteger(scaled) || scaled >= 100) {
+    disp = Math.round(scaled * 10) / 10;
+    if (disp === Math.floor(disp)) disp = Math.floor(disp);
+  } else {
+    disp = Math.round(scaled * 10) / 10;
+  }
+  return disp + (parsed.unit ? ' ' + parsed.unit : '') + (parsed.suffix || '');
+}
+
+// 縮放營養標注字串，例：'蛋白質47g｜淨碳水0g｜脂肪21g'
+function scaleNutrStr(nutrStr, scale) {
+  if (!nutrStr || scale === 1) return nutrStr;
+  return nutrStr.replace(/([\d.]+)(g|kcal)/g, function(_, n, u) {
+    var v = Math.round(parseFloat(n) * scale * 10) / 10;
+    if (v === Math.floor(v)) v = Math.floor(v);
+    return v + u;
+  });
+}
+
+function buildServingAdjuster() {
+  var presets = [
+    { label: '½份', val: 0.5 },
+    { label: '1份', val: 1 },
+    { label: '2份', val: 2 },
+    { label: '3份', val: 3 },
+  ];
+  var presetsHtml = presets.map(function(p) {
+    var active = _modalServings === p.val ? ' active' : '';
+    return '<button class="serving-preset-btn'+active+'" onclick="setServing('+p.val+')">'+p.label+'</button>';
+  }).join('');
+  return '<div class="serving-adjuster" id="serving-adjuster">' +
+    '<span class="serving-label">份量：</span>' +
+    '<div class="serving-presets">'+presetsHtml+'</div>' +
+    '<div class="serving-custom-wrap">' +
+      '<button class="serving-stepper" onclick="stepServing(-0.5)">－</button>' +
+      '<span class="serving-num" id="serving-num">'+_modalServings+'</span>' +
+      '<span class="serving-unit">人份</span>' +
+      '<button class="serving-stepper" onclick="stepServing(0.5)">＋</button>' +
+    '</div>' +
+    (_modalServings !== 1 ? '<div class="serving-note">⚠ 已調整為 '+_modalServings+' 人份，食材用量已同步計算</div>' : '') +
+  '</div>';
+}
+
+function buildNutrGrid(scale) {
+  var d = _modalData;
+  var s = scale;
+  function fmt(v) {
+    var r = Math.round(v * s * 10) / 10;
+    return r === Math.floor(r) ? Math.floor(r) : r;
+  }
+  var changed = s !== 1 ? ' scaled' : '';
+  var baseNote = s !== 1
+    ? '<span class="nutr-base">（基準 1 人份）</span>'
+    : '';
+  return '<div class="recipe-nutr-grid" id="nutr-grid">' +
+    '<div class="recipe-nutr-box'+changed+'"><span class="recipe-nutr-val np">'+fmt(d.protein)+'g</span><span class="recipe-nutr-lbl">蛋白質</span>'+baseNote+'</div>' +
+    '<div class="recipe-nutr-box'+changed+'"><span class="recipe-nutr-val nc">'+fmt(d.netCarb)+'g</span><span class="recipe-nutr-lbl">淨碳水</span>'+baseNote+'</div>' +
+    '<div class="recipe-nutr-box'+changed+'"><span class="recipe-nutr-val nf">'+fmt(d.fat)+'g</span><span class="recipe-nutr-lbl">脂肪</span>'+baseNote+'</div>' +
+    '<div class="recipe-nutr-box'+changed+'"><span class="recipe-nutr-val nk">'+fmt(d.kcal)+'</span><span class="recipe-nutr-lbl">kcal</span>'+baseNote+'</div>' +
+  '</div>';
+}
+
+function guessCurrentMeal() {
+  var h = new Date().getHours();
+  if (h < 10)  return '早餐';
+  if (h < 14)  return '午餐';
+  if (h < 18)  return '下午茶';
+  if (h < 21)  return '晚餐';
+  return '點心';
+}
+
+var _logMeal = '午餐'; // 預設，開 modal 時自動偵測
+
+function buildLogSection() {
+  var meals = ['早餐','午餐','晚餐','點心'];
+  _logMeal = guessCurrentMeal();
+  var mealBtns = meals.map(function(m) {
+    var icons = { '早餐':'🌅', '午餐':'☀️', '晚餐':'🌙', '點心':'🍎' };
+    return '<button class="recipe-log-meal-btn'+(m===_logMeal?' sel':'')+'" onclick="selectLogMeal(this,\''+m+'\')">'+icons[m]+' '+m+'</button>';
+  }).join('');
+  return '<div style="border-top:0.5px solid var(--bd);padding-top:12px;margin-top:4px">' +
+    '<div class="recipe-modal-sec" style="margin-bottom:8px">📝 記錄到飲食日誌</div>' +
+    '<div class="recipe-log-meal-row" id="log-meal-row">'+mealBtns+'</div>' +
+    '<button class="recipe-log-btn" onclick="logRecipeToFood()">➕ 加入' + (guessCurrentMeal()) + '記錄</button>' +
+  '</div>';
+}
+
+function selectLogMeal(el, meal) {
+  _logMeal = meal;
+  document.querySelectorAll('.recipe-log-meal-btn').forEach(function(b){ b.classList.toggle('sel', b === el); });
+  var btn = document.querySelector('.recipe-log-btn');
+  if (btn) btn.textContent = '➕ 加入' + meal + '記錄';
+}
+
+function logRecipeToFood() {
+  if (!_modalData) return;
+  var s = _modalServings;
+  function sc(v) { return Math.round(v * s * 10) / 10; }
+  var name = _modalData.name + (s !== 1 ? '（×' + s + '）' : '');
+  var cal  = sc(_modalData.kcal);
+  var pro  = sc(_modalData.protein);
+  var carb = sc(_modalData.netCarb);
+  var fat  = sc(_modalData.fat);
+  var meal = _logMeal;
+
+  // 關閉 Modal
+  closeRecipeModal();
+
+  // 切換到飲食頁
+  switchPage('food');
+  _foodViewDate = todayKey();
+  renderFood();
+
+  // 自動選 meal
+  _foodEditMeal = meal;
+
+  // 短暫 delay 確保 DOM 就緒後開啟表單
+  setTimeout(function() {
+    // 先打開空白表單
+    openFoodEdit();
+    // 帶入食譜資料
+    var nm = document.getElementById('food-edit-name');
+    if (nm) nm.value = name;
+    var fields = { cal: cal, pro: pro, carb: carb, fat: fat };
+    Object.keys(fields).forEach(function(k) {
+      var el = document.getElementById('food-edit-' + k);
+      if (el) el.value = fields[k] !== 0 ? fields[k] : '';
+    });
+    // 設定餐別
+    document.querySelectorAll('#food-meal-btns .food-meal-btn').forEach(function(b){
+      b.classList.toggle('sel', b.dataset.meal === meal);
+    });
+    // 更新 _foodEditMeal
+    _foodEditMeal = meal;
+    // 隱藏自動完成建議
+    var sg = document.getElementById('food-edit-suggest');
+    if (sg) { sg.classList.add('hidden'); sg.innerHTML = ''; }
+  }, 80);
+}
+
+function buildIngList(scale) {
+  var d = _modalData;
+  if (!d.ingredients || !d.ingredients.length) return '';
+  var label = scale === 1 ? '📌 食材（1 人份）' : '📌 食材（' + scale + ' 人份）';
+  var rows = d.ingredients.map(function(ing) {
+    var parsed = parseIngAmt(ing[1]);
+    var scaledAmt = scale === 1 ? ing[1] : formatScaled(parsed, scale);
+    var changed = (scale !== 1 && parsed.parseable) ? ' changed' : '';
+    var nutrScaled = scaleNutrStr(ing[2], scale);
+    return '<div class="recipe-ing-row">' +
+      '<div class="recipe-ing-top">' +
+        '<span class="recipe-ing-name">'+ing[0]+'</span>' +
+        '<span class="recipe-ing-amt'+changed+'">'+scaledAmt+'</span>' +
+      '</div>' +
+      (nutrScaled ? '<div class="recipe-ing-nutr">'+nutrScaled+'</div>' : '') +
+    '</div>';
+  }).join('');
+  return '<div class="recipe-modal-sec" id="ing-label">'+label+'</div>' +
+    '<div class="recipe-ing-list" id="ing-list">'+rows+'</div>';
+}
+
+function rerenderScaled() {
+  var s = _modalServings;
+  // 更新 preset buttons
+  document.querySelectorAll('.serving-preset-btn').forEach(function(b) {
+    b.classList.toggle('active', parseFloat(b.textContent) === s ||
+      (b.textContent === '½份' && s === 0.5) ||
+      (b.textContent === '1份' && s === 1) ||
+      (b.textContent === '2份' && s === 2) ||
+      (b.textContent === '3份' && s === 3));
+  });
+  // 更新份數顯示
+  var numEl = document.getElementById('serving-num');
+  if (numEl) numEl.textContent = s;
+  // 更新備注
+  var adj = document.getElementById('serving-adjuster');
+  if (adj) {
+    var noteEl = adj.querySelector('.serving-note');
+    if (s !== 1) {
+      if (noteEl) noteEl.textContent = '⚠ 已調整為 '+s+' 人份，食材用量已同步計算';
+      else {
+        var note = document.createElement('div');
+        note.className = 'serving-note';
+        note.textContent = '⚠ 已調整為 '+s+' 人份，食材用量已同步計算';
+        adj.appendChild(note);
+      }
+    } else {
+      if (noteEl) noteEl.remove();
+    }
+  }
+  // 更新營養格
+  var ng = document.getElementById('nutr-grid');
+  if (ng) ng.outerHTML = buildNutrGrid(s);
+  // 重新抓（outerHTML 會替換元素）
+  var ng2 = document.getElementById('nutr-grid');
+  if (!ng2) {
+    // fallback: replace via parent
+    var nutrWrap = document.querySelector('.recipe-modal-body');
+    if (nutrWrap) {
+      var old = nutrWrap.querySelector('.recipe-nutr-grid');
+      if (old) { var tmp = document.createElement('div'); tmp.innerHTML = buildNutrGrid(s); old.replaceWith(tmp.firstChild); }
+    }
+  }
+  // 更新食材
+  var ingLabel = document.getElementById('ing-label');
+  var ingList  = document.getElementById('ing-list');
+  if (ingLabel) {
+    ingLabel.textContent = s === 1 ? '📌 食材（1 人份）' : '📌 食材（'+s+' 人份）';
+  }
+  if (ingList && _modalData.ingredients) {
+    ingList.innerHTML = _modalData.ingredients.map(function(ing) {
+      var parsed = parseIngAmt(ing[1]);
+      var scaledAmt = s === 1 ? ing[1] : formatScaled(parsed, s);
+      var changed = (s !== 1 && parsed.parseable) ? ' changed' : '';
+      var nutrScaled = scaleNutrStr(ing[2], s);
+      return '<div class="recipe-ing-row">' +
+        '<div class="recipe-ing-top">' +
+          '<span class="recipe-ing-name">'+ing[0]+'</span>' +
+          '<span class="recipe-ing-amt'+changed+'">'+scaledAmt+'</span>' +
+        '</div>' +
+        (nutrScaled ? '<div class="recipe-ing-nutr">'+nutrScaled+'</div>' : '') +
+      '</div>';
+    }).join('');
+  }
+}
+
+function setServing(val) {
+  _modalServings = val;
+  rerenderScaled();
+}
+
+function stepServing(delta) {
+  var next = Math.round((_modalServings + delta) * 10) / 10;
+  if (next < 0.5) next = 0.5;
+  if (next > 10) next = 10;
+  _modalServings = next;
+  rerenderScaled();
+}
+
+function openRecipeModal(num, isDessert) {
+  var data = isDessert
+    ? DESSERT_DB.find(function(d){ return d.num === num; })
+    : RECIPE_DB.find(function(r){ return r.num === num; });
+  if (!data) return;
+  _modalData = data;
+  _modalDessert = isDessert;
+  _modalServings = 1;
+
+  var topClass = isDessert ? 'recipe-modal-top dessert' : 'recipe-modal-top';
+  var stepsHtml = (data.steps||[]).map(function(s,i){
+    return '<div class="recipe-step"><div class="recipe-step-num">'+(i+1)+'</div><div class="recipe-step-txt">'+s+'</div></div>';
+  }).join('');
+  var tagHtml = !isDessert && data.tags && data.tags.length
+    ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">' +
+      data.tags.map(function(t){ return '<span class="rtag rtag-'+t+'">'+t+'</span>'; }).join('') + '</div>'
+    : '';
+
+  var content = document.getElementById('recipe-modal-content');
+  content.innerHTML =
+    '<div class="'+topClass+'">' +
+      '<button class="recipe-modal-close" onclick="closeRecipeModal()">✕</button>' +
+      '<div class="recipe-modal-num">'+data.num+'</div>' +
+      '<div class="recipe-modal-name">'+data.name+'</div>' +
+      '<div class="recipe-modal-meta">' +
+        '<span>⏱ '+data.time+'</span>' +
+        (data.diff ? '<span>'+data.diff+'</span>' : '') +
+        (data.source ? '<span>'+data.source+'</span>' : '') +
+        (data.note ? '<span>📌 '+data.note+'</span>' : '') +
+      '</div>' +
+    '</div>' +
+    '<div class="recipe-modal-body">' +
+      buildServingAdjuster() +
+      buildNutrGrid(1) +
+      tagHtml +
+      buildIngList(1) +
+      (stepsHtml ? '<div class="recipe-modal-sec">🍳 作法</div><div class="recipe-steps-list">'+stepsHtml+'</div>' : '') +
+      (data.tip ? '<div class="recipe-tip-box"><div class="recipe-tip-lbl">💡 小提示</div>'+data.tip+'</div>' : '') +
+      buildLogSection() +
+    '</div>';
+
+  var overlay = document.getElementById('recipe-modal-overlay');
+  if (overlay) overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeRecipeModal(e) {
+  if (e && e.target !== document.getElementById('recipe-modal-overlay')) return;
+  var overlay = document.getElementById('recipe-modal-overlay');
+  if (overlay) overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  _modalData = null;
+  _modalServings = 1;
+  _logMeal = guessCurrentMeal ? guessCurrentMeal() : '午餐';
+}
+
+var RECIPE_DB = [
+  { num:'①',  name:'奶油蒜香嫩煎雞腿排',         protein:51.5,netCarb:5.0, fat:28.5,kcal:310,time:'20分',diff:'★☆☆',source:'V3',      note:'',        tags:['快速','低碳','高蛋白'],
+    ingredients:[['去骨雞腿排','2塊（260g）','蛋白質47g｜淨碳水0g｜脂肪21g'],['無鹽奶油','8g','蛋白質0g｜淨碳水0g｜脂肪7g'],['大蒜','3瓣','蛋白質0.5g｜淨碳水2g｜脂肪0g'],['青花菜','150g','蛋白質4g｜淨碳水3g｜脂肪0.5g'],['鹽・黑胡椒・義大利香料','各適量','']],
+    steps:['雞腿排兩面撒鹽黑胡椒，靜置5分鐘。','冷鍋放雞腿皮面朝下中火慢煎8–10分鐘至皮酥脆。','翻面加奶油，待融化後加蒜末，用湯匙將奶油反覆澆淋再煎5分鐘。','取出靜置2分鐘；原鍋大火加青花菜+水翻炒2分鐘調鹽。'],
+    tip:'冷鍋下雞皮是酥脆的關鍵！從冷鍋開始讓皮慢慢逼油，不會外焦內生。' },
+  { num:'②',  name:'麻油薑絲燉雞湯（電鍋版）',   protein:36.7,netCarb:6.0, fat:22.2,kcal:260,time:'45分',diff:'★☆☆',source:'V3',      note:'電鍋',    tags:['電鍋','低熱量'],
+    ingredients:[['雞腿肉（去皮切塊）','200g','蛋白質36g｜淨碳水0g｜脂肪9g'],['老薑','5–6片',''],['麻油','1大匙',''],['水','500ml',''],['枸杞・米酒','少許（可省）','']],
+    steps:['麻油小火爆香薑片至邊緣微卷約1分鐘。','放雞塊大火炒至表面變白，加米酒翻炒30秒。','加水500ml，移入電鍋外鍋1杯水，燉至跳起再燜10分鐘。','開蓋加鹽，撒枸杞享用。'],
+    tip:'麻油不耐高溫，爆薑時必須小火，否則苦味出現就難補救。' },
+  { num:'③',  name:'大白菜豬絞肉豆腐煲 ★',       protein:46.3,netCarb:9.8, fat:32.3,kcal:265,time:'30分',diff:'★☆☆',source:'V3更新',  note:'',        tags:['低熱量','高蛋白'],
+    ingredients:[['豬絞肉（瘦七分）','150g','蛋白質26g｜淨碳水0g｜脂肪11g'],['板豆腐','200g','蛋白質16g｜淨碳水3g｜脂肪7g'],['大白菜','150g',''],['大蒜','3瓣',''],['橄欖油','1大匙',''],['醬油（減鹽）','1大匙','']],
+    steps:['豆腐切大塊，用廚房紙巾壓乾水分。','橄欖油爆香蒜末，加豬絞肉炒至變色，下醬油翻炒。','加大白菜翻炒至稍軟出水，加雞高湯。','放入豆腐，中小火燉10分鐘，調鹽盛盤。'],
+    tip:'大白菜甜味天然，不需另加糖。豆腐壓乾水分後更能吸收湯汁。' },
+  { num:'④',  name:'蒜香奶油蝦佐蘆筍',           protein:41.3,netCarb:6.0, fat:9.1, kcal:235,time:'20分',diff:'★☆☆',source:'V3',      note:'',        tags:['快速','低碳','高蛋白','低熱量'],
+    ingredients:[['白蝦仁（冷凍）','200g','蛋白質38g｜淨碳水0g｜脂肪2g'],['蘆筍','120g',''],['無鹽奶油','8g',''],['大蒜','4瓣',''],['檸檬汁','1大匙','']],
+    steps:['蝦仁退冰後用廚房紙巾擦乾。','奶油熱鍋至起泡，加蒜末爆香30秒，下蝦仁大火快炒1.5分鐘取出。','原鍋加蘆筍+水翻炒2分鐘，回鍋蝦仁，淋檸檬汁調鹽。'],
+    tip:'蝦仁一定要擦乾再下鍋，水分多會蒸不會煎。奶油起泡才下蝦仁，溫度才夠。' },
+  { num:'⑤',  name:'辣炒豬肉高麗菜',             protein:35.7,netCarb:13.0,fat:23.2,kcal:280,time:'20分',diff:'★☆☆',source:'V3',      note:'',        tags:['快速'],
+    ingredients:[['豬里肌肉片（瘦）','150g','蛋白質31g｜淨碳水0g｜脂肪5g'],['高麗菜（手撕）','200g',''],['辣椒・大蒜','1根+3瓣',''],['橄欖油・醬油・麻油','各適量','']],
+    steps:['豬肉片加醬油醃5分鐘。','橄欖油大火爆香蒜末+辣椒，下豬肉炒至七分熟取出。','同鍋大火炒高麗菜加少許水，回鍋豬肉，淋麻油調鹽。'],
+    tip:'高麗菜用手撕，斷面不規則更容易吸附醬汁。大火快炒保留脆度，勿蓋鍋燜。' },
+  { num:'⑥',  name:'蒜炒蝦仁四季豆',             protein:37.9,netCarb:9.3, fat:20.8,kcal:200,time:'20分',diff:'★☆☆',source:'V3',      note:'',        tags:['快速','低熱量'],
+    ingredients:[['蝦仁','150g','蛋白質28g｜淨碳水0g｜脂肪1.5g'],['四季豆','150g',''],['大蒜・薑片','各適量',''],['橄欖油','1大匙',''],['雞蛋','1顆','']],
+    steps:['四季豆汆燙2分鐘撈出。','油熱爆香薑蒜，下蝦仁炒至變色。','加四季豆翻炒，打入1顆蛋快速拌炒，調鹽盛盤。'],
+    tip:'四季豆汆燙後炒保持翠綠。打蛋入鍋不要攪太碎，讓蛋呈現大塊感更好吃。' },
+  { num:'⑦',  name:'牛肉蘑菇炒時蔬',             protein:37.9,netCarb:8.3, fat:33.7,kcal:295,time:'25分',diff:'★☆☆',source:'V3',      note:'',        tags:[],
+    ingredients:[['牛肉片','150g','蛋白質30g｜淨碳水0g｜脂肪8g'],['蘑菇','100g',''],['青花菜','100g',''],['大蒜','3瓣',''],['橄欖油・醬油・麻油','各適量','']],
+    steps:['牛肉片加醬油黑胡椒醃5分鐘。','橄欖油大火爆香蒜末，下牛肉炒至六分熟取出。','原鍋炒蘑菇至出水收汁，加青花菜翻炒，回鍋牛肉淋麻油調鹽。'],
+    tip:'蘑菇一定要炒到出水收汁，味道才鮮甜。牛肉不要炒過熟，六分熟口感最嫩。' },
+  { num:'⑧',  name:'起司焗烤雞胸佐菠菜 ★',       protein:57.9,netCarb:3.2, fat:25.2,kcal:280,time:'35分',diff:'★★☆',source:'V3更新',  note:'蛋白質冠軍',tags:['低碳','高蛋白','重訓'],
+    ingredients:[['雞胸肉（去皮）','200g','蛋白質46g｜淨碳水0g｜脂肪4g'],['莫札瑞拉起司絲','40g','蛋白質8.8g｜淨碳水0.8g｜脂肪6.8g'],['新鮮菠菜','100g',''],['橄欖油','1大匙',''],['大蒜粉・義大利香料','各適量','']],
+    steps:['雞胸肉蝴蝶片，撒鹽黑胡椒蒜粉，橄欖油醃10分鐘。','平底鍋兩面各煎2分鐘上色，移至烤盤。','烤盤鋪菠菜葉，放雞胸，撒起司絲，230°C烤12–15分鐘。'],
+    tip:'主食蛋白質最高（57.9g）！起司鋪厚一點才有牽絲感。' },
+  { num:'⑨',  name:'水煮蛋酪梨嫩葉沙拉',         protein:27.5,netCarb:6.7, fat:41.5,kcal:300,time:'15分',diff:'★☆☆',source:'V3',      note:'輔菜',    tags:['快速','免開火'],
+    ingredients:[['雞蛋','3顆','蛋白質22.5g｜淨碳水0.9g｜脂肪15g'],['酪梨','半顆（80g）',''],['嫩葉菠菜','100g',''],['橄欖油・鹽・黑胡椒・檸檬汁','各適量','']],
+    steps:['水煮蛋：冷水下蛋水滾後7分鐘，冰水冷卻去殼對切。','酪梨切丁加檸檬汁防氧化。','菠菜鋪盤，擺酪梨和蛋，淋橄欖油撒鹽黑胡椒。'],
+    tip:'此道為輔菜，建議搭配⑥或⑬補充蛋白質，兩道合計約65g。' },
+  { num:'⑩',  name:'香煎鮭魚佐菠菜蘑菇',         protein:48.3,netCarb:9.4, fat:21.1,kcal:340,time:'25分',diff:'★☆☆',source:'V3',      note:'',        tags:['高蛋白','重訓'],
+    ingredients:[['鮭魚排（去皮）','200g','蛋白質40g｜淨碳水0g｜脂肪13g'],['菠菜','150g',''],['蘑菇','100g',''],['大蒜','3瓣',''],['橄欖油・奶油','各適量',''],['檸檬汁','適量','']],
+    steps:['鮭魚兩面撒鹽黑胡椒擦乾。','中大火魚皮朝下煎3–4分鐘至金黃，翻面再煎2分鐘取出。','原鍋加奶油蒜末爆香，炒蘑菇至收汁，下菠菜翻炒1分鐘。','蔬菜鋪盤，放鮭魚，擠檸檬汁。'],
+    tip:'鮭魚皮朝下先煎，皮酥後翻面整塊不散。煎前擦乾很重要。' },
+  { num:'⑪',  name:'烤鮭魚佐奶油蘆筍',           protein:43.4,netCarb:6.5, fat:20.3,kcal:330,time:'25分',diff:'★☆☆',source:'V3',      note:'一鍋到底', tags:['低碳','高蛋白','重訓'],
+    ingredients:[['鮭魚排','200g','蛋白質40g｜淨碳水0g｜脂肪13g'],['蘆筍','150g',''],['無鹽奶油','10g',''],['大蒜末','3瓣',''],['橄欖油','1大匙','']],
+    steps:['蘆筍淋橄欖油撒鹽蒜末，230°C烤5分鐘。','鮭魚塗奶油撒鹽黑胡椒，擺旁邊繼續烤12–15分鐘。','取出撒檸檬皮絲增香。'],
+    tip:'一鍋到底！蘆筍先烤5分鐘是關鍵，否則和魚同時放入會不熟。' },
+  { num:'⑫',  name:'豆漿咖哩牛肉花椰菜 ★',       protein:40.8,netCarb:13.1,fat:27.0,kcal:285,time:'35分',diff:'★★☆',source:'V3更新',  note:'',        tags:['高蛋白'],
+    ingredients:[['牛肉片','150g','蛋白質30g｜淨碳水0g｜脂肪8g'],['白花椰菜','200g',''],['無糖豆漿','150ml',''],['咖哩粉','1.5大匙',''],['洋蔥','半顆',''],['橄欖油','1大匙','']],
+    steps:['橄欖油炒洋蔥至軟化，加蒜末薑末炒1分鐘。','加咖哩粉炒香，下牛肉炒至變色。','加花椰菜翻炒，倒豆漿+水，蓋鍋燉10分鐘調鹽。'],
+    tip:'豆漿取代椰奶降低飽和脂肪。洋蔥炒到透明軟化才甜。' },
+  { num:'⑬',  name:'起司炒蛋配菠菜沙拉',         protein:39.2,netCarb:2.9, fat:49.7,kcal:265,time:'15分',diff:'★☆☆',source:'V3',      note:'輔菜',    tags:['快速','低碳','低熱量'],
+    ingredients:[['雞蛋','4顆','蛋白質30g｜淨碳水1.2g｜脂肪20g'],['切達起司片','2片（40g）','蛋白質10g｜淨碳水0.4g｜脂肪13g'],['嫩葉菠菜','100g',''],['橄欖油','1大匙','']],
+    steps:['雞蛋打散加鹽，橄欖油中小火熱鍋。','蛋液倒入小火慢推炒，半熟時放起司片。','起司融化後折疊盛盤，旁邊擺菠菜淋橄欖油。'],
+    tip:'小火慢炒是炒蛋軟嫩的秘訣，中途關火用餘溫收尾最好。' },
+  { num:'⑭',  name:'蔥爆牛肉炒蛋',               protein:45.4,netCarb:5.1, fat:36.6,kcal:310,time:'20分',diff:'★☆☆',source:'新增第1批',note:'',        tags:['快速','低碳','高蛋白'],
+    ingredients:[['牛肉片','150g','蛋白質30g｜淨碳水0g｜脂肪8g'],['雞蛋','2顆','蛋白質13g｜淨碳水0.6g｜脂肪10g'],['青蔥','3根',''],['大蒜','2瓣',''],['醬油・米酒・麻油','各適量',''],['橄欖油','1大匙','']],
+    steps:['牛肉加醬油米酒醃5分鐘；雞蛋打散。','大火熱油，蛋液快速滑炒至半熟取出。','原鍋爆香蒜末，下牛肉炒至7分熟，加蔥白翻炒。','回鍋炒蛋，加蔥綠淋麻油，大火翻炒調鹽。'],
+    tip:'牛肉切勿過熟，7分熟口感最嫩。蔥白蔥綠分開下鍋，蔥白耐炒提香，蔥綠增色。' },
+  { num:'⑮',  name:'味噌豬里肌佐大白菜',         protein:43.3,netCarb:8.8, fat:20.1,kcal:265,time:'25分',diff:'★☆☆',source:'新增第1批',note:'',        tags:['低熱量','高蛋白'],
+    ingredients:[['豬里肌肉（厚切）','180g','蛋白質39g｜淨碳水0g｜脂肪5g'],['大白菜','200g',''],['無糖味噌','1大匙',''],['清酒','1大匙',''],['大蒜・薑末','各適量',''],['橄欖油','1大匙','']],
+    steps:['豬里肌拍鬆，加味噌+清酒醃10分鐘。','中火兩面各煎3分鐘至金黃取出切塊。','原鍋爆香蒜末薑末，加大白菜翻炒，加水蓋鍋燜1分鐘調鹽盛盤放豬肉。'],
+    tip:'味噌含鹽，醃製後不需另加鹽。大白菜自然出甜水，不需勾芡即有濃郁湯汁。' },
+  { num:'⑯',  name:'起司雞胸肉卷佐四季豆',       protein:53.9,netCarb:7.7, fat:24.7,kcal:290,time:'30分',diff:'★★☆',source:'新增第1批',note:'',        tags:['高蛋白','重訓'],
+    ingredients:[['雞胸肉（蝴蝶開）','200g','蛋白質46g｜淨碳水0g｜脂肪4g'],['切達起司片','1片','蛋白質5g｜淨碳水0.2g｜脂肪6.5g'],['四季豆','150g',''],['蒜粉・黑胡椒・義大利香料','各適量',''],['橄欖油','1大匙','']],
+    steps:['雞胸肉蝴蝶開拍薄，撒調料。','鋪起司片捲起，牙籤固定。','中大火每面煎3分鐘，轉小火蓋鍋燜5分鐘。','靜置2分鐘拔牙籤切片，原鍋炒四季豆調鹽盛盤。'],
+    tip:'靜置再切肉汁不流失。起司在肉卷內融化，每口都有起司香！' },
+  { num:'⑰',  name:'薑黃椰奶雞腿燉白花椰',       protein:44.7,netCarb:12.0,fat:45.9,kcal:340,time:'40分',diff:'★☆☆',source:'新增第1批',note:'重訓抗炎', tags:['高蛋白','重訓'],
+    ingredients:[['去骨雞腿排','230g','蛋白質39g｜淨碳水0g｜脂肪15g'],['白花椰菜','200g',''],['椰奶（全脂）','100ml',''],['薑黃粉','1小匙',''],['大蒜・薑末','各適量',''],['橄欖油','1大匙','']],
+    steps:['雞腿切塊撒鹽黑胡椒醃5分鐘。','爆香蒜末薑末，加薑黃粉炒香30秒。','下雞腿煎至金黃，加椰奶+水。','加白花椰，蓋鍋中小火燉15分鐘調鹽。'],
+    tip:'薑黃具抗發炎功效，特別適合重訓日。此道脂肪較高，當日晚餐選清淡食譜。' },
+  { num:'⑱',  name:'蒜香黑胡椒豬排佐炒高麗菜',   protein:40.7,netCarb:14.0,fat:35.2,kcal:300,time:'25分',diff:'★☆☆',source:'新增第1批',note:'',        tags:['高蛋白'],
+    ingredients:[['豬梅花排（厚切）','200g','蛋白質36g｜淨碳水0g｜脂肪14g'],['高麗菜（手撕）','200g',''],['大蒜（拍碎）','4瓣',''],['現磨黑胡椒','大量',''],['醬油・米酒','各1大匙',''],['橄欖油','1.5大匙','']],
+    steps:['豬排用刀背拍打斷筋，加醬油米酒大量黑胡椒醃10分鐘。','大火爆香蒜，放豬排每面煎3分鐘。','靜置3分鐘切片，原鍋炒高麗菜，淋鍋底蒜香汁盛盤。'],
+    tip:'拍打斷筋是關鍵，讓豬梅花排更嫩。黑胡椒要大方使用！' },
+  { num:'⑲',  name:'日式柴魚豆腐蒸蛋',           protein:40.7,netCarb:4.9, fat:22.4,kcal:240,time:'30分',diff:'★☆☆',source:'新增第1批',note:'電鍋',   tags:['低碳','低熱量','電鍋'],
+    ingredients:[['雞蛋','3顆','蛋白質22.5g｜淨碳水0.9g｜脂肪15g'],['板豆腐','150g','蛋白質12g｜淨碳水2.3g｜脂肪5.3g'],['低鈉雞高湯（冷卻）','300ml',''],['醬油・麻油','各1小匙',''],['柴魚片','5g',''],['青蔥末','少許','']],
+    steps:['豆腐切小塊鋪碗底。','蛋液加高湯（1:1.5）醬油拌勻，過篩去泡沫。','蓋保鮮膜，電鍋外鍋半杯水蒸至跳起燜5分鐘。','放柴魚片蔥末淋麻油。'],
+    tip:'蛋液過篩去氣泡是滑嫩關鍵！蒸時夾筷子在鍋蓋縫，避免大火產生蜂巢狀。' },
+  { num:'⑳',  name:'韓式辣炒豬肉（無糖版）',     protein:37.7,netCarb:12.3,fat:32.1,kcal:285,time:'25分',diff:'★☆☆',source:'新增第1批',note:'',        tags:['快速'],
+    ingredients:[['豬梅花肉片','180g','蛋白質33g｜淨碳水0g｜脂肪13g'],['高麗菜','150g',''],['韓式辣椒粉','1大匙',''],['醬油・麻油・赤藻糖醇','各適量',''],['大蒜・薑末','各適量',''],['橄欖油','1大匙','']],
+    steps:['豬肉加韓式辣椒粉、醬油、蒜末、薑末、赤藻糖醇醃10分鐘。','大火快炒至邊緣略焦。','加高麗菜翻炒2分鐘，淋麻油調鹽。'],
+    tip:'赤藻糖醇保留韓式甜鹹平衡。全聯或好市多韓國食品區可買Gochugaru。' },
+  { num:'㉑',  name:'鮭魚酪梨塔塔（免開火）',     protein:46.6,netCarb:4.0, fat:37.5,kcal:320,time:'15分',diff:'★☆☆',source:'新增第1批',note:'免開火',  tags:['快速','低碳','高蛋白','免開火'],
+    ingredients:[['生食級鮭魚（切丁）','150g','蛋白質30g｜淨碳水0g｜脂肪10g'],['酪梨（切丁）','半顆',''],['水煮蛋','2顆',''],['醬油・檸檬汁・麻油','各適量',''],['白芝麻・海苔絲','少許','']],
+    steps:['鮭魚丁加醬油檸檬汁麻油拌勻，冷藏醃5分鐘。','酪梨丁加檸檬汁防氧化。','深盤堆上鮭魚丁+酪梨丁，擺水煮蛋，撒芝麻海苔絲。'],
+    tip:'請確認購買「生食級」鮭魚。有疑慮時改用煙燻鮭魚取代，同樣美味安全。' },
+  { num:'㉒',  name:'棒棒雞低碳版',               protein:58.9,netCarb:7.5, fat:25.5,kcal:330,time:'30分',diff:'★☆☆',source:'新增第1批',note:'蛋白質最高',tags:['高蛋白','重訓'],
+    ingredients:[['雞胸肉（去皮）','220g','蛋白質50.6g｜淨碳水0g｜脂肪4.4g'],['小黃瓜','1根',''],['無糖花生醬','1.5大匙','蛋白質6g｜淨碳水3g｜脂肪12g'],['醬油・麻油・米醋・赤藻糖醇','各適量','']],
+    steps:['雞胸冷水下鍋，水滾後小火12分鐘，燜5分鐘熟透。','取出沿紋理撕成雞絲。','花生醬+醬油+麻油+米醋+赤藻糖醇調醬，加雞湯稀釋。','鋪小黃瓜絲，堆雞絲，淋醬，撒芝麻。'],
+    tip:'全書蛋白質最高（58.9g）！花生醬選「無糖、僅含花生」款式。' },
+  { num:'㉓',  name:'奶油蘑菇鮭魚奶醬佐花椰飯',   protein:51.9,netCarb:12.1,fat:44.0,kcal:355,time:'30分',diff:'★★☆',source:'新增第1批',note:'週末享用',  tags:['高蛋白','重訓'],
+    ingredients:[['鮭魚排（切塊）','200g','蛋白質40g｜淨碳水0g｜脂肪13g'],['蘑菇','100g',''],['白花椰菜（剁碎）','200g',''],['鮮奶油','50ml',''],['無鹽奶油','10g',''],['大蒜末','3瓣','']],
+    steps:['白花椰剁碎乾鍋炒乾水分，加鹽盛盤當底。','奶油炒香蒜末，下蘑菇炒至收汁。','加鮭魚塊煎至熟透，倒鮮奶油收醬，調鹽。','淋在花椰菜飯上。'],
+    tip:'花椰菜飯先炒乾水分，吸醬能力更強，口感接近燉飯。脂肪偏高，每週1–2次。' },
+  { num:'㉔',  name:'香煎帶皮雞腿佐檸檬迷迭香',   protein:44.2,netCarb:2.0, fat:32.5,kcal:315,time:'25分',diff:'★☆☆',source:'新增第2批',note:'低碳清爽',  tags:['低碳','高蛋白','快速'],
+    ingredients:[['帶皮去骨雞腿排','240g','蛋白質43g｜淨碳水0g｜脂肪28g'],['新鮮迷迭香','2枝',''],['檸檬','半顆',''],['大蒜（拍碎）','3瓣',''],['鹽・黑胡椒','各適量','']],
+    steps:['雞皮面輕劃數刀，兩面撒鹽黑胡椒靜置5分鐘。','冷鍋皮面朝下中小火煎10分鐘，翻面加蒜和迷迭香再煎5–6分鐘。','盛盤擠檸檬汁刨皮絲。'],
+    tip:'帶皮雞腿自帶油脂，幾乎不需加油。冷鍋起步、皮面朝下，耐心等10分鐘值得！' },
+  { num:'㉕',  name:'照燒帶皮雞腿（無糖版）',     protein:42.8,netCarb:5.5, fat:28.0,kcal:300,time:'25分',diff:'★☆☆',source:'新增第2批',note:'赤藻糖醇',  tags:['快速','高蛋白'],
+    ingredients:[['帶皮去骨雞腿排','230g','蛋白質42g｜淨碳水0g｜脂肪25g'],['醬油（減鹽）','2大匙',''],['清酒','1大匙',''],['赤藻糖醇','1大匙',''],['薑末','1小匙','']],
+    steps:['醬油+清酒+赤藻糖醇+薑末調成照燒醬。','皮面朝下冷鍋中火煎8–10分鐘，翻面再煎4分鐘。','倒入照燒醬，中小火收汁至濃稠黏裹。','切片盛盤撒白芝麻蔥花。'],
+    tip:'赤藻糖醇焦糖化效果和砂糖相近，照燒色澤同樣亮麗。醬汁收太濃容易焦，需留意火候。' },
+  { num:'㉖',  name:'蒜香奶油帶皮雞腿佐四季豆',   protein:45.5,netCarb:7.5, fat:34.0,kcal:330,time:'30分',diff:'★☆☆',source:'新增第2批',note:'',         tags:['高蛋白','重訓'],
+    ingredients:[['帶皮去骨雞腿排','230g','蛋白質42g｜淨碳水0g｜脂肪25g'],['四季豆','150g',''],['無鹽奶油','10g',''],['大蒜末','5瓣',''],['醬油','1小匙','']],
+    steps:['皮面朝下冷鍋逼油煎8–10分鐘，翻面再煎4分鐘取出。','原鍋留雞油加奶油，炒香蒜末至金黃。','下四季豆大火翻炒3分鐘加醬油調鹽鋪盤。','雞腿切片擺上，淋蒜香奶油汁。'],
+    tip:'雞腿逼出的雞油留在鍋中炒四季豆，香氣倍增，完全不需另加油。' },
+  { num:'㉗',  name:'莫札瑞拉帶皮雞腿焗烤',       protein:52.3,netCarb:4.5, fat:36.8,kcal:350,time:'40分',diff:'★★☆',source:'新增第2批',note:'烤箱料理',  tags:['高蛋白','重訓','低碳'],
+    ingredients:[['帶皮去骨雞腿排','230g','蛋白質42g｜淨碳水0g｜脂肪25g'],['新鮮莫札瑞拉起司','60g','蛋白質12g｜淨碳水0.6g｜脂肪12g'],['牛番茄','半顆',''],['新鮮九層塔','10片',''],['橄欖油','1大匙','']],
+    steps:['雞腿排撒調料醃10分鐘，大火雙面各煎2–3分鐘上色移至烤盤。','雞腿上鋪番茄片和撕塊莫札瑞拉，220°C烤15–18分鐘。','取出插入九層塔，淋少許橄欖油。'],
+    tip:'新鮮莫札瑞拉烤前用紙巾壓乾，避免出水讓雞皮變軟。義式卡布里風格！' },
+  { num:'㉘',  name:'梅花豬肉片壽喜燒（低碳版）', protein:38.5,netCarb:8.0, fat:26.5,kcal:295,time:'20分',diff:'★☆☆',source:'新增第2批',note:'赤藻糖醇',  tags:['快速'],
+    ingredients:[['梅花豬肉片','180g','蛋白質34g｜淨碳水0g｜脂肪18g'],['大白菜','200g',''],['板豆腐','100g',''],['醬油・清酒','各2大匙',''],['赤藻糖醇','1大匙',''],['日式高湯','200ml','']],
+    steps:['醬油+清酒+赤藻糖醇+高湯調成壽喜燒湯底。','鍋中鋪大白菜和豆腐，放豬肉片。','淋湯底蓋鍋中火煮5–7分鐘至熟透。','可打蛋攪散沾食（生食級）。'],
+    tip:'赤藻糖醇完美取代砂糖，甜鹹比例不變但淨碳水幾乎為零。大白菜取代冬粉更低碳。' },
+  { num:'㉙',  name:'梅花豬肉片韓式生菜包肉',     protein:36.2,netCarb:5.5, fat:24.8,kcal:275,time:'20分',diff:'★☆☆',source:'新增第2批',note:'',         tags:['快速','低碳'],
+    ingredients:[['梅花豬肉片','180g','蛋白質32g｜淨碳水0g｜脂肪18g'],['結球萵苣','8片',''],['大蒜片','4瓣',''],['韓式辣椒醬','1小匙',''],['麻油','1小匙','']],
+    steps:['梅花豬乾鍋不加油中大火煎至金黃出油，取出切段。','豬油留鍋，下蒜片小火煎至金黃取出。','生菜葉鋪平，放豬肉+蒜片，點辣椒醬，淋麻油撒芝麻包起吃。'],
+    tip:'梅花豬自帶油脂，完全不需加油。韓式辣椒醬含糖，只用1小匙提味即可。' },
+  { num:'㉚',  name:'梅花豬肉片莫札瑞拉起司卷',   protein:43.8,netCarb:3.0, fat:32.0,kcal:320,time:'25分',diff:'★☆☆',source:'新增第2批',note:'低碳起司香', tags:['低碳','高蛋白'],
+    ingredients:[['梅花豬肉片（寬片）','200g','蛋白質36g｜淨碳水0g｜脂肪20g'],['新鮮莫札瑞拉起司','50g','蛋白質10g｜淨碳水0.5g｜脂肪10g'],['新鮮九層塔','10片',''],['醬油・米酒','各1大匙',''],['橄欖油','1大匙','']],
+    steps:['豬肉片攤平，放起司條+九層塔，捲起牙籤固定。','撒鹽黑胡椒蒜粉，加醬油米酒醃5分鐘。','中火封口朝下先煎，轉動讓四面均勻金黃8–10分鐘。','靜置拔牙籤切段盛盤。'],
+    tip:'豬肉片要選「寬片」才好捲。切開的瞬間起司牽絲效果超棒！' },
+  { num:'㉛',  name:'牛小排肉片炒時蔬（沙茶）',   protein:38.0,netCarb:9.5, fat:29.5,kcal:305,time:'20分',diff:'★☆☆',source:'新增第2批',note:'台式家常',  tags:['快速'],
+    ingredients:[['牛小排肉片','160g','蛋白質33g｜淨碳水0g｜脂肪22g'],['青花菜','120g',''],['甜椒','半顆',''],['沙茶醬（無澱粉）','1大匙',''],['醬油・米酒','各1大匙',''],['大蒜','3瓣','']],
+    steps:['牛肉加醬油+米酒+沙茶醬醃10分鐘。','青花菜汆燙1分鐘撈出。','大火爆香蒜末，下牛肉快炒至6–7分熟取出。','原鍋炒甜椒，回鍋牛肉+青花菜大火翻炒調鹽。'],
+    tip:'選購沙茶醬確認無添加澱粉。牛小排脂肪豐富，沙茶醬加油脂風味更濃。' },
+  { num:'㉜',  name:'牛小排肉片莫札瑞拉起司煎蛋捲',protein:46.5,netCarb:3.5,fat:38.5,kcal:340,time:'20分',diff:'★☆☆',source:'新增第2批',note:'早午餐風',  tags:['快速','低碳','高蛋白'],
+    ingredients:[['牛小排肉片','130g','蛋白質27g｜淨碳水0g｜脂肪18g'],['雞蛋','3顆','蛋白質22.5g｜淨碳水0.9g｜脂肪15g'],['莫札瑞拉起司絲','40g','蛋白質8.8g｜淨碳水0.8g｜脂肪6.8g'],['洋蔥絲','50g',''],['橄欖油','1大匙','']],
+    steps:['牛肉撒鹽黑胡椒大火炒熟，加洋蔥絲炒軟，取出。','雞蛋打散調鹽，原鍋中小火倒入蛋液不翻動，待半凝固。','蛋皮上鋪牛肉洋蔥，撒起司絲，對折成半月形。','蓋鍋小火燜1分鐘讓起司融化，切盤。'],
+    tip:'蛋皮保持整片狀才能包餡。起司絲比新鮮莫札瑞拉水分少，包起來不會出水。' },
+  { num:'㉝',  name:'牛小排肉片蘑菇莫札瑞拉焗烤', protein:49.0,netCarb:6.0, fat:40.0,kcal:360,time:'35分',diff:'★★☆',source:'新增第2批',note:'週末享用',  tags:['高蛋白','重訓'],
+    ingredients:[['牛小排肉片','160g','蛋白質33g｜淨碳水0g｜脂肪22g'],['蘑菇','120g',''],['莫札瑞拉起司絲','50g','蛋白質11g｜淨碳水1g｜脂肪8.5g'],['大蒜末','4瓣',''],['橄欖油','1大匙','']],
+    steps:['橄欖油爆香蒜末，炒蘑菇至收汁，鋪烤盤底部。','牛肉撒鹽黑胡椒大火每面各煎1分鐘，鋪在蘑菇上。','撒起司絲，220°C烤10–12分鐘至起司金黃。','取出撒義大利香料趁熱享用。'],
+    tip:'牛排先煎半熟再烤，保留肉汁同時讓起司完美焦化。' },
+  { num:'㉞',  name:'莫札瑞拉番茄雞腿排卡布里風', protein:47.0,netCarb:6.5, fat:30.5,kcal:320,time:'30分',diff:'★☆☆',source:'新增第2批',note:'義式清爽',  tags:['高蛋白','低碳'],
+    ingredients:[['帶皮去骨雞腿排','220g','蛋白質41g｜淨碳水0g｜脂肪23g'],['新鮮莫札瑞拉起司','50g','蛋白質10g｜淨碳水0.5g｜脂肪10g'],['牛番茄','1顆',''],['新鮮九層塔','15片',''],['初榨橄欖油','1大匙','']],
+    steps:['雞腿排皮面朝下冷鍋中火煎8–10分鐘，翻面再煎4–5分鐘至熟取出切塊。','番茄片與莫札瑞拉交疊排盤（卡布里風格）。','雞腿擺旁邊，插九層塔，淋橄欖油撒鹽黑胡椒。'],
+    tip:'九層塔選新鮮的，是靈魂所在。莫札瑞拉與番茄水分相輔相成，搭配酥脆雞皮層次豐富。' },
+  { num:'㉟',  name:'梅花豬肉片白菜莫札瑞拉起司鍋',protein:41.5,netCarb:7.0,fat:28.5,kcal:295,time:'25分',diff:'★☆☆',source:'新增第2批',note:'冬日暖鍋',  tags:['電鍋','低熱量'],
+    ingredients:[['梅花豬肉片','180g','蛋白質32g｜淨碳水0g｜脂肪18g'],['大白菜','250g',''],['新鮮莫札瑞拉起司','60g','蛋白質12g｜淨碳水0.6g｜脂肪12g'],['日式高湯','400ml',''],['醬油・味噌','各1大匙','']],
+    steps:['高湯加醬油+味噌+大蒜調成湯底，中火煮滾。','加大白菜蓋鍋中火煮5分鐘至軟化。','放豬肉片中大火涮熟，調鹽。','起鍋前擺撕塊莫札瑞拉，蓋鍋燜30秒半融化，撒蔥末。'],
+    tip:'莫札瑞拉半融狀態最美味，不要煮太久。冬天首選！' },
+  { num:'㊱',  name:'泡菜起司焗烤帶皮雞腿排',     protein:38.5,netCarb:5.2, fat:37.8,kcal:520,time:'25分',diff:'★☆☆',source:'新增第3批',note:'泡菜+起司', tags:['高蛋白'],
+    ingredients:[['帶皮去骨雞腿排','180g','蛋白質33g｜淨碳水0g｜脂肪25g'],['韓式泡菜','50g',''],['莫札瑞拉起司絲','30g','蛋白質6.6g｜淨碳水0.6g｜脂肪5.1g'],['洋蔥絲','20g',''],['鹽・黑胡椒','適量','']],
+    steps:['雞腿撒鹽黑胡椒，皮面朝下冷鍋中火煎8–10分鐘，翻面煎4分鐘取出。','原鍋炒洋蔥至軟，下泡菜翻炒1–2分鐘。','雞腿放回，鋪泡菜洋蔥撒起司絲，蓋鍋悶2分鐘至起司融化。'],
+    tip:'此道熱量偏高（520kcal），當日另一餐選低熱量食譜。' },
+  { num:'㊲',  name:'蘑菇蔥嫩炒雞腿肉',           protein:34.2,netCarb:6.1, fat:31.5,kcal:445,time:'20分',diff:'★☆☆',source:'新增第3批',note:'',         tags:['快速'],
+    ingredients:[['帶皮雞腿肉（切塊）','180g','蛋白質33g｜淨碳水0g｜脂肪25g'],['蘑菇','80g',''],['洋蔥絲','30g',''],['大蒜片','3瓣','']],
+    steps:['雞腿切塊，皮面朝下冷鍋乾煎逼油約5分鐘，翻面煎熟取出。','原鍋加蒜片爆香，下洋蔥絲炒軟，下蘑菇炒至出水收汁。','回鍋雞塊翻炒均勻，調鹽黑胡椒盛盤。'],
+    tip:'帶皮雞腿自帶油脂，乾煎完全不需加油。蘑菇要炒到出水才鮮甜香。' },
+  { num:'㊳',  name:'大白菜雞腿燉豆腐（低碳版）', protein:38.0,netCarb:5.8, fat:31.2,kcal:465,time:'35分',diff:'★☆☆',source:'新增第3批',note:'電鍋可做',  tags:['電鍋','低碳','高蛋白'],
+    ingredients:[['帶皮雞腿肉（切塊）','150g','蛋白質27.5g｜淨碳水0g｜脂肪21g'],['大白菜','150g',''],['板豆腐','100g',''],['雞高湯','300ml',''],['薑片','3片',''],['醬油','1大匙','']],
+    steps:['雞腿肉乾煎至金黃出油，加薑片爆香。','加高湯水滾後放大白菜蓋鍋中火燉15分鐘。','放豆腐塊和大蔥，加醬油繼續燉5分鐘調鹽。'],
+    tip:'大白菜燉後釋放天然甜水，湯頭無需額外調味。電鍋版：外鍋1.5杯水直接燉至跳起。' },
+  { num:'㊴',  name:'蘑菇起司厚蛋燒',             protein:27.5,netCarb:3.2, fat:31.8,kcal:410,time:'20分',diff:'★☆☆',source:'新增第3批',note:'低碳早午餐', tags:['快速','低碳'],
+    ingredients:[['雞蛋','3顆','蛋白質22.5g｜淨碳水0.9g｜脂肪15g'],['蘑菇','60g',''],['莫札瑞拉起司絲','25g','蛋白質5.5g｜淨碳水0.5g｜脂肪4.3g'],['草飼無鹽奶油','10g','']],
+    steps:['奶油中火炒蘑菇至出水收汁，撒少許鹽。','蛋液打散加鹽，倒入鍋中與蘑菇輕輕拌勻。','撒起司絲，小火蓋鍋蓋烘3–4分鐘至凝固融化。','對折或切塊盛盤。'],
+    tip:'小火蓋鍋是滑嫩關鍵，不要翻炒！此道蛋白質偏低，建議搭配高蛋白主菜。' },
+  { num:'㊵',  name:'泡菜洋蔥炒蛋',               protein:21.0,netCarb:5.5, fat:25.2,kcal:335,time:'15分',diff:'★☆☆',source:'新增第3批',note:'低熱量輔菜', tags:['快速','低熱量'],
+    ingredients:[['雞蛋','3顆','蛋白質22.5g｜淨碳水0.9g｜脂肪15g'],['韓式泡菜','60g',''],['洋蔥絲','30g',''],['橄欖油','2小匙','']],
+    steps:['橄欖油熱鍋，下洋蔥絲炒至透明軟化約2分鐘。','加泡菜翻炒1分鐘至香氣釋出。','倒入打散蛋液快速翻炒至八分熟，調鹽盛盤。'],
+    tip:'適合作輔菜搭配高蛋白食譜。泡菜本身含鹽，調鹽時少量試味。' },
+  { num:'㊶',  name:'泡菜炒梅花豬肉片',           protein:36.5,netCarb:6.8, fat:30.5,kcal:450,time:'20分',diff:'★☆☆',source:'新增第3批',note:'無需加油',  tags:['快速'],
+    ingredients:[['梅花豬肉片（薄切）','180g','蛋白質32g｜淨碳水0g｜脂肪18g'],['韓式泡菜','80g',''],['洋蔥絲','30g',''],['麻油','1小匙',''],['醬油','1小匙','']],
+    steps:['不沾鍋不放油，豬肉片下鍋中大火炒至微變色出油。','下洋蔥絲翻炒1分鐘，加泡菜大火快炒1–2分鐘。','沿鍋邊淋醬油翻拌，起鍋前淋麻油提香。'],
+    tip:'梅花豬油脂豐富，完全不需加油。泡菜下鍋後大火快炒讓汁略收乾才香。' },
+  { num:'㊷',  name:'起司熔岩牛小排肉片',         protein:38.2,netCarb:3.5, fat:47.0,kcal:590,time:'20分',diff:'★☆☆',source:'新增第3批',note:'低碳起司牽絲',tags:['快速','低碳','高蛋白'],
+    ingredients:[['牛小排肉片（薄切）','150g','蛋白質31g｜淨碳水0g｜脂肪30g'],['切達起司片','2片（40g）','蛋白質10g｜淨碳水0.8g｜脂肪13g'],['洋蔥絲','20g',''],['醬油','1小匙',''],['黑胡椒','大量','']],
+    steps:['洋蔥絲中火炒軟至金黃鋪鍋底。','牛肉片大火快炒至7分熟，撒黑胡椒加醬油翻拌。','聚攏牛肉，鋪上起司片，熄火蓋鍋利用餘溫悶2分鐘。','起司牽絲時立刻盛盤。'],
+    tip:'此道熱量偏高（590kcal），當日另一餐選㊻蒜香蘑菇炒蝦仁（320kcal）平衡。' },
+  { num:'㊸',  name:'娃娃菜梅花豬肉卷',           protein:32.8,netCarb:4.6, fat:29.2,kcal:415,time:'25分',diff:'★☆☆',source:'新增第3批',note:'',         tags:['低碳'],
+    ingredients:[['梅花豬肉片（寬片）','160g','蛋白質28.5g｜淨碳水0g｜脂肪16g'],['娃娃菜','120g',''],['無鹽奶油','5g',''],['醬油','1大匙',''],['清酒','1大匙','']],
+    steps:['娃娃菜切條，豬肉片攤平捲起娃娃菜，封口朝下備用。','奶油中火煎肉卷至封口定型，轉動讓四面上色。','加醬油+清酒+水，蓋鍋中小火燜5–6分鐘至軟嫩。','開蓋大火收汁，撒黑胡椒切段盛盤淋汁。'],
+    tip:'封口朝下先煎，肉卷才不會散開。娃娃菜比大白菜更甜嫩，燜煮時自然出汁。' },
+  { num:'㊹',  name:'蘑菇黑椒炒牛小排肉片',       protein:33.5,netCarb:4.8, fat:41.5,kcal:525,time:'20分',diff:'★☆☆',source:'新增第3批',note:'',         tags:['快速','低碳'],
+    ingredients:[['牛小排肉片（薄切）','150g','蛋白質31g｜淨碳水0g｜脂肪30g'],['蘑菇','100g',''],['大蒜片','3瓣',''],['黑胡椒粒（現磨）','大量',''],['醬油','1小匙','']],
+    steps:['牛小排下鍋大火逼油至變色撈出，保留鍋中油脂。','原鍋爆香蒜片，下蘑菇炒至出水收汁。','回鍋牛肉，大量撒黑胡椒+海鹽，大火快炒，沿鍋邊淋醬油翻拌。','盛盤再撒一次現磨黑胡椒。'],
+    tip:'黑胡椒要大量才夠味，建議用現磨胡椒粒，香氣差異很大。' },
+  { num:'㊺',  name:'大白菜千層豬肉鍋（壽喜低碳版）',protein:32.2,netCarb:7.2,fat:25.5,kcal:390,time:'30分',diff:'★☆☆',source:'新增第3批',note:'白菜自然出水',tags:['電鍋'],
+    ingredients:[['梅花豬肉片','150g','蛋白質26.7g｜淨碳水0g｜脂肪15g'],['大白菜','200g',''],['醬油','1大匙',''],['赤藻糖醇','1小匙',''],['清酒','1大匙',''],['昆布高湯','100ml','']],
+    steps:['大白菜與豬肉片交替疊好，垂直緊密碼入鍋中。','醬油+赤藻糖醇+清酒+高湯調成醬汁，沿鍋邊慢慢淋入。','蓋鍋中小火煨煮15–18分鐘，大白菜自然出水。','撒白芝麻蔥花端鍋上桌。'],
+    tip:'大白菜出水即是天然湯底，鮮甜不需其他調料。' },
+  { num:'㊻',  name:'蒜香蘑菇炒蝦仁',             protein:33.2,netCarb:4.9, fat:17.8,kcal:320,time:'20分',diff:'★☆☆',source:'新增第3批',note:'低熱量清爽', tags:['快速','低熱量','低碳'],
+    ingredients:[['蝦仁','150g','蛋白質28g｜淨碳水0g｜脂肪1.5g'],['蘑菇','100g',''],['大蒜片','4–5瓣',''],['橄欖油','1大匙','']],
+    steps:['橄欖油中火煸香蒜片至金黃脆香，撈出備用。','原鍋加蘑菇炒至出水收汁。','下蝦仁大火炒至變紅，加回蒜片。','撒海鹽黑胡椒調味盛盤。'],
+    tip:'低熱量（320kcal）且蛋白質豐富，性價比最高的食譜之一。' },
+  { num:'㊼',  name:'滑蛋蝦仁大白菜',             protein:34.5,netCarb:4.2, fat:20.5,kcal:340,time:'20分',diff:'★☆☆',source:'新增第3批',note:'脂肪已修正', tags:['快速'],
+    ingredients:[['蝦仁','120g','蛋白質22.4g｜淨碳水0g｜脂肪1.2g'],['雞蛋','2顆','蛋白質13g｜淨碳水0.6g｜脂肪10g'],['大白菜（切絲）','100g',''],['橄欖油','2小匙',''],['薑末','少許','']],
+    steps:['大白菜切絲炒軟加鹽盛出。','補油加薑末爆香，蝦仁炒至變色熟透，加回大白菜翻拌。','轉小火倒蛋液，輕輕畫圈推動至半熟滑蛋狀起鍋調鹽。'],
+    tip:'⚠原文件脂肪欄「205」為錯誤，已修正為20.5g。滑蛋關鍵：小火輕推不翻炒，八分熟即起鍋。' },
+  { num:'㊽',  name:'泡菜海陸起司雙拼',           protein:41.2,netCarb:4.5, fat:26.8,kcal:425,time:'20分',diff:'★☆☆',source:'新增第3批',note:'海陸高蛋白', tags:['快速','高蛋白'],
+    ingredients:[['蝦仁','100g','蛋白質18.7g｜淨碳水0g｜脂肪1g'],['梅花豬肉片','80g','蛋白質14.2g｜淨碳水0g｜脂肪8g'],['韓式泡菜','60g',''],['莫札瑞拉起司絲','20g',''],['醬油','1小匙','']],
+    steps:['橄欖油熱鍋，下豬肉大火炒至出油，加蝦仁炒至變紅。','下泡菜大火翻炒，沿鍋邊淋醬油。','聚攏食材撒起司絲，蓋鍋悶1分鐘至牽絲，立刻盛盤。'],
+    tip:'海鮮＋豬肉雙重蛋白質。起司牽絲後馬上盛盤，冷了就不牽絲了！' },
+  { num:'㊾',  name:'娃娃菜鮮蝦豆腐煲',           protein:34.0,netCarb:6.2, fat:9.8, kcal:260,time:'25分',diff:'★☆☆',source:'新增第3批',note:'低熱量低脂', tags:['低熱量','低碳'],
+    ingredients:[['蝦仁','120g','蛋白質22.4g｜淨碳水0g｜脂肪1.2g'],['娃娃菜','150g',''],['板豆腐','100g',''],['麻油','1小匙',''],['雞高湯','200ml','']],
+    steps:['砂鍋放高湯+薑片中火煮滾。','下豆腐塊與娃娃菜，蓋鍋煮5分鐘至軟。','放蝦仁煮1–2分鐘至變紅熟透。','滴麻油加鹽調味盛碗。'],
+    tip:'全書熱量最低之一（260kcal），脂肪極低（9.8g）。蝦仁過熟會變橡皮！' },
+  { num:'㊿',  name:'洋蔥起司蝦仁烘蛋',           protein:38.8,netCarb:4.5, fat:28.5,kcal:435,time:'20分',diff:'★☆☆',source:'新增第3批',note:'低碳蛋白高', tags:['快速','低碳','高蛋白'],
+    ingredients:[['蝦仁','100g','蛋白質18.7g｜淨碳水0g｜脂肪1g'],['雞蛋','3顆','蛋白質22.5g｜淨碳水0.9g｜脂肪15g'],['洋蔥丁','30g',''],['切達起司絲','20g','蛋白質5g｜淨碳水0.4g｜脂肪6.5g'],['橄欖油','2小匙','']],
+    steps:['橄欖油炒洋蔥丁至透明，加蝦仁炒熟均勻鋪鍋底。','蛋液加鹽均勻倒入覆蓋食材。','撒起司絲，極小火蓋鍋蓋烘3–4分鐘至蛋液凝固。','切塊盛盤撒黑胡椒。'],
+    tip:'極小火是關鍵，大火底部焦糊蛋液還沒熟。切達起司比莫札瑞拉更有鹹香味。' },
+  { num:'5️⃣1️⃣',name:'起司蝦仁櫛瓜煎盤',          protein:31.0,netCarb:4.4, fat:21.3,kcal:340,time:'20分',diff:'★☆☆',source:'新增第3批',note:'低碳清爽',  tags:['快速','低碳','低熱量'],
+    ingredients:[['蝦仁','130g','蛋白質24.3g｜淨碳水0g｜脂肪1.3g'],['櫛瓜（切片）','100g','蛋白質1.6g｜淨碳水2.6g｜脂肪0.3g'],['切達起司片','2片（40g）','蛋白質10g｜淨碳水0.8g｜脂肪13g'],['橄欖油','2小匙',''],['大蒜末','2瓣','']],
+    steps:['橄欖油中大火煎櫛瓜片兩面至金黃取出。','原鍋加蒜末爆香，下蝦仁大火炒至變紅。','回鍋櫛瓜，撒義大利香料黑胡椒翻拌。','鋪起司片，蓋鍋悶1–2分鐘至融化盛盤。'],
+    tip:'櫛瓜煎至上色才有香氣，不要只是軟化。好市多或全聯可買到，淨碳水僅2.6g/100g。' },
+];
+
+var DESSERT_DB = [
+  { num:'甜①',name:'草莓希臘優格碗',         protein:15.9,netCarb:11.5,fat:9.8, kcal:165,time:'5分',        source:'V3原版',       note:'免煮・蛋白質最高',
+    ingredients:[['希臘優格（全脂無糖）','150g','蛋白質13.5g｜淨碳水5.3g｜脂肪2.1g'],['新鮮草莓','100g',''],['杏仁片（烤過）','15g',''],['赤藻糖醇','1小匙（可省）','']],
+    steps:['希臘優格加赤藻糖醇拌勻。','草莓洗淨切片鋪上。','撒杏仁片插薄荷葉裝飾。'],
+    tip:'免煮5分鐘完成，蛋白質最高（15.9g）。草莓可換冷凍藍莓（稍微退冰）。' },
+  { num:'甜②',name:'奇亞籽杏仁奶布丁',       protein:7.1, netCarb:11.1,fat:15.2,kcal:175,time:'10分+冷藏4h',  source:'V3原版',       note:'可前一晚備好',
+    ingredients:[['無糖杏仁奶','250ml',''],['奇亞籽','3大匙（30g）',''],['赤藻糖醇','1小匙',''],['冷凍藍莓','30g（裝飾）','']],
+    steps:['杏仁奶+赤藻糖醇+香草精拌勻。','加奇亞籽攪拌，靜置5分鐘後再拌一次。','蓋蓋冷藏至少4小時至布丁狀，取出放藍莓裝飾。'],
+    tip:'可前一晚備好。奇亞籽靜置5分鐘後再拌一次，防止結塊。' },
+  { num:'甜③',name:'低碳檸檬起司慕斯',       protein:4.5, netCarb:9.7, fat:50.1,kcal:190,time:'10分+冷藏2h',  source:'V3原版',       note:'脂肪偏高少量享用',
+    ingredients:[['奶油起司（室溫軟化）','80g',''],['動物性鮮奶油','60ml',''],['檸檬汁','2大匙',''],['赤藻糖醇','1.5大匙',''],['冷凍草莓','30g（裝飾）','']],
+    steps:['奶油起司加赤藻糖醇打滑順，加檸檬汁拌勻。','鮮奶油打至七分發，分兩次輕輕拌入。','裝杯冷藏至少2小時，取出放草莓裝飾。'],
+    tip:'脂肪偏高（~50g），建議全日脂肪攝取控制時享用。' },
+  { num:'甜④',name:'黑巧克力核桃凍糕（約4顆）',protein:5.3,netCarb:5.0,fat:36.8,kcal:155,time:'15分+冷凍1h',  source:'V3原版',       note:'可做多顆分次吃',
+    ingredients:[['85%以上黑巧克力','40g',''],['無鹽奶油','10g',''],['核桃（切碎）','20g',''],['赤藻糖醇','1小匙',''],['鹽之花','少許','']],
+    steps:['巧克力+奶油隔水加熱融化，加赤藻糖醇攪拌。','拌入核桃碎。','舀入矽膠模，撒鹽之花，冷凍1小時至凝固。'],
+    tip:'85%以上黑巧克力含糖量低。可一次做8–10顆，分裝冷凍保存1個月。' },
+  { num:'甜⑤',name:'抹茶奇亞籽豆漿凍',       protein:17.1,netCarb:7.1, fat:12.0,kcal:160,time:'10分+冷藏4h',  source:'V3原版',       note:'蛋白質較高',
+    ingredients:[['無糖豆漿','300ml','蛋白質10.4g｜淨碳水2.5g｜脂肪4g'],['抹茶粉','1小匙',''],['奇亞籽','2.5大匙',''],['赤藻糖醇','1大匙',''],['希臘優格','30g（裝飾）','']],
+    steps:['抹茶粉加熱水拌成糊，加豆漿+赤藻糖醇攪拌。','加奇亞籽，靜置5分鐘後再拌一次。','倒入玻璃杯，冷藏至少4小時至凝固。','取出放希臘優格，撒抹茶粉裝飾。'],
+    tip:'豆漿版蛋白質高（17g），是運動後補充蛋白質的好選擇。' },
+  { num:'甜⑥',name:'藍莓優格杏仁奶酪',       protein:17.0,netCarb:13.9,fat:8.8, kcal:175,time:'10分+冷藏4h',  source:'新增甜點第1批', note:'冷藏隔夜更濃郁',
+    ingredients:[['無糖希臘優格','120g',''],['無糖杏仁奶','150ml',''],['吉利丁粉','5g',''],['赤藻糖醇','1.5大匙',''],['冷凍藍莓','60g',''],['杏仁片','10g（裝飾）','']],
+    steps:['吉利丁粉加冷水泡5分鐘，隔水加熱至融化。','杏仁奶微溫加赤藻糖醇，加吉利丁液攪拌，稍涼。','加入希臘優格拌勻，倒入杯中，冷藏至少4小時。','取出放藍莓撒杏仁片。'],
+    tip:'吉利丁液不要加入太熱的液體（超過60°C失去凝固力）。' },
+  { num:'甜⑦',name:'草莓鮮奶油杏仁蛋糕杯',   protein:14.1,netCarb:10.7,fat:41.2,kcal:205,time:'15分+冷藏30min',source:'新增甜點第1批', note:'杏仁粉無粉蛋糕體',
+    ingredients:[['杏仁粉（超細）','40g','蛋白質5.6g｜淨碳水1.6g｜脂肪14g'],['雞蛋','1顆',''],['赤藻糖醇','1大匙',''],['泡打粉','¼小匙',''],['動物性鮮奶油','60ml（打發）',''],['冷凍草莓','80g（退冰）','']],
+    steps:['杏仁粉+蛋+赤藻糖醇+泡打粉拌勻，馬克杯微波700W 90秒。','蛋糕體放涼，用叉子壓凹槽。','鮮奶油打至八分發。','填入鮮奶油，放草莓，冷藏30分鐘後享用。'],
+    tip:'鮮奶油一定要打到八分發才能定型。烤箱版180°C烤15分鐘口感更濕潤。' },
+  { num:'甜⑧',name:'冷凍藍莓奶油霜淇淋',     protein:6.8, netCarb:19.6,fat:55.9,kcal:170,time:'10分+冷凍4h',  source:'新增甜點第1批', note:'每次取2–3球',
+    ingredients:[['動物性鮮奶油','150ml',''],['冷凍藍莓','100g',''],['赤藻糖醇','2大匙',''],['希臘優格','30g',''],['香草精','½小匙','']],
+    steps:['冷凍藍莓+赤藻糖醇打成泥。','鮮奶油+香草精打至七分發，加希臘優格輕拌。','藍莓泥旋轉拌入鮮奶油，保留大理石紋。','倒入密封容器冷凍至少4小時。享用前室溫放5分鐘。'],
+    tip:'每2小時取出攪拌一次再繼續冷凍，口感更細緻。每次只取2–3球（約80g）享用。' },
+  { num:'甜⑨',name:'草莓優格慕斯杯',         protein:17.5,netCarb:15.5,fat:17.0,kcal:160,time:'15分+冷藏2h',  source:'新增甜點第1批', note:'清爽低脂首選',
+    ingredients:[['希臘優格（無糖）','150g',''],['冷凍草莓','100g',''],['動物性鮮奶油','40ml',''],['吉利丁粉','3g',''],['赤藻糖醇','1大匙','']],
+    steps:['冷凍草莓+赤藻糖醇小火加熱融化，加入泡軟吉利丁攪融，放涼。','鮮奶油打至七分發。','優格加草莓醬拌勻，輕拌入鮮奶油。','倒入玻璃杯，冷藏至少2小時，取出放草莓裝飾。'],
+    tip:'冷凍草莓退冰後果汁豐富，加熱後顏色更鮮豔。吉利丁幫助定型。' },
+  { num:'甜⑩',name:'杏仁粉奶油餅乾（無麵粉，約12片）',protein:7.8,netCarb:1.7,fat:27.4,kcal:175,time:'20分+烤箱',source:'新增甜點第1批',note:'淨碳水最低・酥脆',
+    ingredients:[['杏仁粉（超細）','120g','蛋白質16.8g｜淨碳水4.8g｜脂肪42g'],['無鹽奶油（室溫軟化）','40g',''],['赤藻糖醇（糖粉狀）','3大匙',''],['雞蛋','1顆',''],['香草精','½小匙','']],
+    steps:['奶油+赤藻糖醇電動打蛋器打2分鐘，加蛋液+香草精拌勻。','加杏仁粉+鹽拌成麵團。','取適量壓成圓片（厚約6mm），間距3cm。','165°C烤12–15分鐘至邊緣金黃，放涼後才會酥脆。'],
+    tip:'淨碳水最低（1.7g/4片）！放涼後密封保存，室溫3–4天；冷凍可存1個月。' },
+  { num:'甜⑪',name:'藍莓鮮奶油起司蛋糕杯（免烤）',protein:6.7,netCarb:14.2,fat:52.2,kcal:210,time:'10分+冷藏1h',source:'新增甜點第1批',note:'免烤・5分鐘組裝',
+    ingredients:[['奶油起司','70g（室溫軟化）',''],['動物性鮮奶油','60ml（打發）',''],['赤藻糖醇','1大匙',''],['檸檬汁','1小匙',''],['冷凍藍莓','70g',''],['杏仁粉','15g（底層）','']],
+    steps:['杏仁粉+少許赤藻糖醇+融化奶油5g拌成粉粒狀，鋪杯底。','奶油起司打滑順，加赤藻糖醇+檸檬汁拌勻。','鮮奶油打至八分發輕拌入起司糊。','填入杯中冷藏1小時，取出放退冰藍莓。'],
+    tip:'5分鐘組裝完成！藍莓加少許赤藻糖醇小火加熱5分鐘成藍莓醬，比直接放更有果醬感。' },
+  { num:'甜⑫',name:'草莓杏仁奶油冰棒（約6支）', protein:1.5, netCarb:3.3, fat:7.7, kcal:155,time:'10分+冷凍4h',  source:'新增甜點第1批', note:'可分6支・低熱量',
+    ingredients:[['冷凍草莓','150g',''],['動物性鮮奶油','120ml',''],['無糖杏仁奶','100ml',''],['赤藻糖醇','2大匙',''],['希臘優格','50g','']],
+    steps:['冷凍草莓+赤藻糖醇打成草莓泥。','鮮奶油+杏仁奶+優格+香草精攪拌均勻（不需打發）。','模具先倒草莓泥至1/3，冷凍20分鐘初步定型。','再倒入奶油優格層至滿，插冰棒棍，冷凍至少4小時。'],
+    tip:'分層製作呈現漂亮雙色。6格矽膠模好市多或全聯可買，冷凍後輕鬆脫模。' },
+  { num:'甜⑬',name:'優格藍莓杏仁格蘭諾拉碗',   protein:18.4,netCarb:16.8,fat:16.1,kcal:190,time:'5分',          source:'新增甜點第1批', note:'蛋白質最高・早餐甜點',
+    ingredients:[['希臘優格（無糖全脂）','150g','蛋白質13.5g｜淨碳水5.3g｜脂肪2.1g'],['杏仁粉（烤過）','20g',''],['杏仁片（烤過）','10g',''],['冷凍藍莓','70g',''],['椰子絲（無糖）','5g','']],
+    steps:['杏仁粉+椰子絲乾鍋小火炒香約2分鐘，放涼加杏仁片。','希臘優格加赤藻糖醇拌勻盛碗。','鋪退冰藍莓，撒低碳格蘭諾拉。'],
+    tip:'蛋白質最高的甜點（18.4g），也可作為斷食結束後的第一餐。' },
+  { num:'甜⑭',name:'鮮奶油草莓提拉米蘇（低碳）',protein:10.6,netCarb:13.9,fat:65.2,kcal:220,time:'20分+冷藏2h',  source:'新增甜點第1批', note:'週末享用',
+    ingredients:[['奶油起司','100g（室溫）',''],['動物性鮮奶油','80ml',''],['希臘優格','50g',''],['赤藻糖醇','2大匙',''],['義式濃縮咖啡','2大匙',''],['冷凍草莓','80g（退冰切丁）',''],['無糖可可粉','適量（裝飾）','']],
+    steps:['奶油起司+赤藻糖醇打滑順，加優格拌勻。','鮮奶油打至八分發輕拌入起司糊。','玻璃杯底鋪草莓丁，淋少許咖啡液。','填入起司慕斯，再鋪草莓+咖啡，蓋最後一層慕斯，撒可可粉，冷藏2小時。'],
+    tip:'用咖啡液浸草莓取代手指餅乾，大幅降低碳水。脂肪偏高，週末享用最適合。' },
+  { num:'甜⑮',name:'藍莓奶油杏仁塔（無派皮）',  protein:20.1,netCarb:19.5,fat:82.0,kcal:200,time:'25分+冷藏1h',  source:'新增甜點第1批', note:'杏仁粉塔皮週末烘焙',
+    ingredients:[['杏仁粉','80g','蛋白質11.2g｜淨碳水3.2g｜脂肪28g'],['無鹽奶油（融化）','30g',''],['赤藻糖醇','3大匙',''],['雞蛋','1顆',''],['動物性鮮奶油','60ml',''],['冷凍藍莓','100g','']],
+    steps:['塔皮：杏仁粉+融化奶油+1大匙赤藻糖醇拌成粒狀，壓入塔模，180°C烤8分鐘放涼。','奶油餡：鮮奶油+2大匙赤藻糖醇打至八分發，拌入打散蛋液+香草精。','奶油餡填入塔皮，撒冷凍藍莓（不需退冰）。','冷藏1小時至定型，切片享用。'],
+    tip:'杏仁粉塔皮酥脆不輸傳統派皮，不含麩質！冷凍藍莓烤後出汁形成天然藍莓醬，色澤驚豔。' },
+];
+
+// ── 狀態 ────────────────────────────────────────────
+var _recipeTab    = 'list';
+var _recipeTag    = '全部';
+var _recipeSort   = 'num';
+var _recipeSearch = '';
+var _dessertSearch = '';
+
+function switchRecipeTab(el) {
+  _recipeTab = el.dataset.rtab;
+  document.querySelectorAll('.recipe-tab').forEach(function(t){ t.classList.toggle('active', t.dataset.rtab === _recipeTab); });
+  ['list','ranking','situation','dessert'].forEach(function(v){
+    var el = document.getElementById('recipe-view-' + v);
+    if (el) el.style.display = v === _recipeTab ? '' : 'none';
+  });
+  if (_recipeTab === 'list')      renderRecipeGrid();
+  if (_recipeTab === 'ranking')   renderRecipeRanking();
+  if (_recipeTab === 'situation') renderRecipeSituation();
+  if (_recipeTab === 'dessert')   renderDessertGrid();
+}
+
+function renderRecipePage() {
+  _recipeTab = 'list';
+  document.querySelectorAll('.recipe-tab').forEach(function(t){ t.classList.toggle('active', t.dataset.rtab === 'list'); });
+  ['list','ranking','situation','dessert'].forEach(function(v){
+    var el = document.getElementById('recipe-view-' + v);
+    if (el) el.style.display = v === 'list' ? '' : 'none';
+  });
+  renderRecipeGrid();
+}
+
+function onRecipeSearch(v) {
+  _recipeSearch = v.trim();
+  var clr = document.getElementById('recipe-search-clear');
+  if (clr) clr.style.display = v ? 'block' : 'none';
+  renderRecipeGrid();
+}
+function clearRecipeSearch() {
+  var inp = document.getElementById('recipe-search-input');
+  if (inp) inp.value = '';
+  onRecipeSearch('');
+}
+function setRecipeTag(el) {
+  _recipeTag = el.dataset.tag;
+  document.querySelectorAll('.recipe-chip').forEach(function(c){ c.classList.toggle('active', c.dataset.tag === _recipeTag); });
+  renderRecipeGrid();
+}
+function setRecipeSort(el) {
+  _recipeSort = el.dataset.sort;
+  document.querySelectorAll('.recipe-sort-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.sort === _recipeSort); });
+  renderRecipeGrid();
+}
+function onDessertSearch(v) {
+  _dessertSearch = v.trim();
+  var clr = document.getElementById('dessert-search-clear');
+  if (clr) clr.style.display = v ? 'block' : 'none';
+  renderDessertGrid();
+}
+function clearDessertSearch() {
+  var inp = document.getElementById('dessert-search-input');
+  if (inp) inp.value = '';
+  onDessertSearch('');
+}
+
+function getFilteredRecipes() {
+  var list = RECIPE_DB.slice();
+  if (_recipeTag !== '全部') list = list.filter(function(r){ return r.tags.indexOf(_recipeTag) >= 0; });
+  if (_recipeSearch) {
+    var q = _recipeSearch;
+    list = list.filter(function(r){
+      return r.name.indexOf(q) >= 0 ||
+        r.tags.some(function(t){ return t.indexOf(q) >= 0; }) ||
+        (r.ingredients || []).some(function(i){ return i[0].indexOf(q) >= 0; });
+    });
+  }
+  if (_recipeSort === 'protein') list.sort(function(a,b){ return b.protein - a.protein; });
+  else if (_recipeSort === 'kcal') list.sort(function(a,b){ return a.kcal - b.kcal; });
+  else if (_recipeSort === 'netCarb') list.sort(function(a,b){ return a.netCarb - b.netCarb; });
+  return list;
+}
+
+var SRC_LBL = {'V3':'V3原版','V3更新':'V3更新','新增第1批':'第1批','新增第2批':'第2批','新增第3批':'第3批'};
+
+function recipeCardHtml(r, isDessert) {
+  var tagHtml = !isDessert && r.tags && r.tags.length
+    ? r.tags.map(function(t){ return '<span class="rtag rtag-'+t+'">'+t+'</span>'; }).join('')
+    : '';
+  var numColor = isDessert ? 'color:#9A6898' : '';
+  return '<div class="recipe-card" onclick="openRecipeModal(\''+r.num+'\','+isDessert+')">' +
+    '<div class="recipe-card-hdr">' +
+      '<div class="recipe-card-num" style="'+numColor+'">'+r.num+'</div>' +
+      '<div><div class="recipe-card-name">'+r.name+'</div>' +
+      '<div class="recipe-card-src">'+(SRC_LBL[r.source]||r.source)+(r.note?' · '+r.note:'')+'</div></div>' +
+    '</div>' +
+    '<div class="recipe-card-macros">' +
+      '<div class="recipe-macro"><span class="recipe-macro-val rp">'+r.protein+'g</span><span class="recipe-macro-lbl">蛋白質</span></div>' +
+      '<div class="recipe-macro"><span class="recipe-macro-val rc">'+r.netCarb+'g</span><span class="recipe-macro-lbl">淨碳水</span></div>' +
+      '<div class="recipe-macro"><span class="recipe-macro-val rf">'+r.fat+'g</span><span class="recipe-macro-lbl">脂肪</span></div>' +
+      '<div class="recipe-macro"><span class="recipe-macro-val rk">'+r.kcal+'</span><span class="recipe-macro-lbl">kcal</span></div>' +
+    '</div>' +
+    (tagHtml ? '<div class="recipe-tag-row" style="padding:0 9px 5px">'+tagHtml+'</div>' : '') +
+    '<div class="recipe-card-footer"><span>⏱ '+r.time+'</span>'+(r.diff?'<span>'+r.diff+'</span>':'')+'</div>' +
+    '</div>';
+}
+
+function renderRecipeGrid() {
+  var list = getFilteredRecipes();
+  var statsBar = document.getElementById('recipe-stats-bar');
+  var resultInfo = document.getElementById('recipe-result-info');
+  var grid = document.getElementById('recipe-grid');
+  if (!grid) return;
+  if (list.length) {
+    var avgProtein = (list.reduce(function(s,r){ return s+r.protein; },0)/list.length).toFixed(1);
+    var avgCarb    = (list.reduce(function(s,r){ return s+r.netCarb;  },0)/list.length).toFixed(1);
+    var avgKcal    = (list.reduce(function(s,r){ return s+r.kcal;    },0)/list.length).toFixed(0);
+    if (statsBar) statsBar.innerHTML =
+      '<div class="recipe-stat"><span class="recipe-stat-num">'+list.length+'</span><span class="recipe-stat-lbl">筆結果</span></div>' +
+      '<div class="recipe-stat"><span class="recipe-stat-num" style="color:#C87A30">'+avgProtein+'g</span><span class="recipe-stat-lbl">平均蛋白質</span></div>' +
+      '<div class="recipe-stat"><span class="recipe-stat-num" style="color:#5A9888">'+avgCarb+'g</span><span class="recipe-stat-lbl">平均淨碳水</span></div>' +
+      '<div class="recipe-stat"><span class="recipe-stat-num">'+avgKcal+'</span><span class="recipe-stat-lbl">平均熱量</span></div>';
+    if (resultInfo) resultInfo.textContent = '顯示 '+list.length+' / '+RECIPE_DB.length+' 道食譜';
+    grid.innerHTML = list.map(function(r){ return recipeCardHtml(r, false); }).join('');
+  } else {
+    if (statsBar) statsBar.innerHTML = '';
+    if (resultInfo) resultInfo.textContent = '';
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">🔍<br>找不到符合的食譜</div>';
+  }
+}
+
+function renderDessertGrid() {
+  var list = DESSERT_DB.slice();
+  if (_dessertSearch) {
+    var q = _dessertSearch;
+    list = list.filter(function(d){ return d.name.indexOf(q) >= 0 || (d.note && d.note.indexOf(q) >= 0); });
+  }
+  var grid = document.getElementById('dessert-grid');
+  if (!grid) return;
+  if (!list.length) { grid.innerHTML = '<div class="empty" style="grid-column:1/-1">🍮<br>找不到符合的甜點</div>'; return; }
+  grid.innerHTML = list.map(function(d){ return recipeCardHtml(d, true); }).join('');
+}
+
+function renderRecipeRanking() {
+  var medals = ['🥇','🥈','🥉'];
+  function topN(arr, field, n, asc) {
+    return arr.slice().sort(function(a,b){ return asc ? a[field]-b[field] : b[field]-a[field]; }).slice(0,n);
+  }
+  function rankListHtml(arr, field, unit, cls) {
+    return arr.map(function(r,i){
+      return '<div class="recipe-rank-item" onclick="openRecipeModal(\''+r.num+'\',false)">' +
+        '<div class="recipe-rank-pos">'+(medals[i]||'No.'+(i+1))+'</div>' +
+        '<div class="recipe-rank-info"><div class="recipe-rank-name">'+r.num+' '+r.name+'</div>' +
+        '<div class="recipe-rank-sub">⏱'+r.time+' · '+(SRC_LBL[r.source]||r.source)+'</div></div>' +
+        '<div class="recipe-rank-val '+cls+'">'+r[field]+unit+'</div>' +
+        '</div>';
+    }).join('');
+  }
+  var content = document.getElementById('recipe-ranking-content');
+  if (!content) return;
+  content.innerHTML =
+    '<div class="recipe-rank-title">🥩 蛋白質排行榜 Top 10</div>' +
+    '<div class="recipe-rank-list">'+rankListHtml(topN(RECIPE_DB,'protein',10,false),'protein','g','vp')+'</div>' +
+    '<div class="recipe-rank-title">🥦 低淨碳水 Top 10</div>' +
+    '<div class="recipe-rank-list">'+rankListHtml(topN(RECIPE_DB,'netCarb',10,true),'netCarb','g','vc')+'</div>' +
+    '<div class="recipe-rank-title">🔥 低熱量 Top 10</div>' +
+    '<div class="recipe-rank-list">'+rankListHtml(topN(RECIPE_DB,'kcal',10,true),'kcal','kcal','vk')+'</div>';
+}
+
+var RECIPE_SITUATIONS = [
+  { icon:'🏋️', title:'重訓日首選', desc:'蛋白質 ≥ 50g', filter:function(r){ return r.protein>=50; }, field:'protein', unit:'g' },
+  { icon:'🥦', title:'低碳首選',  desc:'淨碳水最低',     filter:function(r){ return true; },          sort:function(a,b){ return a.netCarb-b.netCarb; }, field:'netCarb',unit:'g' },
+  { icon:'⚡', title:'快速料理',  desc:'15–20分鐘',      filter:function(r){ return r.tags.indexOf('快速')>=0; }, field:'time', unit:'' },
+  { icon:'🔥', title:'低熱量',    desc:'≤ 310 kcal',    filter:function(r){ return r.kcal<=310; },   sort:function(a,b){ return a.kcal-b.kcal; }, field:'kcal', unit:'kcal' },
+  { icon:'🍱', title:'免開火',    desc:'外帶首選',        filter:function(r){ return r.tags.indexOf('免開火')>=0; }, field:'protein', unit:'g' },
+  { icon:'🔌', title:'電鍋料理',  desc:'免顧火輕鬆做',   filter:function(r){ return r.tags.indexOf('電鍋')>=0; }, field:'time', unit:'' },
+];
+
+function renderRecipeSituation() {
+  var grid = document.getElementById('recipe-sit-grid');
+  if (!grid) return;
+  grid.innerHTML = RECIPE_SITUATIONS.map(function(s) {
+    var list = RECIPE_DB.filter(s.filter);
+    if (s.sort) list = list.sort(s.sort);
+    else if (s.field === 'protein') list = list.sort(function(a,b){ return b.protein-a.protein; });
+    var shown = list.slice(0,6);
+    return '<div class="recipe-sit-card">' +
+      '<div class="recipe-sit-hdr">' +
+        '<span class="recipe-sit-icon">'+s.icon+'</span>' +
+        '<div><div class="recipe-sit-title">'+s.title+'</div>' +
+        '<div class="recipe-sit-count">'+s.desc+' · '+list.length+'道</div></div>' +
+      '</div>' +
+      '<div class="recipe-sit-body">' +
+        shown.map(function(r){
+          return '<div class="recipe-sit-row" onclick="openRecipeModal(\''+r.num+'\',false)">' +
+            '<span>'+r.num+' '+r.name+'</span>' +
+            '<span class="recipe-sit-val">'+r[s.field]+s.unit+'</span>' +
+            '</div>';
+        }).join('') +
+      '</div></div>';
+  }).join('');
+}
+
+
 init();
 
 /* ═══════════════════════════════════════════════════
@@ -8619,529 +9437,5 @@ function renderWeekly() {
 /* ═══════════════════════════════════════════════════
    🥗 食譜庫模組
    ═══════════════════════════════════════════════════ */
-var RECIPE_DB = [
-  { num:'①',  name:'奶油蒜香嫩煎雞腿排',         protein:51.5,netCarb:5.0, fat:28.5,kcal:310,time:'20分',diff:'★☆☆',source:'V3',      note:'',        tags:['快速','低碳','高蛋白'],
-    ingredients:[['去骨雞腿排','2塊（260g）','蛋白質47g｜淨碳水0g｜脂肪21g'],['無鹽奶油','8g','蛋白質0g｜淨碳水0g｜脂肪7g'],['大蒜','3瓣','蛋白質0.5g｜淨碳水2g｜脂肪0g'],['青花菜','150g','蛋白質4g｜淨碳水3g｜脂肪0.5g'],['鹽・黑胡椒・義大利香料','各適量','']],
-    steps:['雞腿排兩面撒鹽黑胡椒，靜置5分鐘。','冷鍋放雞腿皮面朝下中火慢煎8–10分鐘至皮酥脆。','翻面加奶油，待融化後加蒜末，用湯匙將奶油反覆澆淋再煎5分鐘。','取出靜置2分鐘；原鍋大火加青花菜+水翻炒2分鐘調鹽。'],
-    tip:'冷鍋下雞皮是酥脆的關鍵！從冷鍋開始讓皮慢慢逼油，不會外焦內生。' },
-  { num:'②',  name:'麻油薑絲燉雞湯（電鍋版）',   protein:36.7,netCarb:6.0, fat:22.2,kcal:260,time:'45分',diff:'★☆☆',source:'V3',      note:'電鍋',    tags:['電鍋','低熱量'],
-    ingredients:[['雞腿肉（去皮切塊）','200g','蛋白質36g｜淨碳水0g｜脂肪9g'],['老薑','5–6片',''],['麻油','1大匙',''],['水','500ml',''],['枸杞・米酒','少許（可省）','']],
-    steps:['麻油小火爆香薑片至邊緣微卷約1分鐘。','放雞塊大火炒至表面變白，加米酒翻炒30秒。','加水500ml，移入電鍋外鍋1杯水，燉至跳起再燜10分鐘。','開蓋加鹽，撒枸杞享用。'],
-    tip:'麻油不耐高溫，爆薑時必須小火，否則苦味出現就難補救。' },
-  { num:'③',  name:'大白菜豬絞肉豆腐煲 ★',       protein:46.3,netCarb:9.8, fat:32.3,kcal:265,time:'30分',diff:'★☆☆',source:'V3更新',  note:'',        tags:['低熱量','高蛋白'],
-    ingredients:[['豬絞肉（瘦七分）','150g','蛋白質26g｜淨碳水0g｜脂肪11g'],['板豆腐','200g','蛋白質16g｜淨碳水3g｜脂肪7g'],['大白菜','150g',''],['大蒜','3瓣',''],['橄欖油','1大匙',''],['醬油（減鹽）','1大匙','']],
-    steps:['豆腐切大塊，用廚房紙巾壓乾水分。','橄欖油爆香蒜末，加豬絞肉炒至變色，下醬油翻炒。','加大白菜翻炒至稍軟出水，加雞高湯。','放入豆腐，中小火燉10分鐘，調鹽盛盤。'],
-    tip:'大白菜甜味天然，不需另加糖。豆腐壓乾水分後更能吸收湯汁。' },
-  { num:'④',  name:'蒜香奶油蝦佐蘆筍',           protein:41.3,netCarb:6.0, fat:9.1, kcal:235,time:'20分',diff:'★☆☆',source:'V3',      note:'',        tags:['快速','低碳','高蛋白','低熱量'],
-    ingredients:[['白蝦仁（冷凍）','200g','蛋白質38g｜淨碳水0g｜脂肪2g'],['蘆筍','120g',''],['無鹽奶油','8g',''],['大蒜','4瓣',''],['檸檬汁','1大匙','']],
-    steps:['蝦仁退冰後用廚房紙巾擦乾。','奶油熱鍋至起泡，加蒜末爆香30秒，下蝦仁大火快炒1.5分鐘取出。','原鍋加蘆筍+水翻炒2分鐘，回鍋蝦仁，淋檸檬汁調鹽。'],
-    tip:'蝦仁一定要擦乾再下鍋，水分多會蒸不會煎。奶油起泡才下蝦仁，溫度才夠。' },
-  { num:'⑤',  name:'辣炒豬肉高麗菜',             protein:35.7,netCarb:13.0,fat:23.2,kcal:280,time:'20分',diff:'★☆☆',source:'V3',      note:'',        tags:['快速'],
-    ingredients:[['豬里肌肉片（瘦）','150g','蛋白質31g｜淨碳水0g｜脂肪5g'],['高麗菜（手撕）','200g',''],['辣椒・大蒜','1根+3瓣',''],['橄欖油・醬油・麻油','各適量','']],
-    steps:['豬肉片加醬油醃5分鐘。','橄欖油大火爆香蒜末+辣椒，下豬肉炒至七分熟取出。','同鍋大火炒高麗菜加少許水，回鍋豬肉，淋麻油調鹽。'],
-    tip:'高麗菜用手撕，斷面不規則更容易吸附醬汁。大火快炒保留脆度，勿蓋鍋燜。' },
-  { num:'⑥',  name:'蒜炒蝦仁四季豆',             protein:37.9,netCarb:9.3, fat:20.8,kcal:200,time:'20分',diff:'★☆☆',source:'V3',      note:'',        tags:['快速','低熱量'],
-    ingredients:[['蝦仁','150g','蛋白質28g｜淨碳水0g｜脂肪1.5g'],['四季豆','150g',''],['大蒜・薑片','各適量',''],['橄欖油','1大匙',''],['雞蛋','1顆','']],
-    steps:['四季豆汆燙2分鐘撈出。','油熱爆香薑蒜，下蝦仁炒至變色。','加四季豆翻炒，打入1顆蛋快速拌炒，調鹽盛盤。'],
-    tip:'四季豆汆燙後炒保持翠綠。打蛋入鍋不要攪太碎，讓蛋呈現大塊感更好吃。' },
-  { num:'⑦',  name:'牛肉蘑菇炒時蔬',             protein:37.9,netCarb:8.3, fat:33.7,kcal:295,time:'25分',diff:'★☆☆',source:'V3',      note:'',        tags:[],
-    ingredients:[['牛肉片','150g','蛋白質30g｜淨碳水0g｜脂肪8g'],['蘑菇','100g',''],['青花菜','100g',''],['大蒜','3瓣',''],['橄欖油・醬油・麻油','各適量','']],
-    steps:['牛肉片加醬油黑胡椒醃5分鐘。','橄欖油大火爆香蒜末，下牛肉炒至六分熟取出。','原鍋炒蘑菇至出水收汁，加青花菜翻炒，回鍋牛肉淋麻油調鹽。'],
-    tip:'蘑菇一定要炒到出水收汁，味道才鮮甜。牛肉不要炒過熟，六分熟口感最嫩。' },
-  { num:'⑧',  name:'起司焗烤雞胸佐菠菜 ★',       protein:57.9,netCarb:3.2, fat:25.2,kcal:280,time:'35分',diff:'★★☆',source:'V3更新',  note:'蛋白質冠軍',tags:['低碳','高蛋白','重訓'],
-    ingredients:[['雞胸肉（去皮）','200g','蛋白質46g｜淨碳水0g｜脂肪4g'],['莫札瑞拉起司絲','40g','蛋白質8.8g｜淨碳水0.8g｜脂肪6.8g'],['新鮮菠菜','100g',''],['橄欖油','1大匙',''],['大蒜粉・義大利香料','各適量','']],
-    steps:['雞胸肉蝴蝶片，撒鹽黑胡椒蒜粉，橄欖油醃10分鐘。','平底鍋兩面各煎2分鐘上色，移至烤盤。','烤盤鋪菠菜葉，放雞胸，撒起司絲，230°C烤12–15分鐘。'],
-    tip:'主食蛋白質最高（57.9g）！起司鋪厚一點才有牽絲感。' },
-  { num:'⑨',  name:'水煮蛋酪梨嫩葉沙拉',         protein:27.5,netCarb:6.7, fat:41.5,kcal:300,time:'15分',diff:'★☆☆',source:'V3',      note:'輔菜',    tags:['快速','免開火'],
-    ingredients:[['雞蛋','3顆','蛋白質22.5g｜淨碳水0.9g｜脂肪15g'],['酪梨','半顆（80g）',''],['嫩葉菠菜','100g',''],['橄欖油・鹽・黑胡椒・檸檬汁','各適量','']],
-    steps:['水煮蛋：冷水下蛋水滾後7分鐘，冰水冷卻去殼對切。','酪梨切丁加檸檬汁防氧化。','菠菜鋪盤，擺酪梨和蛋，淋橄欖油撒鹽黑胡椒。'],
-    tip:'此道為輔菜，建議搭配⑥或⑬補充蛋白質，兩道合計約65g。' },
-  { num:'⑩',  name:'香煎鮭魚佐菠菜蘑菇',         protein:48.3,netCarb:9.4, fat:21.1,kcal:340,time:'25分',diff:'★☆☆',source:'V3',      note:'',        tags:['高蛋白','重訓'],
-    ingredients:[['鮭魚排（去皮）','200g','蛋白質40g｜淨碳水0g｜脂肪13g'],['菠菜','150g',''],['蘑菇','100g',''],['大蒜','3瓣',''],['橄欖油・奶油','各適量',''],['檸檬汁','適量','']],
-    steps:['鮭魚兩面撒鹽黑胡椒擦乾。','中大火魚皮朝下煎3–4分鐘至金黃，翻面再煎2分鐘取出。','原鍋加奶油蒜末爆香，炒蘑菇至收汁，下菠菜翻炒1分鐘。','蔬菜鋪盤，放鮭魚，擠檸檬汁。'],
-    tip:'鮭魚皮朝下先煎，皮酥後翻面整塊不散。煎前擦乾很重要。' },
-  { num:'⑪',  name:'烤鮭魚佐奶油蘆筍',           protein:43.4,netCarb:6.5, fat:20.3,kcal:330,time:'25分',diff:'★☆☆',source:'V3',      note:'一鍋到底', tags:['低碳','高蛋白','重訓'],
-    ingredients:[['鮭魚排','200g','蛋白質40g｜淨碳水0g｜脂肪13g'],['蘆筍','150g',''],['無鹽奶油','10g',''],['大蒜末','3瓣',''],['橄欖油','1大匙','']],
-    steps:['蘆筍淋橄欖油撒鹽蒜末，230°C烤5分鐘。','鮭魚塗奶油撒鹽黑胡椒，擺旁邊繼續烤12–15分鐘。','取出撒檸檬皮絲增香。'],
-    tip:'一鍋到底！蘆筍先烤5分鐘是關鍵，否則和魚同時放入會不熟。' },
-  { num:'⑫',  name:'豆漿咖哩牛肉花椰菜 ★',       protein:40.8,netCarb:13.1,fat:27.0,kcal:285,time:'35分',diff:'★★☆',source:'V3更新',  note:'',        tags:['高蛋白'],
-    ingredients:[['牛肉片','150g','蛋白質30g｜淨碳水0g｜脂肪8g'],['白花椰菜','200g',''],['無糖豆漿','150ml',''],['咖哩粉','1.5大匙',''],['洋蔥','半顆',''],['橄欖油','1大匙','']],
-    steps:['橄欖油炒洋蔥至軟化，加蒜末薑末炒1分鐘。','加咖哩粉炒香，下牛肉炒至變色。','加花椰菜翻炒，倒豆漿+水，蓋鍋燉10分鐘調鹽。'],
-    tip:'豆漿取代椰奶降低飽和脂肪。洋蔥炒到透明軟化才甜。' },
-  { num:'⑬',  name:'起司炒蛋配菠菜沙拉',         protein:39.2,netCarb:2.9, fat:49.7,kcal:265,time:'15分',diff:'★☆☆',source:'V3',      note:'輔菜',    tags:['快速','低碳','低熱量'],
-    ingredients:[['雞蛋','4顆','蛋白質30g｜淨碳水1.2g｜脂肪20g'],['切達起司片','2片（40g）','蛋白質10g｜淨碳水0.4g｜脂肪13g'],['嫩葉菠菜','100g',''],['橄欖油','1大匙','']],
-    steps:['雞蛋打散加鹽，橄欖油中小火熱鍋。','蛋液倒入小火慢推炒，半熟時放起司片。','起司融化後折疊盛盤，旁邊擺菠菜淋橄欖油。'],
-    tip:'小火慢炒是炒蛋軟嫩的秘訣，中途關火用餘溫收尾最好。' },
-  { num:'⑭',  name:'蔥爆牛肉炒蛋',               protein:45.4,netCarb:5.1, fat:36.6,kcal:310,time:'20分',diff:'★☆☆',source:'新增第1批',note:'',        tags:['快速','低碳','高蛋白'],
-    ingredients:[['牛肉片','150g','蛋白質30g｜淨碳水0g｜脂肪8g'],['雞蛋','2顆','蛋白質13g｜淨碳水0.6g｜脂肪10g'],['青蔥','3根',''],['大蒜','2瓣',''],['醬油・米酒・麻油','各適量',''],['橄欖油','1大匙','']],
-    steps:['牛肉加醬油米酒醃5分鐘；雞蛋打散。','大火熱油，蛋液快速滑炒至半熟取出。','原鍋爆香蒜末，下牛肉炒至7分熟，加蔥白翻炒。','回鍋炒蛋，加蔥綠淋麻油，大火翻炒調鹽。'],
-    tip:'牛肉切勿過熟，7分熟口感最嫩。蔥白蔥綠分開下鍋，蔥白耐炒提香，蔥綠增色。' },
-  { num:'⑮',  name:'味噌豬里肌佐大白菜',         protein:43.3,netCarb:8.8, fat:20.1,kcal:265,time:'25分',diff:'★☆☆',source:'新增第1批',note:'',        tags:['低熱量','高蛋白'],
-    ingredients:[['豬里肌肉（厚切）','180g','蛋白質39g｜淨碳水0g｜脂肪5g'],['大白菜','200g',''],['無糖味噌','1大匙',''],['清酒','1大匙',''],['大蒜・薑末','各適量',''],['橄欖油','1大匙','']],
-    steps:['豬里肌拍鬆，加味噌+清酒醃10分鐘。','中火兩面各煎3分鐘至金黃取出切塊。','原鍋爆香蒜末薑末，加大白菜翻炒，加水蓋鍋燜1分鐘調鹽盛盤放豬肉。'],
-    tip:'味噌含鹽，醃製後不需另加鹽。大白菜自然出甜水，不需勾芡即有濃郁湯汁。' },
-  { num:'⑯',  name:'起司雞胸肉卷佐四季豆',       protein:53.9,netCarb:7.7, fat:24.7,kcal:290,time:'30分',diff:'★★☆',source:'新增第1批',note:'',        tags:['高蛋白','重訓'],
-    ingredients:[['雞胸肉（蝴蝶開）','200g','蛋白質46g｜淨碳水0g｜脂肪4g'],['切達起司片','1片','蛋白質5g｜淨碳水0.2g｜脂肪6.5g'],['四季豆','150g',''],['蒜粉・黑胡椒・義大利香料','各適量',''],['橄欖油','1大匙','']],
-    steps:['雞胸肉蝴蝶開拍薄，撒調料。','鋪起司片捲起，牙籤固定。','中大火每面煎3分鐘，轉小火蓋鍋燜5分鐘。','靜置2分鐘拔牙籤切片，原鍋炒四季豆調鹽盛盤。'],
-    tip:'靜置再切肉汁不流失。起司在肉卷內融化，每口都有起司香！' },
-  { num:'⑰',  name:'薑黃椰奶雞腿燉白花椰',       protein:44.7,netCarb:12.0,fat:45.9,kcal:340,time:'40分',diff:'★☆☆',source:'新增第1批',note:'重訓抗炎', tags:['高蛋白','重訓'],
-    ingredients:[['去骨雞腿排','230g','蛋白質39g｜淨碳水0g｜脂肪15g'],['白花椰菜','200g',''],['椰奶（全脂）','100ml',''],['薑黃粉','1小匙',''],['大蒜・薑末','各適量',''],['橄欖油','1大匙','']],
-    steps:['雞腿切塊撒鹽黑胡椒醃5分鐘。','爆香蒜末薑末，加薑黃粉炒香30秒。','下雞腿煎至金黃，加椰奶+水。','加白花椰，蓋鍋中小火燉15分鐘調鹽。'],
-    tip:'薑黃具抗發炎功效，特別適合重訓日。此道脂肪較高，當日晚餐選清淡食譜。' },
-  { num:'⑱',  name:'蒜香黑胡椒豬排佐炒高麗菜',   protein:40.7,netCarb:14.0,fat:35.2,kcal:300,time:'25分',diff:'★☆☆',source:'新增第1批',note:'',        tags:['高蛋白'],
-    ingredients:[['豬梅花排（厚切）','200g','蛋白質36g｜淨碳水0g｜脂肪14g'],['高麗菜（手撕）','200g',''],['大蒜（拍碎）','4瓣',''],['現磨黑胡椒','大量',''],['醬油・米酒','各1大匙',''],['橄欖油','1.5大匙','']],
-    steps:['豬排用刀背拍打斷筋，加醬油米酒大量黑胡椒醃10分鐘。','大火爆香蒜，放豬排每面煎3分鐘。','靜置3分鐘切片，原鍋炒高麗菜，淋鍋底蒜香汁盛盤。'],
-    tip:'拍打斷筋是關鍵，讓豬梅花排更嫩。黑胡椒要大方使用！' },
-  { num:'⑲',  name:'日式柴魚豆腐蒸蛋',           protein:40.7,netCarb:4.9, fat:22.4,kcal:240,time:'30分',diff:'★☆☆',source:'新增第1批',note:'電鍋',   tags:['低碳','低熱量','電鍋'],
-    ingredients:[['雞蛋','3顆','蛋白質22.5g｜淨碳水0.9g｜脂肪15g'],['板豆腐','150g','蛋白質12g｜淨碳水2.3g｜脂肪5.3g'],['低鈉雞高湯（冷卻）','300ml',''],['醬油・麻油','各1小匙',''],['柴魚片','5g',''],['青蔥末','少許','']],
-    steps:['豆腐切小塊鋪碗底。','蛋液加高湯（1:1.5）醬油拌勻，過篩去泡沫。','蓋保鮮膜，電鍋外鍋半杯水蒸至跳起燜5分鐘。','放柴魚片蔥末淋麻油。'],
-    tip:'蛋液過篩去氣泡是滑嫩關鍵！蒸時夾筷子在鍋蓋縫，避免大火產生蜂巢狀。' },
-  { num:'⑳',  name:'韓式辣炒豬肉（無糖版）',     protein:37.7,netCarb:12.3,fat:32.1,kcal:285,time:'25分',diff:'★☆☆',source:'新增第1批',note:'',        tags:['快速'],
-    ingredients:[['豬梅花肉片','180g','蛋白質33g｜淨碳水0g｜脂肪13g'],['高麗菜','150g',''],['韓式辣椒粉','1大匙',''],['醬油・麻油・赤藻糖醇','各適量',''],['大蒜・薑末','各適量',''],['橄欖油','1大匙','']],
-    steps:['豬肉加韓式辣椒粉、醬油、蒜末、薑末、赤藻糖醇醃10分鐘。','大火快炒至邊緣略焦。','加高麗菜翻炒2分鐘，淋麻油調鹽。'],
-    tip:'赤藻糖醇保留韓式甜鹹平衡。全聯或好市多韓國食品區可買Gochugaru。' },
-  { num:'㉑',  name:'鮭魚酪梨塔塔（免開火）',     protein:46.6,netCarb:4.0, fat:37.5,kcal:320,time:'15分',diff:'★☆☆',source:'新增第1批',note:'免開火',  tags:['快速','低碳','高蛋白','免開火'],
-    ingredients:[['生食級鮭魚（切丁）','150g','蛋白質30g｜淨碳水0g｜脂肪10g'],['酪梨（切丁）','半顆',''],['水煮蛋','2顆',''],['醬油・檸檬汁・麻油','各適量',''],['白芝麻・海苔絲','少許','']],
-    steps:['鮭魚丁加醬油檸檬汁麻油拌勻，冷藏醃5分鐘。','酪梨丁加檸檬汁防氧化。','深盤堆上鮭魚丁+酪梨丁，擺水煮蛋，撒芝麻海苔絲。'],
-    tip:'請確認購買「生食級」鮭魚。有疑慮時改用煙燻鮭魚取代，同樣美味安全。' },
-  { num:'㉒',  name:'棒棒雞低碳版',               protein:58.9,netCarb:7.5, fat:25.5,kcal:330,time:'30分',diff:'★☆☆',source:'新增第1批',note:'蛋白質最高',tags:['高蛋白','重訓'],
-    ingredients:[['雞胸肉（去皮）','220g','蛋白質50.6g｜淨碳水0g｜脂肪4.4g'],['小黃瓜','1根',''],['無糖花生醬','1.5大匙','蛋白質6g｜淨碳水3g｜脂肪12g'],['醬油・麻油・米醋・赤藻糖醇','各適量','']],
-    steps:['雞胸冷水下鍋，水滾後小火12分鐘，燜5分鐘熟透。','取出沿紋理撕成雞絲。','花生醬+醬油+麻油+米醋+赤藻糖醇調醬，加雞湯稀釋。','鋪小黃瓜絲，堆雞絲，淋醬，撒芝麻。'],
-    tip:'全書蛋白質最高（58.9g）！花生醬選「無糖、僅含花生」款式。' },
-  { num:'㉓',  name:'奶油蘑菇鮭魚奶醬佐花椰飯',   protein:51.9,netCarb:12.1,fat:44.0,kcal:355,time:'30分',diff:'★★☆',source:'新增第1批',note:'週末享用',  tags:['高蛋白','重訓'],
-    ingredients:[['鮭魚排（切塊）','200g','蛋白質40g｜淨碳水0g｜脂肪13g'],['蘑菇','100g',''],['白花椰菜（剁碎）','200g',''],['鮮奶油','50ml',''],['無鹽奶油','10g',''],['大蒜末','3瓣','']],
-    steps:['白花椰剁碎乾鍋炒乾水分，加鹽盛盤當底。','奶油炒香蒜末，下蘑菇炒至收汁。','加鮭魚塊煎至熟透，倒鮮奶油收醬，調鹽。','淋在花椰菜飯上。'],
-    tip:'花椰菜飯先炒乾水分，吸醬能力更強，口感接近燉飯。脂肪偏高，每週1–2次。' },
-  { num:'㉔',  name:'香煎帶皮雞腿佐檸檬迷迭香',   protein:44.2,netCarb:2.0, fat:32.5,kcal:315,time:'25分',diff:'★☆☆',source:'新增第2批',note:'低碳清爽',  tags:['低碳','高蛋白','快速'],
-    ingredients:[['帶皮去骨雞腿排','240g','蛋白質43g｜淨碳水0g｜脂肪28g'],['新鮮迷迭香','2枝',''],['檸檬','半顆',''],['大蒜（拍碎）','3瓣',''],['鹽・黑胡椒','各適量','']],
-    steps:['雞皮面輕劃數刀，兩面撒鹽黑胡椒靜置5分鐘。','冷鍋皮面朝下中小火煎10分鐘，翻面加蒜和迷迭香再煎5–6分鐘。','盛盤擠檸檬汁刨皮絲。'],
-    tip:'帶皮雞腿自帶油脂，幾乎不需加油。冷鍋起步、皮面朝下，耐心等10分鐘值得！' },
-  { num:'㉕',  name:'照燒帶皮雞腿（無糖版）',     protein:42.8,netCarb:5.5, fat:28.0,kcal:300,time:'25分',diff:'★☆☆',source:'新增第2批',note:'赤藻糖醇',  tags:['快速','高蛋白'],
-    ingredients:[['帶皮去骨雞腿排','230g','蛋白質42g｜淨碳水0g｜脂肪25g'],['醬油（減鹽）','2大匙',''],['清酒','1大匙',''],['赤藻糖醇','1大匙',''],['薑末','1小匙','']],
-    steps:['醬油+清酒+赤藻糖醇+薑末調成照燒醬。','皮面朝下冷鍋中火煎8–10分鐘，翻面再煎4分鐘。','倒入照燒醬，中小火收汁至濃稠黏裹。','切片盛盤撒白芝麻蔥花。'],
-    tip:'赤藻糖醇焦糖化效果和砂糖相近，照燒色澤同樣亮麗。醬汁收太濃容易焦，需留意火候。' },
-  { num:'㉖',  name:'蒜香奶油帶皮雞腿佐四季豆',   protein:45.5,netCarb:7.5, fat:34.0,kcal:330,time:'30分',diff:'★☆☆',source:'新增第2批',note:'',         tags:['高蛋白','重訓'],
-    ingredients:[['帶皮去骨雞腿排','230g','蛋白質42g｜淨碳水0g｜脂肪25g'],['四季豆','150g',''],['無鹽奶油','10g',''],['大蒜末','5瓣',''],['醬油','1小匙','']],
-    steps:['皮面朝下冷鍋逼油煎8–10分鐘，翻面再煎4分鐘取出。','原鍋留雞油加奶油，炒香蒜末至金黃。','下四季豆大火翻炒3分鐘加醬油調鹽鋪盤。','雞腿切片擺上，淋蒜香奶油汁。'],
-    tip:'雞腿逼出的雞油留在鍋中炒四季豆，香氣倍增，完全不需另加油。' },
-  { num:'㉗',  name:'莫札瑞拉帶皮雞腿焗烤',       protein:52.3,netCarb:4.5, fat:36.8,kcal:350,time:'40分',diff:'★★☆',source:'新增第2批',note:'烤箱料理',  tags:['高蛋白','重訓','低碳'],
-    ingredients:[['帶皮去骨雞腿排','230g','蛋白質42g｜淨碳水0g｜脂肪25g'],['新鮮莫札瑞拉起司','60g','蛋白質12g｜淨碳水0.6g｜脂肪12g'],['牛番茄','半顆',''],['新鮮九層塔','10片',''],['橄欖油','1大匙','']],
-    steps:['雞腿排撒調料醃10分鐘，大火雙面各煎2–3分鐘上色移至烤盤。','雞腿上鋪番茄片和撕塊莫札瑞拉，220°C烤15–18分鐘。','取出插入九層塔，淋少許橄欖油。'],
-    tip:'新鮮莫札瑞拉烤前用紙巾壓乾，避免出水讓雞皮變軟。義式卡布里風格！' },
-  { num:'㉘',  name:'梅花豬肉片壽喜燒（低碳版）', protein:38.5,netCarb:8.0, fat:26.5,kcal:295,time:'20分',diff:'★☆☆',source:'新增第2批',note:'赤藻糖醇',  tags:['快速'],
-    ingredients:[['梅花豬肉片','180g','蛋白質34g｜淨碳水0g｜脂肪18g'],['大白菜','200g',''],['板豆腐','100g',''],['醬油・清酒','各2大匙',''],['赤藻糖醇','1大匙',''],['日式高湯','200ml','']],
-    steps:['醬油+清酒+赤藻糖醇+高湯調成壽喜燒湯底。','鍋中鋪大白菜和豆腐，放豬肉片。','淋湯底蓋鍋中火煮5–7分鐘至熟透。','可打蛋攪散沾食（生食級）。'],
-    tip:'赤藻糖醇完美取代砂糖，甜鹹比例不變但淨碳水幾乎為零。大白菜取代冬粉更低碳。' },
-  { num:'㉙',  name:'梅花豬肉片韓式生菜包肉',     protein:36.2,netCarb:5.5, fat:24.8,kcal:275,time:'20分',diff:'★☆☆',source:'新增第2批',note:'',         tags:['快速','低碳'],
-    ingredients:[['梅花豬肉片','180g','蛋白質32g｜淨碳水0g｜脂肪18g'],['結球萵苣','8片',''],['大蒜片','4瓣',''],['韓式辣椒醬','1小匙',''],['麻油','1小匙','']],
-    steps:['梅花豬乾鍋不加油中大火煎至金黃出油，取出切段。','豬油留鍋，下蒜片小火煎至金黃取出。','生菜葉鋪平，放豬肉+蒜片，點辣椒醬，淋麻油撒芝麻包起吃。'],
-    tip:'梅花豬自帶油脂，完全不需加油。韓式辣椒醬含糖，只用1小匙提味即可。' },
-  { num:'㉚',  name:'梅花豬肉片莫札瑞拉起司卷',   protein:43.8,netCarb:3.0, fat:32.0,kcal:320,time:'25分',diff:'★☆☆',source:'新增第2批',note:'低碳起司香', tags:['低碳','高蛋白'],
-    ingredients:[['梅花豬肉片（寬片）','200g','蛋白質36g｜淨碳水0g｜脂肪20g'],['新鮮莫札瑞拉起司','50g','蛋白質10g｜淨碳水0.5g｜脂肪10g'],['新鮮九層塔','10片',''],['醬油・米酒','各1大匙',''],['橄欖油','1大匙','']],
-    steps:['豬肉片攤平，放起司條+九層塔，捲起牙籤固定。','撒鹽黑胡椒蒜粉，加醬油米酒醃5分鐘。','中火封口朝下先煎，轉動讓四面均勻金黃8–10分鐘。','靜置拔牙籤切段盛盤。'],
-    tip:'豬肉片要選「寬片」才好捲。切開的瞬間起司牽絲效果超棒！' },
-  { num:'㉛',  name:'牛小排肉片炒時蔬（沙茶）',   protein:38.0,netCarb:9.5, fat:29.5,kcal:305,time:'20分',diff:'★☆☆',source:'新增第2批',note:'台式家常',  tags:['快速'],
-    ingredients:[['牛小排肉片','160g','蛋白質33g｜淨碳水0g｜脂肪22g'],['青花菜','120g',''],['甜椒','半顆',''],['沙茶醬（無澱粉）','1大匙',''],['醬油・米酒','各1大匙',''],['大蒜','3瓣','']],
-    steps:['牛肉加醬油+米酒+沙茶醬醃10分鐘。','青花菜汆燙1分鐘撈出。','大火爆香蒜末，下牛肉快炒至6–7分熟取出。','原鍋炒甜椒，回鍋牛肉+青花菜大火翻炒調鹽。'],
-    tip:'選購沙茶醬確認無添加澱粉。牛小排脂肪豐富，沙茶醬加油脂風味更濃。' },
-  { num:'㉜',  name:'牛小排肉片莫札瑞拉起司煎蛋捲',protein:46.5,netCarb:3.5,fat:38.5,kcal:340,time:'20分',diff:'★☆☆',source:'新增第2批',note:'早午餐風',  tags:['快速','低碳','高蛋白'],
-    ingredients:[['牛小排肉片','130g','蛋白質27g｜淨碳水0g｜脂肪18g'],['雞蛋','3顆','蛋白質22.5g｜淨碳水0.9g｜脂肪15g'],['莫札瑞拉起司絲','40g','蛋白質8.8g｜淨碳水0.8g｜脂肪6.8g'],['洋蔥絲','50g',''],['橄欖油','1大匙','']],
-    steps:['牛肉撒鹽黑胡椒大火炒熟，加洋蔥絲炒軟，取出。','雞蛋打散調鹽，原鍋中小火倒入蛋液不翻動，待半凝固。','蛋皮上鋪牛肉洋蔥，撒起司絲，對折成半月形。','蓋鍋小火燜1分鐘讓起司融化，切盤。'],
-    tip:'蛋皮保持整片狀才能包餡。起司絲比新鮮莫札瑞拉水分少，包起來不會出水。' },
-  { num:'㉝',  name:'牛小排肉片蘑菇莫札瑞拉焗烤', protein:49.0,netCarb:6.0, fat:40.0,kcal:360,time:'35分',diff:'★★☆',source:'新增第2批',note:'週末享用',  tags:['高蛋白','重訓'],
-    ingredients:[['牛小排肉片','160g','蛋白質33g｜淨碳水0g｜脂肪22g'],['蘑菇','120g',''],['莫札瑞拉起司絲','50g','蛋白質11g｜淨碳水1g｜脂肪8.5g'],['大蒜末','4瓣',''],['橄欖油','1大匙','']],
-    steps:['橄欖油爆香蒜末，炒蘑菇至收汁，鋪烤盤底部。','牛肉撒鹽黑胡椒大火每面各煎1分鐘，鋪在蘑菇上。','撒起司絲，220°C烤10–12分鐘至起司金黃。','取出撒義大利香料趁熱享用。'],
-    tip:'牛排先煎半熟再烤，保留肉汁同時讓起司完美焦化。' },
-  { num:'㉞',  name:'莫札瑞拉番茄雞腿排卡布里風', protein:47.0,netCarb:6.5, fat:30.5,kcal:320,time:'30分',diff:'★☆☆',source:'新增第2批',note:'義式清爽',  tags:['高蛋白','低碳'],
-    ingredients:[['帶皮去骨雞腿排','220g','蛋白質41g｜淨碳水0g｜脂肪23g'],['新鮮莫札瑞拉起司','50g','蛋白質10g｜淨碳水0.5g｜脂肪10g'],['牛番茄','1顆',''],['新鮮九層塔','15片',''],['初榨橄欖油','1大匙','']],
-    steps:['雞腿排皮面朝下冷鍋中火煎8–10分鐘，翻面再煎4–5分鐘至熟取出切塊。','番茄片與莫札瑞拉交疊排盤（卡布里風格）。','雞腿擺旁邊，插九層塔，淋橄欖油撒鹽黑胡椒。'],
-    tip:'九層塔選新鮮的，是靈魂所在。莫札瑞拉與番茄水分相輔相成，搭配酥脆雞皮層次豐富。' },
-  { num:'㉟',  name:'梅花豬肉片白菜莫札瑞拉起司鍋',protein:41.5,netCarb:7.0,fat:28.5,kcal:295,time:'25分',diff:'★☆☆',source:'新增第2批',note:'冬日暖鍋',  tags:['電鍋','低熱量'],
-    ingredients:[['梅花豬肉片','180g','蛋白質32g｜淨碳水0g｜脂肪18g'],['大白菜','250g',''],['新鮮莫札瑞拉起司','60g','蛋白質12g｜淨碳水0.6g｜脂肪12g'],['日式高湯','400ml',''],['醬油・味噌','各1大匙','']],
-    steps:['高湯加醬油+味噌+大蒜調成湯底，中火煮滾。','加大白菜蓋鍋中火煮5分鐘至軟化。','放豬肉片中大火涮熟，調鹽。','起鍋前擺撕塊莫札瑞拉，蓋鍋燜30秒半融化，撒蔥末。'],
-    tip:'莫札瑞拉半融狀態最美味，不要煮太久。冬天首選！' },
-  { num:'㊱',  name:'泡菜起司焗烤帶皮雞腿排',     protein:38.5,netCarb:5.2, fat:37.8,kcal:520,time:'25分',diff:'★☆☆',source:'新增第3批',note:'泡菜+起司', tags:['高蛋白'],
-    ingredients:[['帶皮去骨雞腿排','180g','蛋白質33g｜淨碳水0g｜脂肪25g'],['韓式泡菜','50g',''],['莫札瑞拉起司絲','30g','蛋白質6.6g｜淨碳水0.6g｜脂肪5.1g'],['洋蔥絲','20g',''],['鹽・黑胡椒','適量','']],
-    steps:['雞腿撒鹽黑胡椒，皮面朝下冷鍋中火煎8–10分鐘，翻面煎4分鐘取出。','原鍋炒洋蔥至軟，下泡菜翻炒1–2分鐘。','雞腿放回，鋪泡菜洋蔥撒起司絲，蓋鍋悶2分鐘至起司融化。'],
-    tip:'此道熱量偏高（520kcal），當日另一餐選低熱量食譜。' },
-  { num:'㊲',  name:'蘑菇蔥嫩炒雞腿肉',           protein:34.2,netCarb:6.1, fat:31.5,kcal:445,time:'20分',diff:'★☆☆',source:'新增第3批',note:'',         tags:['快速'],
-    ingredients:[['帶皮雞腿肉（切塊）','180g','蛋白質33g｜淨碳水0g｜脂肪25g'],['蘑菇','80g',''],['洋蔥絲','30g',''],['大蒜片','3瓣','']],
-    steps:['雞腿切塊，皮面朝下冷鍋乾煎逼油約5分鐘，翻面煎熟取出。','原鍋加蒜片爆香，下洋蔥絲炒軟，下蘑菇炒至出水收汁。','回鍋雞塊翻炒均勻，調鹽黑胡椒盛盤。'],
-    tip:'帶皮雞腿自帶油脂，乾煎完全不需加油。蘑菇要炒到出水才鮮甜香。' },
-  { num:'㊳',  name:'大白菜雞腿燉豆腐（低碳版）', protein:38.0,netCarb:5.8, fat:31.2,kcal:465,time:'35分',diff:'★☆☆',source:'新增第3批',note:'電鍋可做',  tags:['電鍋','低碳','高蛋白'],
-    ingredients:[['帶皮雞腿肉（切塊）','150g','蛋白質27.5g｜淨碳水0g｜脂肪21g'],['大白菜','150g',''],['板豆腐','100g',''],['雞高湯','300ml',''],['薑片','3片',''],['醬油','1大匙','']],
-    steps:['雞腿肉乾煎至金黃出油，加薑片爆香。','加高湯水滾後放大白菜蓋鍋中火燉15分鐘。','放豆腐塊和大蔥，加醬油繼續燉5分鐘調鹽。'],
-    tip:'大白菜燉後釋放天然甜水，湯頭無需額外調味。電鍋版：外鍋1.5杯水直接燉至跳起。' },
-  { num:'㊴',  name:'蘑菇起司厚蛋燒',             protein:27.5,netCarb:3.2, fat:31.8,kcal:410,time:'20分',diff:'★☆☆',source:'新增第3批',note:'低碳早午餐', tags:['快速','低碳'],
-    ingredients:[['雞蛋','3顆','蛋白質22.5g｜淨碳水0.9g｜脂肪15g'],['蘑菇','60g',''],['莫札瑞拉起司絲','25g','蛋白質5.5g｜淨碳水0.5g｜脂肪4.3g'],['草飼無鹽奶油','10g','']],
-    steps:['奶油中火炒蘑菇至出水收汁，撒少許鹽。','蛋液打散加鹽，倒入鍋中與蘑菇輕輕拌勻。','撒起司絲，小火蓋鍋蓋烘3–4分鐘至凝固融化。','對折或切塊盛盤。'],
-    tip:'小火蓋鍋是滑嫩關鍵，不要翻炒！此道蛋白質偏低，建議搭配高蛋白主菜。' },
-  { num:'㊵',  name:'泡菜洋蔥炒蛋',               protein:21.0,netCarb:5.5, fat:25.2,kcal:335,time:'15分',diff:'★☆☆',source:'新增第3批',note:'低熱量輔菜', tags:['快速','低熱量'],
-    ingredients:[['雞蛋','3顆','蛋白質22.5g｜淨碳水0.9g｜脂肪15g'],['韓式泡菜','60g',''],['洋蔥絲','30g',''],['橄欖油','2小匙','']],
-    steps:['橄欖油熱鍋，下洋蔥絲炒至透明軟化約2分鐘。','加泡菜翻炒1分鐘至香氣釋出。','倒入打散蛋液快速翻炒至八分熟，調鹽盛盤。'],
-    tip:'適合作輔菜搭配高蛋白食譜。泡菜本身含鹽，調鹽時少量試味。' },
-  { num:'㊶',  name:'泡菜炒梅花豬肉片',           protein:36.5,netCarb:6.8, fat:30.5,kcal:450,time:'20分',diff:'★☆☆',source:'新增第3批',note:'無需加油',  tags:['快速'],
-    ingredients:[['梅花豬肉片（薄切）','180g','蛋白質32g｜淨碳水0g｜脂肪18g'],['韓式泡菜','80g',''],['洋蔥絲','30g',''],['麻油','1小匙',''],['醬油','1小匙','']],
-    steps:['不沾鍋不放油，豬肉片下鍋中大火炒至微變色出油。','下洋蔥絲翻炒1分鐘，加泡菜大火快炒1–2分鐘。','沿鍋邊淋醬油翻拌，起鍋前淋麻油提香。'],
-    tip:'梅花豬油脂豐富，完全不需加油。泡菜下鍋後大火快炒讓汁略收乾才香。' },
-  { num:'㊷',  name:'起司熔岩牛小排肉片',         protein:38.2,netCarb:3.5, fat:47.0,kcal:590,time:'20分',diff:'★☆☆',source:'新增第3批',note:'低碳起司牽絲',tags:['快速','低碳','高蛋白'],
-    ingredients:[['牛小排肉片（薄切）','150g','蛋白質31g｜淨碳水0g｜脂肪30g'],['切達起司片','2片（40g）','蛋白質10g｜淨碳水0.8g｜脂肪13g'],['洋蔥絲','20g',''],['醬油','1小匙',''],['黑胡椒','大量','']],
-    steps:['洋蔥絲中火炒軟至金黃鋪鍋底。','牛肉片大火快炒至7分熟，撒黑胡椒加醬油翻拌。','聚攏牛肉，鋪上起司片，熄火蓋鍋利用餘溫悶2分鐘。','起司牽絲時立刻盛盤。'],
-    tip:'此道熱量偏高（590kcal），當日另一餐選㊻蒜香蘑菇炒蝦仁（320kcal）平衡。' },
-  { num:'㊸',  name:'娃娃菜梅花豬肉卷',           protein:32.8,netCarb:4.6, fat:29.2,kcal:415,time:'25分',diff:'★☆☆',source:'新增第3批',note:'',         tags:['低碳'],
-    ingredients:[['梅花豬肉片（寬片）','160g','蛋白質28.5g｜淨碳水0g｜脂肪16g'],['娃娃菜','120g',''],['無鹽奶油','5g',''],['醬油','1大匙',''],['清酒','1大匙','']],
-    steps:['娃娃菜切條，豬肉片攤平捲起娃娃菜，封口朝下備用。','奶油中火煎肉卷至封口定型，轉動讓四面上色。','加醬油+清酒+水，蓋鍋中小火燜5–6分鐘至軟嫩。','開蓋大火收汁，撒黑胡椒切段盛盤淋汁。'],
-    tip:'封口朝下先煎，肉卷才不會散開。娃娃菜比大白菜更甜嫩，燜煮時自然出汁。' },
-  { num:'㊹',  name:'蘑菇黑椒炒牛小排肉片',       protein:33.5,netCarb:4.8, fat:41.5,kcal:525,time:'20分',diff:'★☆☆',source:'新增第3批',note:'',         tags:['快速','低碳'],
-    ingredients:[['牛小排肉片（薄切）','150g','蛋白質31g｜淨碳水0g｜脂肪30g'],['蘑菇','100g',''],['大蒜片','3瓣',''],['黑胡椒粒（現磨）','大量',''],['醬油','1小匙','']],
-    steps:['牛小排下鍋大火逼油至變色撈出，保留鍋中油脂。','原鍋爆香蒜片，下蘑菇炒至出水收汁。','回鍋牛肉，大量撒黑胡椒+海鹽，大火快炒，沿鍋邊淋醬油翻拌。','盛盤再撒一次現磨黑胡椒。'],
-    tip:'黑胡椒要大量才夠味，建議用現磨胡椒粒，香氣差異很大。' },
-  { num:'㊺',  name:'大白菜千層豬肉鍋（壽喜低碳版）',protein:32.2,netCarb:7.2,fat:25.5,kcal:390,time:'30分',diff:'★☆☆',source:'新增第3批',note:'白菜自然出水',tags:['電鍋'],
-    ingredients:[['梅花豬肉片','150g','蛋白質26.7g｜淨碳水0g｜脂肪15g'],['大白菜','200g',''],['醬油','1大匙',''],['赤藻糖醇','1小匙',''],['清酒','1大匙',''],['昆布高湯','100ml','']],
-    steps:['大白菜與豬肉片交替疊好，垂直緊密碼入鍋中。','醬油+赤藻糖醇+清酒+高湯調成醬汁，沿鍋邊慢慢淋入。','蓋鍋中小火煨煮15–18分鐘，大白菜自然出水。','撒白芝麻蔥花端鍋上桌。'],
-    tip:'大白菜出水即是天然湯底，鮮甜不需其他調料。' },
-  { num:'㊻',  name:'蒜香蘑菇炒蝦仁',             protein:33.2,netCarb:4.9, fat:17.8,kcal:320,time:'20分',diff:'★☆☆',source:'新增第3批',note:'低熱量清爽', tags:['快速','低熱量','低碳'],
-    ingredients:[['蝦仁','150g','蛋白質28g｜淨碳水0g｜脂肪1.5g'],['蘑菇','100g',''],['大蒜片','4–5瓣',''],['橄欖油','1大匙','']],
-    steps:['橄欖油中火煸香蒜片至金黃脆香，撈出備用。','原鍋加蘑菇炒至出水收汁。','下蝦仁大火炒至變紅，加回蒜片。','撒海鹽黑胡椒調味盛盤。'],
-    tip:'低熱量（320kcal）且蛋白質豐富，性價比最高的食譜之一。' },
-  { num:'㊼',  name:'滑蛋蝦仁大白菜',             protein:34.5,netCarb:4.2, fat:20.5,kcal:340,time:'20分',diff:'★☆☆',source:'新增第3批',note:'脂肪已修正', tags:['快速'],
-    ingredients:[['蝦仁','120g','蛋白質22.4g｜淨碳水0g｜脂肪1.2g'],['雞蛋','2顆','蛋白質13g｜淨碳水0.6g｜脂肪10g'],['大白菜（切絲）','100g',''],['橄欖油','2小匙',''],['薑末','少許','']],
-    steps:['大白菜切絲炒軟加鹽盛出。','補油加薑末爆香，蝦仁炒至變色熟透，加回大白菜翻拌。','轉小火倒蛋液，輕輕畫圈推動至半熟滑蛋狀起鍋調鹽。'],
-    tip:'⚠原文件脂肪欄「205」為錯誤，已修正為20.5g。滑蛋關鍵：小火輕推不翻炒，八分熟即起鍋。' },
-  { num:'㊽',  name:'泡菜海陸起司雙拼',           protein:41.2,netCarb:4.5, fat:26.8,kcal:425,time:'20分',diff:'★☆☆',source:'新增第3批',note:'海陸高蛋白', tags:['快速','高蛋白'],
-    ingredients:[['蝦仁','100g','蛋白質18.7g｜淨碳水0g｜脂肪1g'],['梅花豬肉片','80g','蛋白質14.2g｜淨碳水0g｜脂肪8g'],['韓式泡菜','60g',''],['莫札瑞拉起司絲','20g',''],['醬油','1小匙','']],
-    steps:['橄欖油熱鍋，下豬肉大火炒至出油，加蝦仁炒至變紅。','下泡菜大火翻炒，沿鍋邊淋醬油。','聚攏食材撒起司絲，蓋鍋悶1分鐘至牽絲，立刻盛盤。'],
-    tip:'海鮮＋豬肉雙重蛋白質。起司牽絲後馬上盛盤，冷了就不牽絲了！' },
-  { num:'㊾',  name:'娃娃菜鮮蝦豆腐煲',           protein:34.0,netCarb:6.2, fat:9.8, kcal:260,time:'25分',diff:'★☆☆',source:'新增第3批',note:'低熱量低脂', tags:['低熱量','低碳'],
-    ingredients:[['蝦仁','120g','蛋白質22.4g｜淨碳水0g｜脂肪1.2g'],['娃娃菜','150g',''],['板豆腐','100g',''],['麻油','1小匙',''],['雞高湯','200ml','']],
-    steps:['砂鍋放高湯+薑片中火煮滾。','下豆腐塊與娃娃菜，蓋鍋煮5分鐘至軟。','放蝦仁煮1–2分鐘至變紅熟透。','滴麻油加鹽調味盛碗。'],
-    tip:'全書熱量最低之一（260kcal），脂肪極低（9.8g）。蝦仁過熟會變橡皮！' },
-  { num:'㊿',  name:'洋蔥起司蝦仁烘蛋',           protein:38.8,netCarb:4.5, fat:28.5,kcal:435,time:'20分',diff:'★☆☆',source:'新增第3批',note:'低碳蛋白高', tags:['快速','低碳','高蛋白'],
-    ingredients:[['蝦仁','100g','蛋白質18.7g｜淨碳水0g｜脂肪1g'],['雞蛋','3顆','蛋白質22.5g｜淨碳水0.9g｜脂肪15g'],['洋蔥丁','30g',''],['切達起司絲','20g','蛋白質5g｜淨碳水0.4g｜脂肪6.5g'],['橄欖油','2小匙','']],
-    steps:['橄欖油炒洋蔥丁至透明，加蝦仁炒熟均勻鋪鍋底。','蛋液加鹽均勻倒入覆蓋食材。','撒起司絲，極小火蓋鍋蓋烘3–4分鐘至蛋液凝固。','切塊盛盤撒黑胡椒。'],
-    tip:'極小火是關鍵，大火底部焦糊蛋液還沒熟。切達起司比莫札瑞拉更有鹹香味。' },
-  { num:'5️⃣1️⃣',name:'起司蝦仁櫛瓜煎盤',          protein:31.0,netCarb:4.4, fat:21.3,kcal:340,time:'20分',diff:'★☆☆',source:'新增第3批',note:'低碳清爽',  tags:['快速','低碳','低熱量'],
-    ingredients:[['蝦仁','130g','蛋白質24.3g｜淨碳水0g｜脂肪1.3g'],['櫛瓜（切片）','100g','蛋白質1.6g｜淨碳水2.6g｜脂肪0.3g'],['切達起司片','2片（40g）','蛋白質10g｜淨碳水0.8g｜脂肪13g'],['橄欖油','2小匙',''],['大蒜末','2瓣','']],
-    steps:['橄欖油中大火煎櫛瓜片兩面至金黃取出。','原鍋加蒜末爆香，下蝦仁大火炒至變紅。','回鍋櫛瓜，撒義大利香料黑胡椒翻拌。','鋪起司片，蓋鍋悶1–2分鐘至融化盛盤。'],
-    tip:'櫛瓜煎至上色才有香氣，不要只是軟化。好市多或全聯可買到，淨碳水僅2.6g/100g。' },
-];
-
-var DESSERT_DB = [
-  { num:'甜①',name:'草莓希臘優格碗',         protein:15.9,netCarb:11.5,fat:9.8, kcal:165,time:'5分',        source:'V3原版',       note:'免煮・蛋白質最高',
-    ingredients:[['希臘優格（全脂無糖）','150g','蛋白質13.5g｜淨碳水5.3g｜脂肪2.1g'],['新鮮草莓','100g',''],['杏仁片（烤過）','15g',''],['赤藻糖醇','1小匙（可省）','']],
-    steps:['希臘優格加赤藻糖醇拌勻。','草莓洗淨切片鋪上。','撒杏仁片插薄荷葉裝飾。'],
-    tip:'免煮5分鐘完成，蛋白質最高（15.9g）。草莓可換冷凍藍莓（稍微退冰）。' },
-  { num:'甜②',name:'奇亞籽杏仁奶布丁',       protein:7.1, netCarb:11.1,fat:15.2,kcal:175,time:'10分+冷藏4h',  source:'V3原版',       note:'可前一晚備好',
-    ingredients:[['無糖杏仁奶','250ml',''],['奇亞籽','3大匙（30g）',''],['赤藻糖醇','1小匙',''],['冷凍藍莓','30g（裝飾）','']],
-    steps:['杏仁奶+赤藻糖醇+香草精拌勻。','加奇亞籽攪拌，靜置5分鐘後再拌一次。','蓋蓋冷藏至少4小時至布丁狀，取出放藍莓裝飾。'],
-    tip:'可前一晚備好。奇亞籽靜置5分鐘後再拌一次，防止結塊。' },
-  { num:'甜③',name:'低碳檸檬起司慕斯',       protein:4.5, netCarb:9.7, fat:50.1,kcal:190,time:'10分+冷藏2h',  source:'V3原版',       note:'脂肪偏高少量享用',
-    ingredients:[['奶油起司（室溫軟化）','80g',''],['動物性鮮奶油','60ml',''],['檸檬汁','2大匙',''],['赤藻糖醇','1.5大匙',''],['冷凍草莓','30g（裝飾）','']],
-    steps:['奶油起司加赤藻糖醇打滑順，加檸檬汁拌勻。','鮮奶油打至七分發，分兩次輕輕拌入。','裝杯冷藏至少2小時，取出放草莓裝飾。'],
-    tip:'脂肪偏高（~50g），建議全日脂肪攝取控制時享用。' },
-  { num:'甜④',name:'黑巧克力核桃凍糕（約4顆）',protein:5.3,netCarb:5.0,fat:36.8,kcal:155,time:'15分+冷凍1h',  source:'V3原版',       note:'可做多顆分次吃',
-    ingredients:[['85%以上黑巧克力','40g',''],['無鹽奶油','10g',''],['核桃（切碎）','20g',''],['赤藻糖醇','1小匙',''],['鹽之花','少許','']],
-    steps:['巧克力+奶油隔水加熱融化，加赤藻糖醇攪拌。','拌入核桃碎。','舀入矽膠模，撒鹽之花，冷凍1小時至凝固。'],
-    tip:'85%以上黑巧克力含糖量低。可一次做8–10顆，分裝冷凍保存1個月。' },
-  { num:'甜⑤',name:'抹茶奇亞籽豆漿凍',       protein:17.1,netCarb:7.1, fat:12.0,kcal:160,time:'10分+冷藏4h',  source:'V3原版',       note:'蛋白質較高',
-    ingredients:[['無糖豆漿','300ml','蛋白質10.4g｜淨碳水2.5g｜脂肪4g'],['抹茶粉','1小匙',''],['奇亞籽','2.5大匙',''],['赤藻糖醇','1大匙',''],['希臘優格','30g（裝飾）','']],
-    steps:['抹茶粉加熱水拌成糊，加豆漿+赤藻糖醇攪拌。','加奇亞籽，靜置5分鐘後再拌一次。','倒入玻璃杯，冷藏至少4小時至凝固。','取出放希臘優格，撒抹茶粉裝飾。'],
-    tip:'豆漿版蛋白質高（17g），是運動後補充蛋白質的好選擇。' },
-  { num:'甜⑥',name:'藍莓優格杏仁奶酪',       protein:17.0,netCarb:13.9,fat:8.8, kcal:175,time:'10分+冷藏4h',  source:'新增甜點第1批', note:'冷藏隔夜更濃郁',
-    ingredients:[['無糖希臘優格','120g',''],['無糖杏仁奶','150ml',''],['吉利丁粉','5g',''],['赤藻糖醇','1.5大匙',''],['冷凍藍莓','60g',''],['杏仁片','10g（裝飾）','']],
-    steps:['吉利丁粉加冷水泡5分鐘，隔水加熱至融化。','杏仁奶微溫加赤藻糖醇，加吉利丁液攪拌，稍涼。','加入希臘優格拌勻，倒入杯中，冷藏至少4小時。','取出放藍莓撒杏仁片。'],
-    tip:'吉利丁液不要加入太熱的液體（超過60°C失去凝固力）。' },
-  { num:'甜⑦',name:'草莓鮮奶油杏仁蛋糕杯',   protein:14.1,netCarb:10.7,fat:41.2,kcal:205,time:'15分+冷藏30min',source:'新增甜點第1批', note:'杏仁粉無粉蛋糕體',
-    ingredients:[['杏仁粉（超細）','40g','蛋白質5.6g｜淨碳水1.6g｜脂肪14g'],['雞蛋','1顆',''],['赤藻糖醇','1大匙',''],['泡打粉','¼小匙',''],['動物性鮮奶油','60ml（打發）',''],['冷凍草莓','80g（退冰）','']],
-    steps:['杏仁粉+蛋+赤藻糖醇+泡打粉拌勻，馬克杯微波700W 90秒。','蛋糕體放涼，用叉子壓凹槽。','鮮奶油打至八分發。','填入鮮奶油，放草莓，冷藏30分鐘後享用。'],
-    tip:'鮮奶油一定要打到八分發才能定型。烤箱版180°C烤15分鐘口感更濕潤。' },
-  { num:'甜⑧',name:'冷凍藍莓奶油霜淇淋',     protein:6.8, netCarb:19.6,fat:55.9,kcal:170,time:'10分+冷凍4h',  source:'新增甜點第1批', note:'每次取2–3球',
-    ingredients:[['動物性鮮奶油','150ml',''],['冷凍藍莓','100g',''],['赤藻糖醇','2大匙',''],['希臘優格','30g',''],['香草精','½小匙','']],
-    steps:['冷凍藍莓+赤藻糖醇打成泥。','鮮奶油+香草精打至七分發，加希臘優格輕拌。','藍莓泥旋轉拌入鮮奶油，保留大理石紋。','倒入密封容器冷凍至少4小時。享用前室溫放5分鐘。'],
-    tip:'每2小時取出攪拌一次再繼續冷凍，口感更細緻。每次只取2–3球（約80g）享用。' },
-  { num:'甜⑨',name:'草莓優格慕斯杯',         protein:17.5,netCarb:15.5,fat:17.0,kcal:160,time:'15分+冷藏2h',  source:'新增甜點第1批', note:'清爽低脂首選',
-    ingredients:[['希臘優格（無糖）','150g',''],['冷凍草莓','100g',''],['動物性鮮奶油','40ml',''],['吉利丁粉','3g',''],['赤藻糖醇','1大匙','']],
-    steps:['冷凍草莓+赤藻糖醇小火加熱融化，加入泡軟吉利丁攪融，放涼。','鮮奶油打至七分發。','優格加草莓醬拌勻，輕拌入鮮奶油。','倒入玻璃杯，冷藏至少2小時，取出放草莓裝飾。'],
-    tip:'冷凍草莓退冰後果汁豐富，加熱後顏色更鮮豔。吉利丁幫助定型。' },
-  { num:'甜⑩',name:'杏仁粉奶油餅乾（無麵粉，約12片）',protein:7.8,netCarb:1.7,fat:27.4,kcal:175,time:'20分+烤箱',source:'新增甜點第1批',note:'淨碳水最低・酥脆',
-    ingredients:[['杏仁粉（超細）','120g','蛋白質16.8g｜淨碳水4.8g｜脂肪42g'],['無鹽奶油（室溫軟化）','40g',''],['赤藻糖醇（糖粉狀）','3大匙',''],['雞蛋','1顆',''],['香草精','½小匙','']],
-    steps:['奶油+赤藻糖醇電動打蛋器打2分鐘，加蛋液+香草精拌勻。','加杏仁粉+鹽拌成麵團。','取適量壓成圓片（厚約6mm），間距3cm。','165°C烤12–15分鐘至邊緣金黃，放涼後才會酥脆。'],
-    tip:'淨碳水最低（1.7g/4片）！放涼後密封保存，室溫3–4天；冷凍可存1個月。' },
-  { num:'甜⑪',name:'藍莓鮮奶油起司蛋糕杯（免烤）',protein:6.7,netCarb:14.2,fat:52.2,kcal:210,time:'10分+冷藏1h',source:'新增甜點第1批',note:'免烤・5分鐘組裝',
-    ingredients:[['奶油起司','70g（室溫軟化）',''],['動物性鮮奶油','60ml（打發）',''],['赤藻糖醇','1大匙',''],['檸檬汁','1小匙',''],['冷凍藍莓','70g',''],['杏仁粉','15g（底層）','']],
-    steps:['杏仁粉+少許赤藻糖醇+融化奶油5g拌成粉粒狀，鋪杯底。','奶油起司打滑順，加赤藻糖醇+檸檬汁拌勻。','鮮奶油打至八分發輕拌入起司糊。','填入杯中冷藏1小時，取出放退冰藍莓。'],
-    tip:'5分鐘組裝完成！藍莓加少許赤藻糖醇小火加熱5分鐘成藍莓醬，比直接放更有果醬感。' },
-  { num:'甜⑫',name:'草莓杏仁奶油冰棒（約6支）', protein:1.5, netCarb:3.3, fat:7.7, kcal:155,time:'10分+冷凍4h',  source:'新增甜點第1批', note:'可分6支・低熱量',
-    ingredients:[['冷凍草莓','150g',''],['動物性鮮奶油','120ml',''],['無糖杏仁奶','100ml',''],['赤藻糖醇','2大匙',''],['希臘優格','50g','']],
-    steps:['冷凍草莓+赤藻糖醇打成草莓泥。','鮮奶油+杏仁奶+優格+香草精攪拌均勻（不需打發）。','模具先倒草莓泥至1/3，冷凍20分鐘初步定型。','再倒入奶油優格層至滿，插冰棒棍，冷凍至少4小時。'],
-    tip:'分層製作呈現漂亮雙色。6格矽膠模好市多或全聯可買，冷凍後輕鬆脫模。' },
-  { num:'甜⑬',name:'優格藍莓杏仁格蘭諾拉碗',   protein:18.4,netCarb:16.8,fat:16.1,kcal:190,time:'5分',          source:'新增甜點第1批', note:'蛋白質最高・早餐甜點',
-    ingredients:[['希臘優格（無糖全脂）','150g','蛋白質13.5g｜淨碳水5.3g｜脂肪2.1g'],['杏仁粉（烤過）','20g',''],['杏仁片（烤過）','10g',''],['冷凍藍莓','70g',''],['椰子絲（無糖）','5g','']],
-    steps:['杏仁粉+椰子絲乾鍋小火炒香約2分鐘，放涼加杏仁片。','希臘優格加赤藻糖醇拌勻盛碗。','鋪退冰藍莓，撒低碳格蘭諾拉。'],
-    tip:'蛋白質最高的甜點（18.4g），也可作為斷食結束後的第一餐。' },
-  { num:'甜⑭',name:'鮮奶油草莓提拉米蘇（低碳）',protein:10.6,netCarb:13.9,fat:65.2,kcal:220,time:'20分+冷藏2h',  source:'新增甜點第1批', note:'週末享用',
-    ingredients:[['奶油起司','100g（室溫）',''],['動物性鮮奶油','80ml',''],['希臘優格','50g',''],['赤藻糖醇','2大匙',''],['義式濃縮咖啡','2大匙',''],['冷凍草莓','80g（退冰切丁）',''],['無糖可可粉','適量（裝飾）','']],
-    steps:['奶油起司+赤藻糖醇打滑順，加優格拌勻。','鮮奶油打至八分發輕拌入起司糊。','玻璃杯底鋪草莓丁，淋少許咖啡液。','填入起司慕斯，再鋪草莓+咖啡，蓋最後一層慕斯，撒可可粉，冷藏2小時。'],
-    tip:'用咖啡液浸草莓取代手指餅乾，大幅降低碳水。脂肪偏高，週末享用最適合。' },
-  { num:'甜⑮',name:'藍莓奶油杏仁塔（無派皮）',  protein:20.1,netCarb:19.5,fat:82.0,kcal:200,time:'25分+冷藏1h',  source:'新增甜點第1批', note:'杏仁粉塔皮週末烘焙',
-    ingredients:[['杏仁粉','80g','蛋白質11.2g｜淨碳水3.2g｜脂肪28g'],['無鹽奶油（融化）','30g',''],['赤藻糖醇','3大匙',''],['雞蛋','1顆',''],['動物性鮮奶油','60ml',''],['冷凍藍莓','100g','']],
-    steps:['塔皮：杏仁粉+融化奶油+1大匙赤藻糖醇拌成粒狀，壓入塔模，180°C烤8分鐘放涼。','奶油餡：鮮奶油+2大匙赤藻糖醇打至八分發，拌入打散蛋液+香草精。','奶油餡填入塔皮，撒冷凍藍莓（不需退冰）。','冷藏1小時至定型，切片享用。'],
-    tip:'杏仁粉塔皮酥脆不輸傳統派皮，不含麩質！冷凍藍莓烤後出汁形成天然藍莓醬，色澤驚豔。' },
-];
-
-// ── 狀態 ────────────────────────────────────────────
-var _recipeTab    = 'list';
-var _recipeTag    = '全部';
-var _recipeSort   = 'num';
-var _recipeSearch = '';
-var _dessertSearch = '';
-
-function switchRecipeTab(el) {
-  _recipeTab = el.dataset.rtab;
-  document.querySelectorAll('.recipe-tab').forEach(function(t){ t.classList.toggle('active', t.dataset.rtab === _recipeTab); });
-  ['list','ranking','situation','dessert'].forEach(function(v){
-    var el = document.getElementById('recipe-view-' + v);
-    if (el) el.style.display = v === _recipeTab ? '' : 'none';
-  });
-  if (_recipeTab === 'list')      renderRecipeGrid();
-  if (_recipeTab === 'ranking')   renderRecipeRanking();
-  if (_recipeTab === 'situation') renderRecipeSituation();
-  if (_recipeTab === 'dessert')   renderDessertGrid();
-}
-
-function renderRecipePage() {
-  _recipeTab = 'list';
-  document.querySelectorAll('.recipe-tab').forEach(function(t){ t.classList.toggle('active', t.dataset.rtab === 'list'); });
-  ['list','ranking','situation','dessert'].forEach(function(v){
-    var el = document.getElementById('recipe-view-' + v);
-    if (el) el.style.display = v === 'list' ? '' : 'none';
-  });
-  renderRecipeGrid();
-}
-
-function onRecipeSearch(v) {
-  _recipeSearch = v.trim();
-  var clr = document.getElementById('recipe-search-clear');
-  if (clr) clr.style.display = v ? 'block' : 'none';
-  renderRecipeGrid();
-}
-function clearRecipeSearch() {
-  var inp = document.getElementById('recipe-search-input');
-  if (inp) inp.value = '';
-  onRecipeSearch('');
-}
-function setRecipeTag(el) {
-  _recipeTag = el.dataset.tag;
-  document.querySelectorAll('.recipe-chip').forEach(function(c){ c.classList.toggle('active', c.dataset.tag === _recipeTag); });
-  renderRecipeGrid();
-}
-function setRecipeSort(el) {
-  _recipeSort = el.dataset.sort;
-  document.querySelectorAll('.recipe-sort-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.sort === _recipeSort); });
-  renderRecipeGrid();
-}
-function onDessertSearch(v) {
-  _dessertSearch = v.trim();
-  var clr = document.getElementById('dessert-search-clear');
-  if (clr) clr.style.display = v ? 'block' : 'none';
-  renderDessertGrid();
-}
-function clearDessertSearch() {
-  var inp = document.getElementById('dessert-search-input');
-  if (inp) inp.value = '';
-  onDessertSearch('');
-}
-
-function getFilteredRecipes() {
-  var list = RECIPE_DB.slice();
-  if (_recipeTag !== '全部') list = list.filter(function(r){ return r.tags.indexOf(_recipeTag) >= 0; });
-  if (_recipeSearch) {
-    var q = _recipeSearch;
-    list = list.filter(function(r){
-      return r.name.indexOf(q) >= 0 ||
-        r.tags.some(function(t){ return t.indexOf(q) >= 0; }) ||
-        (r.ingredients || []).some(function(i){ return i[0].indexOf(q) >= 0; });
-    });
-  }
-  if (_recipeSort === 'protein') list.sort(function(a,b){ return b.protein - a.protein; });
-  else if (_recipeSort === 'kcal') list.sort(function(a,b){ return a.kcal - b.kcal; });
-  else if (_recipeSort === 'netCarb') list.sort(function(a,b){ return a.netCarb - b.netCarb; });
-  return list;
-}
-
-var SRC_LBL = {'V3':'V3原版','V3更新':'V3更新','新增第1批':'第1批','新增第2批':'第2批','新增第3批':'第3批'};
-
-function recipeCardHtml(r, isDessert) {
-  var tagHtml = !isDessert && r.tags && r.tags.length
-    ? r.tags.map(function(t){ return '<span class="rtag rtag-'+t+'">'+t+'</span>'; }).join('')
-    : '';
-  var numColor = isDessert ? 'color:#9A6898' : '';
-  return '<div class="recipe-card" onclick="openRecipeModal(\''+r.num+'\','+isDessert+')">' +
-    '<div class="recipe-card-hdr">' +
-      '<div class="recipe-card-num" style="'+numColor+'">'+r.num+'</div>' +
-      '<div><div class="recipe-card-name">'+r.name+'</div>' +
-      '<div class="recipe-card-src">'+(SRC_LBL[r.source]||r.source)+(r.note?' · '+r.note:'')+'</div></div>' +
-    '</div>' +
-    '<div class="recipe-card-macros">' +
-      '<div class="recipe-macro"><span class="recipe-macro-val rp">'+r.protein+'g</span><span class="recipe-macro-lbl">蛋白質</span></div>' +
-      '<div class="recipe-macro"><span class="recipe-macro-val rc">'+r.netCarb+'g</span><span class="recipe-macro-lbl">淨碳水</span></div>' +
-      '<div class="recipe-macro"><span class="recipe-macro-val rf">'+r.fat+'g</span><span class="recipe-macro-lbl">脂肪</span></div>' +
-      '<div class="recipe-macro"><span class="recipe-macro-val rk">'+r.kcal+'</span><span class="recipe-macro-lbl">kcal</span></div>' +
-    '</div>' +
-    (tagHtml ? '<div class="recipe-tag-row" style="padding:0 9px 5px">'+tagHtml+'</div>' : '') +
-    '<div class="recipe-card-footer"><span>⏱ '+r.time+'</span>'+(r.diff?'<span>'+r.diff+'</span>':'')+'</div>' +
-    '</div>';
-}
-
-function renderRecipeGrid() {
-  var list = getFilteredRecipes();
-  var statsBar = document.getElementById('recipe-stats-bar');
-  var resultInfo = document.getElementById('recipe-result-info');
-  var grid = document.getElementById('recipe-grid');
-  if (!grid) return;
-  if (list.length) {
-    var avgProtein = (list.reduce(function(s,r){ return s+r.protein; },0)/list.length).toFixed(1);
-    var avgCarb    = (list.reduce(function(s,r){ return s+r.netCarb;  },0)/list.length).toFixed(1);
-    var avgKcal    = (list.reduce(function(s,r){ return s+r.kcal;    },0)/list.length).toFixed(0);
-    if (statsBar) statsBar.innerHTML =
-      '<div class="recipe-stat"><span class="recipe-stat-num">'+list.length+'</span><span class="recipe-stat-lbl">筆結果</span></div>' +
-      '<div class="recipe-stat"><span class="recipe-stat-num" style="color:#C87A30">'+avgProtein+'g</span><span class="recipe-stat-lbl">平均蛋白質</span></div>' +
-      '<div class="recipe-stat"><span class="recipe-stat-num" style="color:#5A9888">'+avgCarb+'g</span><span class="recipe-stat-lbl">平均淨碳水</span></div>' +
-      '<div class="recipe-stat"><span class="recipe-stat-num">'+avgKcal+'</span><span class="recipe-stat-lbl">平均熱量</span></div>';
-    if (resultInfo) resultInfo.textContent = '顯示 '+list.length+' / '+RECIPE_DB.length+' 道食譜';
-    grid.innerHTML = list.map(function(r){ return recipeCardHtml(r, false); }).join('');
-  } else {
-    if (statsBar) statsBar.innerHTML = '';
-    if (resultInfo) resultInfo.textContent = '';
-    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">🔍<br>找不到符合的食譜</div>';
-  }
-}
-
-function renderDessertGrid() {
-  var list = DESSERT_DB.slice();
-  if (_dessertSearch) {
-    var q = _dessertSearch;
-    list = list.filter(function(d){ return d.name.indexOf(q) >= 0 || (d.note && d.note.indexOf(q) >= 0); });
-  }
-  var grid = document.getElementById('dessert-grid');
-  if (!grid) return;
-  if (!list.length) { grid.innerHTML = '<div class="empty" style="grid-column:1/-1">🍮<br>找不到符合的甜點</div>'; return; }
-  grid.innerHTML = list.map(function(d){ return recipeCardHtml(d, true); }).join('');
-}
-
-function renderRecipeRanking() {
-  var medals = ['🥇','🥈','🥉'];
-  function topN(arr, field, n, asc) {
-    return arr.slice().sort(function(a,b){ return asc ? a[field]-b[field] : b[field]-a[field]; }).slice(0,n);
-  }
-  function rankListHtml(arr, field, unit, cls) {
-    return arr.map(function(r,i){
-      return '<div class="recipe-rank-item" onclick="openRecipeModal(\''+r.num+'\',false)">' +
-        '<div class="recipe-rank-pos">'+(medals[i]||'No.'+(i+1))+'</div>' +
-        '<div class="recipe-rank-info"><div class="recipe-rank-name">'+r.num+' '+r.name+'</div>' +
-        '<div class="recipe-rank-sub">⏱'+r.time+' · '+(SRC_LBL[r.source]||r.source)+'</div></div>' +
-        '<div class="recipe-rank-val '+cls+'">'+r[field]+unit+'</div>' +
-        '</div>';
-    }).join('');
-  }
-  var content = document.getElementById('recipe-ranking-content');
-  if (!content) return;
-  content.innerHTML =
-    '<div class="recipe-rank-title">🥩 蛋白質排行榜 Top 10</div>' +
-    '<div class="recipe-rank-list">'+rankListHtml(topN(RECIPE_DB,'protein',10,false),'protein','g','vp')+'</div>' +
-    '<div class="recipe-rank-title">🥦 低淨碳水 Top 10</div>' +
-    '<div class="recipe-rank-list">'+rankListHtml(topN(RECIPE_DB,'netCarb',10,true),'netCarb','g','vc')+'</div>' +
-    '<div class="recipe-rank-title">🔥 低熱量 Top 10</div>' +
-    '<div class="recipe-rank-list">'+rankListHtml(topN(RECIPE_DB,'kcal',10,true),'kcal','kcal','vk')+'</div>';
-}
-
-var RECIPE_SITUATIONS = [
-  { icon:'🏋️', title:'重訓日首選', desc:'蛋白質 ≥ 50g', filter:function(r){ return r.protein>=50; }, field:'protein', unit:'g' },
-  { icon:'🥦', title:'低碳首選',  desc:'淨碳水最低',     filter:function(r){ return true; },          sort:function(a,b){ return a.netCarb-b.netCarb; }, field:'netCarb',unit:'g' },
-  { icon:'⚡', title:'快速料理',  desc:'15–20分鐘',      filter:function(r){ return r.tags.indexOf('快速')>=0; }, field:'time', unit:'' },
-  { icon:'🔥', title:'低熱量',    desc:'≤ 310 kcal',    filter:function(r){ return r.kcal<=310; },   sort:function(a,b){ return a.kcal-b.kcal; }, field:'kcal', unit:'kcal' },
-  { icon:'🍱', title:'免開火',    desc:'外帶首選',        filter:function(r){ return r.tags.indexOf('免開火')>=0; }, field:'protein', unit:'g' },
-  { icon:'🔌', title:'電鍋料理',  desc:'免顧火輕鬆做',   filter:function(r){ return r.tags.indexOf('電鍋')>=0; }, field:'time', unit:'' },
-];
-
-function renderRecipeSituation() {
-  var grid = document.getElementById('recipe-sit-grid');
-  if (!grid) return;
-  grid.innerHTML = RECIPE_SITUATIONS.map(function(s) {
-    var list = RECIPE_DB.filter(s.filter);
-    if (s.sort) list = list.sort(s.sort);
-    else if (s.field === 'protein') list = list.sort(function(a,b){ return b.protein-a.protein; });
-    var shown = list.slice(0,6);
-    return '<div class="recipe-sit-card">' +
-      '<div class="recipe-sit-hdr">' +
-        '<span class="recipe-sit-icon">'+s.icon+'</span>' +
-        '<div><div class="recipe-sit-title">'+s.title+'</div>' +
-        '<div class="recipe-sit-count">'+s.desc+' · '+list.length+'道</div></div>' +
-      '</div>' +
-      '<div class="recipe-sit-body">' +
-        shown.map(function(r){
-          return '<div class="recipe-sit-row" onclick="openRecipeModal(\''+r.num+'\',false)">' +
-            '<span>'+r.num+' '+r.name+'</span>' +
-            '<span class="recipe-sit-val">'+r[s.field]+s.unit+'</span>' +
-            '</div>';
-        }).join('') +
-      '</div></div>';
-  }).join('');
-}
-
-function openRecipeModal(num, isDessert) {
-  var data = isDessert
-    ? DESSERT_DB.find(function(d){ return d.num === num; })
-    : RECIPE_DB.find(function(r){ return r.num === num; });
-  if (!data) return;
-  var topClass = isDessert ? 'recipe-modal-top dessert' : 'recipe-modal-top';
-  var ingHtml = (data.ingredients||[]).map(function(ing){
-    return '<div class="recipe-ing-row"><div class="recipe-ing-top"><span class="recipe-ing-name">'+ing[0]+'</span><span class="recipe-ing-amt">'+ing[1]+'</span></div>' +
-      (ing[2] ? '<div class="recipe-ing-nutr">'+ing[2]+'</div>' : '') + '</div>';
-  }).join('');
-  var stepsHtml = (data.steps||[]).map(function(s,i){
-    return '<div class="recipe-step"><div class="recipe-step-num">'+(i+1)+'</div><div class="recipe-step-txt">'+s+'</div></div>';
-  }).join('');
-  var tagHtml = !isDessert && data.tags && data.tags.length
-    ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">' +
-      data.tags.map(function(t){ return '<span class="rtag rtag-'+t+'">'+t+'</span>'; }).join('') + '</div>'
-    : '';
-  var content = document.getElementById('recipe-modal-content');
-  content.innerHTML =
-    '<div class="'+topClass+'">' +
-      '<button class="recipe-modal-close" onclick="closeRecipeModal()">✕</button>' +
-      '<div class="recipe-modal-num">'+data.num+'</div>' +
-      '<div class="recipe-modal-name">'+data.name+'</div>' +
-      '<div class="recipe-modal-meta">' +
-        '<span>⏱ '+data.time+'</span>' +
-        (data.diff ? '<span>'+data.diff+'</span>' : '') +
-        (data.source ? '<span>'+data.source+'</span>' : '') +
-        (data.note ? '<span>📌 '+data.note+'</span>' : '') +
-      '</div>' +
-    '</div>' +
-    '<div class="recipe-modal-body">' +
-      '<div class="recipe-nutr-grid">' +
-        '<div class="recipe-nutr-box"><span class="recipe-nutr-val np">'+data.protein+'g</span><span class="recipe-nutr-lbl">蛋白質</span></div>' +
-        '<div class="recipe-nutr-box"><span class="recipe-nutr-val nc">'+data.netCarb+'g</span><span class="recipe-nutr-lbl">淨碳水</span></div>' +
-        '<div class="recipe-nutr-box"><span class="recipe-nutr-val nf">'+data.fat+'g</span><span class="recipe-nutr-lbl">脂肪</span></div>' +
-        '<div class="recipe-nutr-box"><span class="recipe-nutr-val nk">'+data.kcal+'</span><span class="recipe-nutr-lbl">kcal</span></div>' +
-      '</div>' +
-      tagHtml +
-      (ingHtml ? '<div class="recipe-modal-sec">📌 食材（1人份）</div><div class="recipe-ing-list">'+ingHtml+'</div>' : '') +
-      (stepsHtml ? '<div class="recipe-modal-sec">🍳 作法</div><div class="recipe-steps-list">'+stepsHtml+'</div>' : '') +
-      (data.tip ? '<div class="recipe-tip-box"><div class="recipe-tip-lbl">💡 小提示</div>'+data.tip+'</div>' : '') +
-    '</div>';
-  var overlay = document.getElementById('recipe-modal-overlay');
-  if (overlay) overlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeRecipeModal(e) {
-  if (e && e.target !== document.getElementById('recipe-modal-overlay')) return;
-  var overlay = document.getElementById('recipe-modal-overlay');
-  if (overlay) overlay.classList.remove('open');
-  document.body.style.overflow = '';
-}
-
 </body>
 </html>
