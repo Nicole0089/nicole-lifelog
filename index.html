@@ -1180,6 +1180,14 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .recipe-log-meal-row { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 .recipe-log-meal-btn { flex: 1; padding: 7px 6px; border-radius: var(--rr); font-size: 12px; font-weight: 600; background: var(--bg3); border: 1.5px solid var(--bd); color: var(--tx2); cursor: pointer; font-family: var(--font); text-align: center; white-space: nowrap; }
 .recipe-log-meal-btn.sel { background: var(--acl); border-color: var(--ac); color: var(--acd); }
+/* 食譜庫試算頁籤 */
+.rcalc-meal-btn { flex:1; padding:6px 4px; border-radius:var(--rr); font-size:12px; font-weight:600; background:var(--bg); border:1.5px solid var(--bd); color:var(--tx2); cursor:pointer; font-family:var(--font); text-align:center; }
+.rcalc-meal-btn.sel { background:var(--acl); border-color:var(--ac); color:var(--acd); }
+.rcalc-today-item { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.rcalc-today-lbl { font-size:11px; color:var(--tx3); width:50px; flex-shrink:0; }
+.rcalc-today-bar-track { flex:1; height:6px; background:var(--bg3); border-radius:3px; overflow:hidden; }
+.rcalc-today-bar-fill { height:100%; border-radius:3px; transition:width .3s; }
+.rcalc-today-val { font-size:11px; font-weight:700; width:72px; text-align:right; flex-shrink:0; }
 /* 排行榜 */
 .recipe-rank-section { padding: 10px 12px 4px; }
 .recipe-rank-title { font-size: 13px; font-weight: 700; color: var(--tx); margin-bottom: 8px; }
@@ -1827,6 +1835,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         <button class="recipe-tab" data-rtab="ranking" onclick="switchRecipeTab(this)">🏆 排行榜</button>
         <button class="recipe-tab" data-rtab="situation" onclick="switchRecipeTab(this)">⚡ 情境</button>
         <button class="recipe-tab" data-rtab="dessert" onclick="switchRecipeTab(this)">🍮 甜點</button>
+        <button class="recipe-tab" data-rtab="calc" onclick="switchRecipeTab(this)">🔢 試算</button>
       </div>
       <!-- 食譜庫 -->
       <div id="recipe-view-list">
@@ -1876,6 +1885,52 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
           </div>
         </div>
         <div class="recipe-grid" id="dessert-grid"></div>
+      </div>
+    </div>
+
+      <!-- 🔢 試算頁籤 -->
+      <div id="recipe-view-calc" style="display:none; padding-bottom:80px;">
+        <!-- 今日攝取進度條 -->
+        <div id="rcalc-today-bar" style="padding:10px 14px 4px; background:var(--bg2); border-bottom:0.5px solid var(--bd);"></div>
+        <!-- 搜尋列 -->
+        <div style="display:flex;gap:8px;padding:10px 12px 8px;background:var(--bg);border-bottom:0.5px solid var(--bd);position:sticky;top:44px;z-index:5;">
+          <div style="position:relative;flex:1">
+            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.5;pointer-events:none">🔍</span>
+            <input type="text" id="rcalc-search" placeholder="搜尋食物…"
+              style="width:100%;padding:8px 10px 8px 32px;font-size:14px;background:var(--bg3);border:0.5px solid var(--bd);border-radius:var(--rr);color:var(--tx);font-family:var(--font);"
+              autocomplete="off" oninput="rcalcSearch(this.value)">
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <input type="number" id="rcalc-grams" min="1" value="100"
+              style="width:64px;text-align:center;font-size:14px;padding:8px 4px;background:var(--bg3);border:0.5px solid var(--bd);border-radius:var(--r);color:var(--tx);font-family:var(--font);"
+              oninput="rcalcUpdateResult()">
+            <span style="font-size:12px;color:var(--tx3)" id="rcalc-unit-label">g</span>
+          </div>
+        </div>
+        <!-- 即時計算結果 -->
+        <div id="rcalc-result" style="display:none;background:var(--acl);border-bottom:0.5px solid var(--ac);padding:10px 14px;">
+          <div style="display:flex;gap:0;justify-content:space-around;margin-bottom:8px">
+            <div style="text-align:center"><div id="rcalc-res-cal" style="font-size:20px;font-weight:800;color:var(--ac)">0</div><div style="font-size:10px;color:var(--tx3)">kcal</div></div>
+            <div style="text-align:center"><div id="rcalc-res-pro" style="font-size:20px;font-weight:800;color:#C87A30">0</div><div style="font-size:10px;color:var(--tx3)">蛋白質g</div></div>
+            <div style="text-align:center"><div id="rcalc-res-carb" style="font-size:20px;font-weight:800;color:#5A9888">0</div><div style="font-size:10px;color:var(--tx3)">淨碳水g</div></div>
+            <div style="text-align:center"><div id="rcalc-res-fat" style="font-size:20px;font-weight:800;color:var(--tx2)">0</div><div style="font-size:10px;color:var(--tx3)">脂肪g</div></div>
+          </div>
+          <!-- 加入記錄按鈕 -->
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <div style="display:flex;gap:4px;flex:1;min-width:200px" id="rcalc-meal-row">
+              <button class="rcalc-meal-btn" data-meal="早餐" onclick="rcalcSelectMeal(this)">🌅 早</button>
+              <button class="rcalc-meal-btn" data-meal="午餐" onclick="rcalcSelectMeal(this)">☀️ 午</button>
+              <button class="rcalc-meal-btn sel" data-meal="晚餐" onclick="rcalcSelectMeal(this)">🌙 晚</button>
+              <button class="rcalc-meal-btn" data-meal="點心" onclick="rcalcSelectMeal(this)">🍎 點</button>
+            </div>
+            <button id="rcalc-add-btn" onclick="rcalcAddToLog()"
+              style="flex:none;padding:7px 14px;background:var(--ac);color:#fff;border:none;border-radius:var(--rr);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">
+              ➕ 加入記錄
+            </button>
+          </div>
+        </div>
+        <!-- 食物資料庫列表 -->
+        <div id="rcalc-db" style="padding:0 12px 12px;"></div>
       </div>
     </div>
 
@@ -8252,6 +8307,216 @@ function closeRecipeModal(e) {
   _logMeal = guessCurrentMeal ? guessCurrentMeal() : '午餐';
 }
 
+/* ═══════════════════════════════════════════════════
+   🔢 食譜庫內嵌試算工具
+   ═══════════════════════════════════════════════════ */
+var _rcalcSelected = null;
+var _rcalcMeal = '午餐';
+
+function rcalcSearch(kw) {
+  // 同步搜尋字到原試算工具再呼叫 renderCalcDB，然後把結果複製到 rcalc-db
+  rcalcRenderDB(kw);
+}
+
+function rcalcSelectMeal(el) {
+  _rcalcMeal = el.dataset.meal;
+  document.querySelectorAll('.rcalc-meal-btn').forEach(function(b){ b.classList.toggle('sel', b === el); });
+  var addBtn = document.getElementById('rcalc-add-btn');
+  if (addBtn) addBtn.textContent = '➕ 加入' + _rcalcMeal + '記錄';
+}
+
+function rcalcUpdateResult() {
+  if (!_rcalcSelected) return;
+  var g = parseFloat(document.getElementById('rcalc-grams').value) || (_rcalcSelected.isPrivate ? 1 : 100);
+  var calc = _rcalcSelected.isPrivate
+    ? function(v){ return Math.round(v * g * 10) / 10; }
+    : function(v){ return Math.round(v * g / 100 * 10) / 10; };
+  var rc = document.getElementById('rcalc-res-cal');
+  var rp = document.getElementById('rcalc-res-pro');
+  var rb = document.getElementById('rcalc-res-carb');
+  var rf = document.getElementById('rcalc-res-fat');
+  if (rc) rc.textContent = calc(_rcalcSelected.cal);
+  if (rp) rp.textContent = calc(_rcalcSelected.pro);
+  if (rb) rb.textContent = calc(_rcalcSelected.carb);
+  if (rf) rf.textContent = calc(_rcalcSelected.fat);
+  var res = document.getElementById('rcalc-result');
+  if (res) res.style.display = '';
+}
+
+function rcalcAddToLog() {
+  if (!_rcalcSelected) return;
+  var g = parseFloat(document.getElementById('rcalc-grams').value) || (_rcalcSelected.isPrivate ? 1 : 100);
+  var calc = _rcalcSelected.isPrivate
+    ? function(v){ return Math.round(v * g * 10) / 10; }
+    : function(v){ return Math.round(v * g / 100 * 10) / 10; };
+  var name = _rcalcSelected.name;
+  var meal = _rcalcMeal;
+  // 切換到飲食頁
+  switchPage('food');
+  _foodViewDate = todayKey();
+  renderFood();
+  setTimeout(function() {
+    openFoodEdit();
+    var nm = document.getElementById('food-edit-name'); if (nm) nm.value = name;
+    var flds = { cal: calc(_rcalcSelected.cal), pro: calc(_rcalcSelected.pro), carb: calc(_rcalcSelected.carb), fat: calc(_rcalcSelected.fat) };
+    Object.keys(flds).forEach(function(k){ var el = document.getElementById('food-edit-' + k); if (el) el.value = flds[k] || ''; });
+    document.querySelectorAll('#food-meal-btns .food-meal-btn').forEach(function(b){ b.classList.toggle('sel', b.dataset.meal === meal); });
+    _foodEditMeal = meal;
+    var sg = document.getElementById('food-edit-suggest'); if (sg) { sg.classList.add('hidden'); sg.innerHTML = ''; }
+  }, 80);
+}
+
+function rcalcRenderDB(keyword) {
+  var db = document.getElementById('rcalc-db'); if (!db) return;
+  keyword = (keyword || '').trim();
+  var html = '';
+  function isDeleted(cat, name) {
+    return (typeof _deletedStdFoods !== 'undefined') && _deletedStdFoods.some(function(d){ return d.cat === cat && d.name === name; });
+  }
+  function itemHtml(f, clickFn) {
+    var isPriv = !!f.isPrivate;
+    var vals = isPriv
+      ? '每' + (f.unit||'份') + '：' + f.cal + 'kcal / 蛋白' + f.pro + 'g / 碳水' + f.carb + 'g'
+      : '每100g：' + f.cal + 'kcal / 蛋白' + f.pro + 'g / 碳水' + f.carb + 'g';
+    return '<div class="food-calc-db-item rcalc-item" style="cursor:pointer" data-rcalc-name="' + esc(f.name) + '" data-rcalc-priv="' + (isPriv?'1':'0') + '">' +
+      '<div class="food-calc-db-name">' + esc(f.name) + '</div>' +
+      '<div class="food-calc-db-vals">' + vals + '</div></div>';
+  }
+
+  if (keyword) {
+    var allFoods = [];
+    if (typeof FOOD_DB_CATEGORIES !== 'undefined') {
+      FOOD_DB_CATEGORIES.forEach(function(cat){
+        cat.items.filter(function(item){ return !isDeleted(cat.cat, item.name); })
+          .forEach(function(item){ allFoods.push(Object.assign({cat:cat.cat}, item)); });
+      });
+    }
+    if (typeof _customFoods !== 'undefined') _customFoods.forEach(function(f){ allFoods.push(Object.assign({},f)); });
+    if (typeof _privateFoods !== 'undefined') _privateFoods.forEach(function(f){ allFoods.push(Object.assign({isPrivate:true},f)); });
+    var list = allFoods.filter(function(f){ return f.name.indexOf(keyword) >= 0; });
+    if (list.length) {
+      html = '<div class="food-calc-cat-grid">' + list.map(itemHtml).join('') + '</div>';
+    } else {
+      html = '<div style="text-align:center;padding:24px;color:var(--tx3);font-size:13px">找不到「' + esc(keyword) + '」</div>';
+    }
+  } else {
+    // 私人菜單
+    if (typeof _privateFoods !== 'undefined' && _privateFoods.length) {
+      html += '<div style="font-size:12px;font-weight:600;color:var(--tx2);letter-spacing:.5px;padding:10px 2px 6px;border-bottom:.5px solid var(--bd);margin-bottom:6px">🍱 私人菜單</div>';
+      html += '<div class="food-calc-cat-grid">' + _privateFoods.map(function(f){ return itemHtml(Object.assign({isPrivate:true},f)); }).join('') + '</div>';
+    }
+    // 標準分類
+    if (typeof FOOD_DB_CATEGORIES !== 'undefined') {
+      FOOD_DB_CATEGORIES.forEach(function(cat) {
+        var visItems = cat.items.filter(function(item){ return !isDeleted(cat.cat, item.name); });
+        var customs = (typeof _customFoods !== 'undefined') ? _customFoods.filter(function(f){ return (f.cat||'') === cat.cat; }) : [];
+        var total = visItems.length + customs.length;
+        if (!total) return;
+        var catOpen = _calcCatOpen[cat.cat] === true;
+        html += '<button class="food-calc-cat-toggle rcalc-cat-toggle" data-cat="' + esc(cat.cat) + '">' +
+          '<span>' + cat.cat + '</span><span class="cat-arrow">' + (catOpen?'▲':'▼') + '</span></button>';
+        if (catOpen) {
+          html += '<div class="food-calc-cat-grid">' + visItems.map(function(item){ return itemHtml(Object.assign({cat:cat.cat},item)); }).join('') + '</div>';
+          if (customs.length) html += '<div class="food-calc-cat-grid">' + customs.map(function(f){ return itemHtml(f); }).join('') + '</div>';
+        }
+      });
+    }
+  }
+  db.innerHTML = html;
+
+  // 類別 toggle
+  db.querySelectorAll('.rcalc-cat-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      _calcCatOpen[btn.dataset.cat] = !_calcCatOpen[btn.dataset.cat];
+      rcalcRenderDB(document.getElementById('rcalc-search') ? document.getElementById('rcalc-search').value.trim() : '');
+    });
+  });
+
+  // 點選食物
+  db.querySelectorAll('.rcalc-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var name = el.dataset.rcalcName;
+      var isPriv = el.dataset.rcalcPriv === '1';
+      if (isPriv) {
+        _rcalcSelected = Object.assign({}, (_privateFoods||[]).find(function(f){ return f.name === name; }), { isPrivate: true });
+        var ul = document.getElementById('rcalc-unit-label'); if (ul) ul.textContent = _rcalcSelected.unit || '份';
+        var gi = document.getElementById('rcalc-grams'); if (gi) gi.value = 1;
+      } else {
+        var allFoods = [];
+        if (typeof FOOD_DB_CATEGORIES !== 'undefined') {
+          FOOD_DB_CATEGORIES.forEach(function(cat){
+            cat.items.filter(function(item){ return !(typeof _deletedStdFoods!=='undefined'&&_deletedStdFoods.some(function(d){return d.cat===cat.cat&&d.name===item.name;})); })
+              .forEach(function(item){ allFoods.push(Object.assign({cat:cat.cat},item)); });
+          });
+        }
+        if (typeof _customFoods !== 'undefined') _customFoods.forEach(function(f){ allFoods.push(Object.assign({},f)); });
+        _rcalcSelected = allFoods.find(function(f){ return f.name === name; }) || null;
+        if (_rcalcSelected) delete _rcalcSelected.isPrivate;
+        var ul2 = document.getElementById('rcalc-unit-label'); if (ul2) ul2.textContent = 'g';
+        var gi2 = document.getElementById('rcalc-grams'); if (gi2 && parseFloat(gi2.value) < 2) gi2.value = 100;
+      }
+      // 高亮選中
+      db.querySelectorAll('.rcalc-item').forEach(function(i){ i.style.borderColor=''; i.style.background=''; });
+      el.style.borderColor = 'var(--ac)';
+      el.style.background = 'var(--acl)';
+      rcalcUpdateResult();
+    });
+  });
+}
+
+function rcalcRenderTodayBar() {
+  var bar = document.getElementById('rcalc-today-bar'); if (!bar) return;
+  var items = (state.foodLogs || []).filter(function(l){ return l.date === todayKey(); });
+  if (!items.length) { bar.innerHTML = '<div style="font-size:11px;color:var(--tx3);text-align:center;padding:2px 0">今日尚無飲食記錄</div>'; return; }
+  var totPro  = items.reduce(function(s,l){ return s + (parseFloat(l.protein)||0); }, 0);
+  var totCarb = items.reduce(function(s,l){ return s + (parseFloat(l.carbs)||0); }, 0);
+  var totFat  = items.reduce(function(s,l){ return s + (parseFloat(l.fat)||0); }, 0);
+  var totCal  = items.reduce(function(s,l){ return s + (parseFloat(l.calories)||0); }, 0);
+  // 目標值來自 bodyData
+  var bd = typeof _bodyData !== 'undefined' ? _bodyData : {};
+  var macros = (typeof calcDayMacros === 'function') ? calcDayMacros(bd) : null;
+  var goalPro  = macros ? macros.protein  : 95;
+  var goalCarb = macros ? macros.carbs    : 45;
+  var goalCal  = macros ? macros.goalCal  : 1400;
+  function pct(v, g) { return Math.min(100, Math.round(v / g * 100)); }
+  function fmtVal(v, g) {
+    var p = pct(v, g);
+    var col = p >= 100 ? '#c0392b' : p >= 80 ? '#e67e22' : 'var(--ac)';
+    return '<span style="color:' + col + '">' + Math.round(v) + '</span>/<span style="color:var(--tx3)">' + g + '</span>g';
+  }
+  var rows = [
+    { lbl:'蛋白質', v:totPro, g:goalPro, col:'#C87A30' },
+    { lbl:'淨碳水', v:totCarb, g:goalCarb, col:'#5A9888' },
+    { lbl:'熱量', v:totCal, g:goalCal, col:'var(--ac)', unit:'kcal' },
+  ];
+  bar.innerHTML = '<div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:6px">📊 今日攝取進度</div>' +
+    rows.map(function(r) {
+      var p = pct(r.v, r.g);
+      var fillCol = p >= 100 ? '#c0392b' : r.col;
+      var unit = r.unit || 'g';
+      return '<div class="rcalc-today-item">' +
+        '<span class="rcalc-today-lbl">' + r.lbl + '</span>' +
+        '<div class="rcalc-today-bar-track"><div class="rcalc-today-bar-fill" style="width:' + p + '%;background:' + fillCol + '"></div></div>' +
+        '<span class="rcalc-today-val" style="color:' + fillCol + '">' + Math.round(r.v) + '/' + r.g + unit + '</span>' +
+      '</div>';
+    }).join('');
+}
+
+function renderRecipeCalc() {
+  _rcalcMeal = (typeof guessCurrentMeal === 'function') ? guessCurrentMeal() : '午餐';
+  // 更新餐別按鈕
+  document.querySelectorAll('.rcalc-meal-btn').forEach(function(b){ b.classList.toggle('sel', b.dataset.meal === _rcalcMeal); });
+  var addBtn = document.getElementById('rcalc-add-btn'); if (addBtn) addBtn.textContent = '➕ 加入' + _rcalcMeal + '記錄';
+  // 清除上次選擇
+  _rcalcSelected = null;
+  var res = document.getElementById('rcalc-result'); if (res) res.style.display = 'none';
+  var si = document.getElementById('rcalc-search'); if (si) si.value = '';
+  // 今日進度條
+  rcalcRenderTodayBar();
+  // 食物資料庫
+  rcalcRenderDB('');
+}
+
 var RECIPE_DB = [
   { num:'①',  name:'奶油蒜香嫩煎雞腿排',         protein:51.5,netCarb:5.0, fat:28.5,kcal:310,time:'20分',diff:'★☆☆',source:'V3',      note:'',        tags:['快速','低碳','高蛋白'],
     ingredients:[['去骨雞腿排','2塊（260g）','蛋白質47g｜淨碳水0g｜脂肪21g'],['無鹽奶油','8g','蛋白質0g｜淨碳水0g｜脂肪7g'],['大蒜','3瓣','蛋白質0.5g｜淨碳水2g｜脂肪0g'],['青花菜','150g','蛋白質4g｜淨碳水3g｜脂肪0.5g'],['鹽・黑胡椒・義大利香料','各適量','']],
@@ -8532,7 +8797,7 @@ var _dessertSearch = '';
 function switchRecipeTab(el) {
   _recipeTab = el.dataset.rtab;
   document.querySelectorAll('.recipe-tab').forEach(function(t){ t.classList.toggle('active', t.dataset.rtab === _recipeTab); });
-  ['list','ranking','situation','dessert'].forEach(function(v){
+  ['list','ranking','situation','dessert','calc'].forEach(function(v){
     var el = document.getElementById('recipe-view-' + v);
     if (el) el.style.display = v === _recipeTab ? '' : 'none';
   });
@@ -8540,12 +8805,13 @@ function switchRecipeTab(el) {
   if (_recipeTab === 'ranking')   renderRecipeRanking();
   if (_recipeTab === 'situation') renderRecipeSituation();
   if (_recipeTab === 'dessert')   renderDessertGrid();
+  if (_recipeTab === 'calc')      renderRecipeCalc();
 }
 
 function renderRecipePage() {
   _recipeTab = 'list';
   document.querySelectorAll('.recipe-tab').forEach(function(t){ t.classList.toggle('active', t.dataset.rtab === 'list'); });
-  ['list','ranking','situation','dessert'].forEach(function(v){
+  ['list','ranking','situation','dessert','calc'].forEach(function(v){
     var el = document.getElementById('recipe-view-' + v);
     if (el) el.style.display = v === 'list' ? '' : 'none';
   });
