@@ -664,11 +664,12 @@ input::placeholder { color: var(--tx3); }
 .food-multi-row select { font-size: 12px; color: var(--tx2); border: 1px solid var(--bd); border-radius: 6px; background: var(--bg3); padding: 6px 2px; flex-shrink: 0; }
 .food-multi-remove { flex-shrink: 0; border: none; background: none; color: var(--tx3); font-size: 16px; cursor: pointer; padding: 4px 6px; }
 .food-fav-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; align-items: center; }
-.food-fav-chip-wrap { position: relative; display: inline-flex; align-items: center; }
-.food-fav-chip { padding: 5px 20px 5px 10px; border: 1px solid var(--bd); border-radius: 14px; background: var(--bg3); font-size: 12px; color: var(--tx2); cursor: pointer; white-space: nowrap; }
-.food-fav-chip.is-fav { border-color: var(--ac); background: var(--acl); color: var(--acd); }
-.food-fav-chip-del { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--tx3); font-size: 11px; cursor: pointer; padding: 0; line-height: 1; }
-.food-fav-chip-del:hover { color: var(--ac); }
+.food-fav-chip-wrap { display: inline-flex; align-items: center; background: var(--bg3); border: 1px solid var(--bd); border-radius: 14px; overflow: hidden; }
+.food-fav-chip { padding: 5px 10px; border: none; border-radius: 0; background: transparent; font-size: 12px; color: var(--tx2); cursor: pointer; white-space: nowrap; }
+.food-fav-chip-wrap.is-fav { border-color: var(--ac); background: var(--acl); }
+.food-fav-chip.is-fav { background: transparent; color: var(--acd); }
+.food-fav-chip-del { background: none; border: none; border-left: 1px solid var(--bd); color: var(--tx3); font-size: 13px; cursor: pointer; padding: 3px 7px; line-height: 1; flex-shrink: 0; align-self: stretch; display: flex; align-items: center; }
+.food-fav-chip-del:hover, .food-fav-chip-del:active { color: var(--ac); background: var(--acl); }
 .food-edit-fav-btn.is-fav { border-color: var(--ac); background: var(--acl); color: var(--acd); }
 /* Calculator overlay */
 .food-calc-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 195; display: flex; align-items: flex-end; justify-content: center; }
@@ -5084,6 +5085,7 @@ function renderFood() {
         (l.note?'<div style="font-size:11px;color:var(--tx3);margin-top:3px;word-break:break-all">'+esc(l.note)+'</div>':'')+
       '</div>'+
       '<span class="food-log-time">'+l.time+'</span>'+
+      '<button class="food-save-pf-btn" data-id="'+l.id+'" title="存到試算工具">📥</button>'+
       '<button class="food-edit-btn" data-id="'+l.id+'" title="修改">✏️</button>'+
       '<button class="food-del-btn" data-id="'+l.id+'">×</button>'+
     '</div>';
@@ -5530,7 +5532,7 @@ function renderFoodFavChips(){
   if(!all.length){ row.classList.add('hidden'); box.innerHTML=''; box._list=null; return; }
   row.classList.remove('hidden');
   box.innerHTML = all.map(function(f,i){
-    return '<span class="food-fav-chip-wrap">' +
+    return '<span class="food-fav-chip-wrap'+(f.isFav?' is-fav':'')+'">' +
       '<div class="food-fav-chip'+(f.isFav?' is-fav':'')+'" data-idx="'+i+'">'+(f.isFav?'⭐ ':'')+esc(f.name)+'</div>' +
       (f.isFav ? '<button class="food-fav-chip-del" data-del-idx="'+i+'" title="移除常用">✕</button>' : '') +
     '</span>';
