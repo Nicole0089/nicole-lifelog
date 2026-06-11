@@ -28,9 +28,17 @@ body { background: #F0E8E6; background: var(--bg); color: #3D2828; color: var(--
 #app { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; background: var(--bg); }
 
 /* ── 頂部標題 ── */
-#header { flex-shrink: 0; height: 52px; background: var(--bg); border-bottom: 0.5px solid var(--bd); display: flex; align-items: center; justify-content: space-between; padding: 0 18px; }
+#header { flex-shrink: 0; min-height: 52px; background: var(--bg); border-bottom: 0.5px solid var(--bd); display: flex; align-items: center; justify-content: space-between; padding: 0 14px 0 14px; flex-wrap: wrap; gap: 4px; }
 #hdr-title { font-size: 17px; font-weight: 700; font-family: 'Microsoft JhengHei','微軟正黑體','PingFang TC',sans-serif; letter-spacing: 0; }
 #hdr-date { font-size: 12px; color: var(--ac); background: var(--acl); padding: 3px 10px; border-radius: 10px; }
+/* 標題列日型選擇器 */
+#hdr-dtype-row { display: flex; align-items: center; gap: 5px; width: 100%; padding: 0 0 7px 0; }
+#hdr-dtype-label { font-size: 11px; color: var(--tx3); flex-shrink: 0; }
+.hdr-dtype-btn { flex: 1; padding: 4px 6px; border-radius: 8px; border: 1px solid var(--bd); background: var(--bg3); color: var(--tx2); font-size: 12px; font-family: var(--font); cursor: pointer; text-align: center; transition: all 0.15s; white-space: nowrap; }
+.hdr-dtype-btn.sel { background: var(--acl); border-color: var(--ac); color: var(--acd); font-weight: 600; }
+.hdr-dtype-btn.sel-high { background: #FFF0E8; border-color: #E07050; color: #C04030; font-weight: 600; }
+.hdr-dtype-btn.sel-low  { background: #FFFBE8; border-color: #C0A030; color: #907020; font-weight: 600; }
+.hdr-dtype-btn.sel-rest { background: var(--bg2); border-color: var(--tx3); color: var(--tx2); font-weight: 600; }
 
 /* ── 內容區 ── */
 #content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; min-height: 0; }
@@ -1076,45 +1084,45 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 /* ═══════════════════════════════════════════════════
    🥗 食譜庫頁面
    ═══════════════════════════════════════════════════ */
-#page-recipes.active { display: flex !important; flex-direction: column; min-height: 100%; }
+#page-recipes.active { display: block !important; }
 .recipe-toolbar { padding: 8px 12px 6px; background: var(--bg); border-bottom: 0.5px solid var(--bd); flex-shrink: 0; }
 .recipe-search-wrap { position: relative; margin-bottom: 7px; }
-.recipe-search-input { width: 100%; padding: 8px 32px 8px 34px; background: var(--bg3); border: 0.5px solid var(--bd); border-radius: var(--rr); font-size: 14px; color: var(--tx); font-family: var(--font); }
+.recipe-search-input { width: 100%; padding: 9px 32px 9px 34px; background: var(--bg3); border: 0.5px solid var(--bd); border-radius: var(--rr); font-size: 15px; color: var(--tx); font-family: var(--font); }
 .recipe-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 15px; opacity: .5; pointer-events: none; }
 .recipe-search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--tx3); cursor: pointer; font-size: 16px; display: none; }
 .recipe-filter-row { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .recipe-filter-row::-webkit-scrollbar { display: none; }
-.recipe-chip { flex-shrink: 0; padding: 4px 10px; border-radius: 14px; font-size: 12px; font-weight: 600; background: var(--bg3); border: 0.5px solid var(--bd); color: var(--tx2); cursor: pointer; white-space: nowrap; font-family: var(--font); }
+.recipe-chip { flex-shrink: 0; padding: 5px 11px; border-radius: 14px; font-size: 13px; font-weight: 600; background: var(--bg3); border: 0.5px solid var(--bd); color: var(--tx2); cursor: pointer; white-space: nowrap; font-family: var(--font); }
 .recipe-chip.active { background: var(--ac); border-color: var(--ac); color: #fff; }
 .recipe-sort-row { display: flex; gap: 5px; align-items: center; margin-top: 6px; }
 .recipe-sort-label { font-size: 11px; color: var(--tx3); flex-shrink: 0; }
-.recipe-sort-btn { padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; background: var(--bg3); border: 0.5px solid var(--bd); color: var(--tx2); cursor: pointer; font-family: var(--font); }
+.recipe-sort-btn { padding: 4px 10px; border-radius: 10px; font-size: 13px; font-weight: 600; background: var(--bg3); border: 0.5px solid var(--bd); color: var(--tx2); cursor: pointer; font-family: var(--font); }
 .recipe-sort-btn.active { background: var(--acd); border-color: var(--acd); color: #fff; }
 .recipe-stats-bar { display: flex; background: var(--bg2); border-bottom: 0.5px solid var(--bd); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
 .recipe-stats-bar::-webkit-scrollbar { display: none; }
 .recipe-stat { flex: none; padding: 6px 14px; text-align: center; border-right: 0.5px solid var(--bd); min-width: 64px; }
 .recipe-stat:last-child { border-right: none; }
-.recipe-stat-num { font-size: 16px; font-weight: 700; color: var(--ac); display: block; }
-.recipe-stat-lbl { font-size: 10px; color: var(--tx3); }
-.recipe-result-info { font-size: 11px; color: var(--tx3); padding: 5px 14px 3px; flex-shrink: 0; }
+.recipe-stat-num { font-size: 18px; font-weight: 700; color: var(--ac); display: block; }
+.recipe-stat-lbl { font-size: 12px; color: var(--tx3); }
+.recipe-result-info { font-size: 13px; color: var(--tx3); padding: 5px 14px 3px; flex-shrink: 0; }
 .recipe-grid { padding: 8px 10px 80px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .recipe-card { background: var(--bg3); border: 0.5px solid var(--bd); border-radius: var(--r); cursor: pointer; overflow: hidden; display: flex; flex-direction: column; transition: border-color .15s; }
 .recipe-card:active { background: var(--acl); border-color: var(--ac); }
 .recipe-card-hdr { padding: 9px 9px 5px; display: flex; align-items: flex-start; gap: 5px; }
 .recipe-card-num { font-size: 17px; font-weight: 900; color: var(--ac); min-width: 24px; line-height: 1.2; flex-shrink: 0; }
-.recipe-card-name { font-size: 12px; font-weight: 700; color: var(--tx); line-height: 1.35; }
-.recipe-card-src { font-size: 10px; color: var(--tx3); margin-top: 1px; }
+.recipe-card-name { font-size: 14px; font-weight: 700; color: var(--tx); line-height: 1.35; }
+.recipe-card-src { font-size: 12px; color: var(--tx3); margin-top: 1px; }
 .recipe-card-macros { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 0 9px 6px; }
 .recipe-macro { text-align: center; }
-.recipe-macro-val { font-size: 13px; font-weight: 800; display: block; }
-.recipe-macro-lbl { font-size: 10px; color: var(--tx3); }
+.recipe-macro-val { font-size: 15px; font-weight: 800; display: block; }
+.recipe-macro-lbl { font-size: 12px; color: var(--tx3); }
 .recipe-macro-val.rp { color: #C87A30; }
 .recipe-macro-val.rc { color: #5A9888; }
 .recipe-macro-val.rf { color: var(--tx2); }
 .recipe-macro-val.rk { color: var(--ac); }
-.recipe-card-footer { padding: 5px 9px; background: var(--bg2); display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--tx3); border-top: 0.5px solid var(--bd); margin-top: auto; }
+.recipe-card-footer { padding: 5px 9px; background: var(--bg2); display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--tx3); border-top: 0.5px solid var(--bd); margin-top: auto; }
 .recipe-tag-row { display: flex; gap: 3px; flex-wrap: wrap; }
-.rtag { font-size: 10px; padding: 1px 5px; border-radius: 6px; font-weight: 600; }
+.rtag { font-size: 11px; padding: 1px 5px; border-radius: 6px; font-weight: 600; }
 .rtag-重訓  { background: #FDEBD0; color: #C87A30; }
 .rtag-快速  { background: var(--acl); color: var(--acd); }
 .rtag-低碳  { background: #E0F0EE; color: #3A8878; }
@@ -1123,8 +1131,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .rtag-免開火{ background: #E0EEF5; color: #3A6888; }
 .rtag-高蛋白{ background: #FDDBD8; color: #A03030; }
 /* 分頁標籤 */
-.recipe-page-tabs { display: flex; background: var(--bg); border-bottom: 0.5px solid var(--bd); flex-shrink: 0; position: sticky; top: 0; z-index: 4; }
-.recipe-tab { flex: 1; padding: 9px 4px 8px; font-size: 13px; color: var(--tx3); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; white-space: nowrap; }
+.recipe-page-tabs { display: flex; background: var(--bg); border-bottom: 0.5px solid var(--bd); position: sticky; top: 0; z-index: 4; overflow-x: auto; scrollbar-width: none; }
+.recipe-tab { flex: 1; padding: 10px 4px 9px; font-size: 14px; color: var(--tx3); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; white-space: nowrap; }
 .recipe-tab.active { color: var(--acd); font-weight: 600; }
 .recipe-tab.active::after { content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 2px; background: var(--ac); border-radius: 1px; }
 /* Modal */
@@ -1134,54 +1142,64 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .recipe-modal-top { background: var(--ac); color: #fff; padding: 14px 14px 10px; position: relative; }
 .recipe-modal-top.dessert { background: #9A6898; }
 .recipe-modal-num { font-size: 22px; font-weight: 900; opacity: .85; }
-.recipe-modal-name { font-size: 16px; font-weight: 800; margin-top: 2px; line-height: 1.3; }
-.recipe-modal-meta { font-size: 11px; opacity: .8; margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
+.recipe-modal-name { font-size: 18px; font-weight: 800; margin-top: 2px; line-height: 1.3; }
+.recipe-modal-meta { font-size: 13px; opacity: .8; margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
 .recipe-modal-close { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,.2); border: none; color: #fff; border-radius: 50%; width: 28px; height: 28px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .recipe-modal-body { padding: 14px; }
 .recipe-nutr-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 12px; }
 .recipe-nutr-box { background: var(--bg3); border-radius: var(--r); padding: 8px 4px; text-align: center; border: 0.5px solid var(--bd); }
-.recipe-nutr-val { font-size: 18px; font-weight: 800; display: block; }
-.recipe-nutr-lbl { font-size: 10px; color: var(--tx3); margin-top: 1px; }
+.recipe-nutr-val { font-size: 20px; font-weight: 800; display: block; }
+.recipe-nutr-lbl { font-size: 12px; color: var(--tx3); margin-top: 1px; }
 .recipe-nutr-val.np { color: #C87A30; }
 .recipe-nutr-val.nc { color: #5A9888; }
 .recipe-nutr-val.nf { color: var(--tx2); }
 .recipe-nutr-val.nk { color: var(--ac); }
-.recipe-modal-sec { font-size: 12px; font-weight: 700; color: var(--ac); margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+.recipe-modal-sec { font-size: 14px; font-weight: 700; color: var(--ac); margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
 .recipe-ing-list { margin-bottom: 12px; }
-.recipe-ing-row { padding: 5px 0; border-bottom: 0.5px solid var(--bd); font-size: 13px; }
+.recipe-ing-row { padding: 6px 0; border-bottom: 0.5px solid var(--bd); font-size: 15px; }
 .recipe-ing-row:last-child { border-bottom: none; }
 .recipe-ing-top { display: flex; justify-content: space-between; gap: 6px; }
 .recipe-ing-name { font-weight: 600; color: var(--tx); }
 .recipe-ing-amt { color: var(--tx2); }
-.recipe-ing-nutr { font-size: 11px; color: var(--tx3); margin-top: 1px; }
+.recipe-ing-nutr { font-size: 12px; color: var(--tx3); margin-top: 1px; }
+/* 食材克數微調器 */
+.ing-adj-row { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+.ing-adj-stepper { background: var(--bg3); border: 1px solid var(--bd); border-radius: 50%; width: 24px; height: 24px; font-size: 15px; font-weight: 700; color: var(--ac); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: var(--font); line-height: 1; padding: 0; }
+.ing-adj-stepper:active { background: var(--acl); }
+.ing-adj-input { width: 52px; text-align: center; font-size: 14px; font-weight: 700; color: var(--acd); background: var(--acl); border: 1px solid var(--ac); border-radius: var(--r); padding: 3px 4px; font-family: var(--font); }
+.ing-adj-unit { font-size: 12px; color: var(--tx3); }
+.ing-adj-nutr { font-size: 11px; color: var(--tx3); flex: 1; text-align: right; }
+.ing-adj-nutr.changed { color: var(--acd); font-weight: 600; }
+.recipe-nutr-box.custom .recipe-nutr-val { color: var(--acd) !important; }
+.nutr-custom-note { font-size: 10px; color: var(--tx3); display: block; margin-top: 1px; }
 .recipe-steps-list { margin-bottom: 12px; }
-.recipe-step { display: flex; gap: 8px; margin-bottom: 8px; font-size: 13px; color: var(--tx); }
+.recipe-step { display: flex; gap: 8px; margin-bottom: 10px; font-size: 15px; color: var(--tx); }
 .recipe-step-num { background: var(--ac); color: #fff; border-radius: 50%; width: 20px; height: 20px; min-width: 20px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; margin-top: 1px; flex-shrink: 0; }
 .recipe-step-txt { line-height: 1.55; }
-.recipe-tip-box { background: var(--acl); border-left: 3px solid var(--ac); border-radius: 0 var(--r) var(--r) 0; padding: 8px 10px; font-size: 12px; color: var(--tx); margin-bottom: 8px; }
-.recipe-tip-lbl { font-weight: 700; color: var(--acd); margin-bottom: 2px; font-size: 11px; }
+.recipe-tip-box { background: var(--acl); border-left: 3px solid var(--ac); border-radius: 0 var(--r) var(--r) 0; padding: 10px 12px; font-size: 14px; color: var(--tx); margin-bottom: 8px; }
+.recipe-tip-lbl { font-weight: 700; color: var(--acd); margin-bottom: 4px; font-size: 13px; }
 /* 份量調整器 */
 .serving-adjuster { display: flex; align-items: center; gap: 8px; background: var(--bg2); border: 0.5px solid var(--bd); border-radius: var(--rr); padding: 8px 12px; margin-bottom: 12px; flex-wrap: wrap; }
-.serving-label { font-size: 12px; color: var(--tx2); flex-shrink: 0; font-weight: 600; }
+.serving-label { font-size: 14px; color: var(--tx2); flex-shrink: 0; font-weight: 600; }
 .serving-presets { display: flex; gap: 4px; }
-.serving-preset-btn { padding: 5px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; background: var(--bg3); border: 0.5px solid var(--bd); color: var(--tx2); cursor: pointer; font-family: var(--font); white-space: nowrap; }
+.serving-preset-btn { padding: 6px 10px; border-radius: 10px; font-size: 14px; font-weight: 600; background: var(--bg3); border: 0.5px solid var(--bd); color: var(--tx2); cursor: pointer; font-family: var(--font); white-space: nowrap; }
 .serving-preset-btn.active { background: var(--ac); border-color: var(--ac); color: #fff; }
 .serving-custom-wrap { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 .serving-stepper { background: var(--bg3); border: 0.5px solid var(--bd); border-radius: 50%; width: 26px; height: 26px; font-size: 17px; font-weight: 700; color: var(--ac); cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; font-family: var(--font); }
 .serving-stepper:active { background: var(--acl); }
 .serving-num { font-size: 16px; font-weight: 800; color: var(--tx); min-width: 24px; text-align: center; }
-.serving-unit { font-size: 11px; color: var(--tx3); }
+.serving-unit { font-size: 13px; color: var(--tx3); }
 .recipe-ing-amt.changed { color: var(--acd); font-weight: 700; }
-.nutr-base { font-size: 10px; color: var(--tx3); margin-top: 1px; display: block; }
+.nutr-base { font-size: 11px; color: var(--tx3); margin-top: 1px; display: block; }
 .serving-note { font-size: 11px; color: var(--tx3); width: 100%; padding-top: 2px; }
 /* 食譜 → 飲食串聯按鈕 */
-.recipe-log-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; background: var(--ac); color: #fff; border: none; border-radius: var(--rr); font-size: 14px; font-weight: 700; font-family: var(--font); cursor: pointer; margin-top: 4px; margin-bottom: 8px; }
+.recipe-log-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; background: var(--ac); color: #fff; border: none; border-radius: var(--rr); font-size: 15px; font-weight: 700; font-family: var(--font); cursor: pointer; margin-top: 4px; margin-bottom: 8px; }
 .recipe-log-btn:active { background: var(--acd); }
 .recipe-log-meal-row { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
-.recipe-log-meal-btn { flex: 1; padding: 7px 6px; border-radius: var(--rr); font-size: 12px; font-weight: 600; background: var(--bg3); border: 1.5px solid var(--bd); color: var(--tx2); cursor: pointer; font-family: var(--font); text-align: center; white-space: nowrap; }
+.recipe-log-meal-btn { flex: 1; padding: 7px 6px; border-radius: var(--rr); font-size: 14px; font-weight: 600; background: var(--bg3); border: 1.5px solid var(--bd); color: var(--tx2); cursor: pointer; font-family: var(--font); text-align: center; white-space: nowrap; }
 .recipe-log-meal-btn.sel { background: var(--acl); border-color: var(--ac); color: var(--acd); }
 /* 食譜庫試算頁籤 */
-.rcalc-meal-btn { flex:1; padding:6px 4px; border-radius:var(--rr); font-size:12px; font-weight:600; background:var(--bg); border:1.5px solid var(--bd); color:var(--tx2); cursor:pointer; font-family:var(--font); text-align:center; }
+.rcalc-meal-btn { flex:1; padding:7px 4px; border-radius:var(--rr); font-size:14px; font-weight:600; background:var(--bg); border:1.5px solid var(--bd); color:var(--tx2); cursor:pointer; font-family:var(--font); text-align:center; }
 .rcalc-meal-btn.sel { background:var(--acl); border-color:var(--ac); color:var(--acd); }
 .rcalc-today-item { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
 .rcalc-today-lbl { font-size:11px; color:var(--tx3); width:50px; flex-shrink:0; }
@@ -1196,9 +1214,9 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .recipe-rank-item:active { background: var(--acl); }
 .recipe-rank-pos { font-size: 18px; min-width: 26px; text-align: center; }
 .recipe-rank-info { flex: 1; }
-.recipe-rank-name { font-size: 12px; font-weight: 700; color: var(--tx); }
-.recipe-rank-sub { font-size: 11px; color: var(--tx3); }
-.recipe-rank-val { font-size: 16px; font-weight: 800; white-space: nowrap; }
+.recipe-rank-name { font-size: 14px; font-weight: 700; color: var(--tx); }
+.recipe-rank-sub { font-size: 12px; color: var(--tx3); }
+.recipe-rank-val { font-size: 18px; font-weight: 800; white-space: nowrap; }
 .recipe-rank-val.vp { color: #C87A30; }
 .recipe-rank-val.vc { color: #5A9888; }
 .recipe-rank-val.vk { color: var(--ac); }
@@ -1207,10 +1225,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .recipe-sit-card { background: var(--bg3); border: 0.5px solid var(--bd); border-radius: var(--r); overflow: hidden; }
 .recipe-sit-hdr { padding: 9px 10px; display: flex; align-items: center; gap: 6px; border-bottom: 0.5px solid var(--bd); background: var(--bg2); }
 .recipe-sit-icon { font-size: 18px; }
-.recipe-sit-title { font-size: 12px; font-weight: 700; color: var(--tx); }
-.recipe-sit-count { font-size: 10px; color: var(--tx3); }
+.recipe-sit-title { font-size: 14px; font-weight: 700; color: var(--tx); }
+.recipe-sit-count { font-size: 12px; color: var(--tx3); }
 .recipe-sit-body { padding: 0 10px 6px; }
-.recipe-sit-row { font-size: 11px; color: var(--tx2); padding: 4px 0; border-bottom: 0.5px solid var(--bd); display: flex; justify-content: space-between; gap: 4px; cursor: pointer; }
+.recipe-sit-row { font-size: 13px; color: var(--tx2); padding: 4px 0; border-bottom: 0.5px solid var(--bd); display: flex; justify-content: space-between; gap: 4px; cursor: pointer; }
 .recipe-sit-row:last-child { border-bottom: none; }
 .recipe-sit-val { color: var(--ac); font-weight: 700; white-space: nowrap; }
 </style>
@@ -1222,9 +1240,17 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 
 <div id="app">
   <div id="header">
-    <button id="menu-btn" aria-label="選單">☰</button>
-    <span id="hdr-title">Nicole的生活日誌</span>
-    <span id="hdr-date"></span>
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;min-height:44px;">
+      <button id="menu-btn" aria-label="選單">☰</button>
+      <span id="hdr-title">Nicole的生活日誌</span>
+      <span id="hdr-date"></span>
+    </div>
+    <div id="hdr-dtype-row">
+      <span id="hdr-dtype-label">今日：</span>
+      <button class="hdr-dtype-btn" data-dtype="high" onclick="setHdrDtype(this,'high')">🔴 高碳</button>
+      <button class="hdr-dtype-btn" data-dtype="low"  onclick="setHdrDtype(this,'low')">🟡 低碳</button>
+      <button class="hdr-dtype-btn" data-dtype="rest" onclick="setHdrDtype(this,'rest')">⚫ 休息</button>
+    </div>
   </div>
 
   <div id="content">
@@ -4760,6 +4786,36 @@ function renderBodySettings() {
 }
 
 /* ── renderFoodDayType ── */
+function renderHdrDtype() {
+  var dtype = (typeof _foodDayType !== 'undefined') ? (_foodDayType[todayKey()] || '') : '';
+  var selMap = { high:'sel-high', low:'sel-low', rest:'sel-rest' };
+  document.querySelectorAll('.hdr-dtype-btn').forEach(function(b) {
+    b.classList.remove('sel','sel-high','sel-low','sel-rest');
+    if (b.dataset.dtype === dtype) b.classList.add(selMap[dtype] || 'sel');
+  });
+  // 同步更新試算頁的進度條
+  if (typeof rcalcRenderTodayBar === 'function') {
+    var bar = document.getElementById('rcalc-today-bar');
+    if (bar && bar.innerHTML) rcalcRenderTodayBar();
+  }
+}
+
+function setHdrDtype(el, dtype) {
+  var today = todayKey();
+  if (!_foodDayType) _foodDayType = {};
+  var cur = _foodDayType[today] || '';
+  // 再次點選同一個就取消
+  if (cur === dtype) {
+    delete _foodDayType[today];
+  } else {
+    _foodDayType[today] = dtype;
+  }
+  saveStorage('myapp_food_day_type', _foodDayType);
+  renderHdrDtype();
+  // 同步飲食頁日型按鈕
+  if (typeof renderFoodDayType === 'function') renderFoodDayType();
+}
+
 function renderFoodDayType() {
   var dtype=_foodDayType[_foodViewDate]||'';
   document.querySelectorAll('#food-dtype-btns .food-dtype-btn').forEach(function(b){ b.classList.toggle('sel',b.dataset.dtype===dtype); });
@@ -5221,7 +5277,7 @@ document.querySelectorAll('#food-dtype-btns .food-dtype-btn').forEach(function(b
     var cur=_foodDayType[_foodViewDate]||'';
     if(cur===btn.dataset.dtype) delete _foodDayType[_foodViewDate];
     else _foodDayType[_foodViewDate]=btn.dataset.dtype;
-    saveStorage('myapp_food_day_type',_foodDayType); renderFoodDayType();
+    saveStorage('myapp_food_day_type',_foodDayType); renderFoodDayType(); renderHdrDtype();
   });
 });
 
@@ -8110,11 +8166,19 @@ function logRecipeToFood() {
   if (!_modalData) return;
   var s = _modalServings;
   function sc(v) { return Math.round(v * s * 10) / 10; }
-  var name = _modalData.name + (s !== 1 ? '（×' + s + '）' : '');
-  var cal  = sc(_modalData.kcal);
-  var pro  = sc(_modalData.protein);
-  var carb = sc(_modalData.netCarb);
-  var fat  = sc(_modalData.fat);
+  var hasCustom = Object.keys(_ingCustomGrams).length > 0;
+  var name = _modalData.name + (s !== 1 ? '（×' + s + '）' : '') + (hasCustom ? '（自訂份量）' : '');
+  // 優先使用自訂計算後的數值
+  var nutrEl = {
+    pro:  document.querySelector('#nutr-grid .recipe-nutr-val.np'),
+    carb: document.querySelector('#nutr-grid .recipe-nutr-val.nc'),
+    fat:  document.querySelector('#nutr-grid .recipe-nutr-val.nf'),
+    kcal: document.querySelector('#nutr-grid .recipe-nutr-val.nk'),
+  };
+  var cal  = nutrEl.kcal ? parseFloat(nutrEl.kcal.textContent) : sc(_modalData.kcal);
+  var pro  = nutrEl.pro  ? parseFloat(nutrEl.pro.textContent)  : sc(_modalData.protein);
+  var carb = nutrEl.carb ? parseFloat(nutrEl.carb.textContent) : sc(_modalData.netCarb);
+  var fat  = nutrEl.fat  ? parseFloat(nutrEl.fat.textContent)  : sc(_modalData.fat);
   var meal = _logMeal;
 
   // 關閉 Modal
@@ -8152,21 +8216,174 @@ function logRecipeToFood() {
   }, 80);
 }
 
+// ── 食材微調狀態：{ ingIndex: customGrams } ────────────────────
+var _ingCustomGrams = {};
+
+// 判斷是否為可微調的主要食材（肉魚蛋奶豆類蔬菜）
+var ING_MAIN_KEYWORDS = ['雞','豬','牛','羊','鮭','鱸','鮪','秋刀','蝦','蟹','透抽',
+  '豆腐','蛋','起司','奶油','鮮奶油','杏仁粉','花椰','菠菜','四季豆','蘆筍',
+  '高麗菜','大白菜','娃娃菜','蘑菇','洋蔥','番茄','甜椒','小黃瓜','酪梨',
+  '青花','豆漿','椰奶','鮮奶','莫札瑞拉','切達','帕瑪森','泡菜','櫛瓜'];
+
+function isMainIngredient(name) {
+  return ING_MAIN_KEYWORDS.some(function(kw){ return name.indexOf(kw) >= 0; });
+}
+
+// 從營養標注字串解析出每100g的營養值
+// ing[2] 格式：'蛋白質47g｜淨碳水0g｜脂肪21g' （這是原始份量的值，非每100g）
+// 原始份量在 ing[1]（例如 '260g' 或 '2塊（260g）'）
+// 所以每克 = 標注值 / 原始克數
+function parseIngNutrPer1g(ingAmt, ingNutr) {
+  if (!ingNutr) return null;
+  // 找原始克數
+  var gMatch = ingAmt.match(/(\d+(?:\.\d+)?)\s*g/);
+  var baseG = gMatch ? parseFloat(gMatch[1]) : 0;
+  if (!baseG) return null;
+  var result = {};
+  var map = { '蛋白質':'pro', '淨碳水':'carb', '脂肪':'fat', '熱量':'cal' };
+  ingNutr.replace(/([蛋白質淨碳水脂肪熱量]+)([\d.]+)(g|kcal)/g, function(_, key, val) {
+    var field = map[key];
+    if (field) result[field] = parseFloat(val) / baseG;
+  });
+  return Object.keys(result).length ? result : null;
+}
+
+// 根據目前所有食材的自訂克數，重算整體營養
+function recalcCustomNutr() {
+  if (!_modalData || !_modalData.ingredients) return;
+  var s = _modalServings;
+  var d = _modalData;
+  // 基礎值（份量縮放後）
+  var basePro  = d.protein  * s;
+  var baseCarb = d.netCarb  * s;
+  var baseFat  = d.fat      * s;
+  var baseKcal = d.kcal     * s;
+  var hasCustom = Object.keys(_ingCustomGrams).length > 0;
+  if (!hasCustom) {
+    // 無自訂時直接用份量計算結果
+    updateNutrGrid(basePro, baseCarb, baseFat, baseKcal, false);
+    return;
+  }
+  // 有自訂：計算差值
+  var deltaPro = 0, deltaCarb = 0, deltaFat = 0, deltaKcal = 0;
+  d.ingredients.forEach(function(ing, idx) {
+    if (typeof _ingCustomGrams[idx] === 'undefined') return;
+    var origParsed = parseIngAmt(ing[1]);
+    var origG = origParsed.parseable ? origParsed.num * s : 0;
+    var customG = _ingCustomGrams[idx];
+    var diff = customG - origG;
+    if (!diff) return;
+    var per1g = parseIngNutrPer1g(ing[1], ing[2]);
+    if (!per1g) return;
+    if (per1g.pro)  deltaPro  += per1g.pro  * diff;
+    if (per1g.carb) deltaCarb += per1g.carb * diff;
+    if (per1g.fat)  deltaFat  += per1g.fat  * diff;
+    // 熱量 = 蛋白質*4 + 碳水*4 + 脂肪*9
+    deltaKcal += (per1g.pro||0)*4*diff + (per1g.carb||0)*4*diff + (per1g.fat||0)*9*diff;
+  });
+  var newPro  = Math.max(0, Math.round((basePro  + deltaPro)  * 10) / 10);
+  var newCarb = Math.max(0, Math.round((baseCarb + deltaCarb) * 10) / 10);
+  var newFat  = Math.max(0, Math.round((baseFat  + deltaFat)  * 10) / 10);
+  var newKcal = Math.max(0, Math.round((baseKcal + deltaKcal) * 10) / 10);
+  updateNutrGrid(newPro, newCarb, newFat, newKcal, true);
+}
+
+function updateNutrGrid(pro, carb, fat, kcal, isCustom) {
+  var ng = document.getElementById('nutr-grid');
+  if (!ng) return;
+  var note = isCustom ? '<span class="nutr-custom-note">已含食材調整</span>' : '';
+  ng.innerHTML =
+    '<div class="recipe-nutr-box'+(isCustom?' custom':'')+'"><span class="recipe-nutr-val np">'+pro+'g</span><span class="recipe-nutr-lbl">蛋白質</span>'+note+'</div>' +
+    '<div class="recipe-nutr-box'+(isCustom?' custom':'')+'"><span class="recipe-nutr-val nc">'+carb+'g</span><span class="recipe-nutr-lbl">淨碳水</span>'+note+'</div>' +
+    '<div class="recipe-nutr-box'+(isCustom?' custom':'')+'"><span class="recipe-nutr-val nf">'+fat+'g</span><span class="recipe-nutr-lbl">脂肪</span>'+note+'</div>' +
+    '<div class="recipe-nutr-box'+(isCustom?' custom':'')+'"><span class="recipe-nutr-val nk">'+kcal+'</span><span class="recipe-nutr-lbl">kcal</span>'+note+'</div>';
+}
+
+function ingAdjChange(idx, delta) {
+  var d = _modalData; if (!d || !d.ingredients) return;
+  var s = _modalServings;
+  var ing = d.ingredients[idx];
+  var parsed = parseIngAmt(ing[1]);
+  var origG = parsed.parseable ? Math.round(parsed.num * s * 10) / 10 : 100;
+  var cur = (typeof _ingCustomGrams[idx] !== 'undefined') ? _ingCustomGrams[idx] : origG;
+  var next = Math.max(0, Math.round((cur + delta) * 10) / 10);
+  _ingCustomGrams[idx] = next;
+  // 更新該行顯示
+  var inputEl = document.getElementById('ing-adj-' + idx);
+  if (inputEl) inputEl.value = next;
+  // 更新差值顯示
+  var diffEl = document.getElementById('ing-diff-' + idx);
+  if (diffEl) {
+    var diff = Math.round((next - origG) * 10) / 10;
+    if (Math.abs(diff) < 0.05) {
+      diffEl.textContent = '';
+      diffEl.className = 'ing-adj-nutr';
+      delete _ingCustomGrams[idx];
+    } else {
+      var per1g = parseIngNutrPer1g(ing[1], ing[2]);
+      if (per1g && per1g.pro !== undefined) {
+        var dPro = Math.round(per1g.pro * diff * 10) / 10;
+        var sign = diff > 0 ? '+' : '';
+        diffEl.textContent = sign + diff + 'g → 蛋白質' + (dPro >= 0 ? '+' : '') + dPro + 'g';
+      } else {
+        diffEl.textContent = (diff > 0 ? '+' : '') + diff + 'g';
+      }
+      diffEl.className = 'ing-adj-nutr changed';
+    }
+  }
+  recalcCustomNutr();
+}
+
+function ingAdjInput(idx, val) {
+  var d = _modalData; if (!d || !d.ingredients) return;
+  var s = _modalServings;
+  var ing = d.ingredients[idx];
+  var parsed = parseIngAmt(ing[1]);
+  var origG = parsed.parseable ? Math.round(parsed.num * s * 10) / 10 : 100;
+  var next = Math.max(0, parseFloat(val) || 0);
+  if (next === origG) {
+    delete _ingCustomGrams[idx];
+  } else {
+    _ingCustomGrams[idx] = next;
+  }
+  ingAdjChange(idx, 0); // 觸發顯示更新（傳 0 表示不再加減）
+  // 直接更新（避免 delta 雙重計算）
+  _ingCustomGrams[idx] = next;
+  recalcCustomNutr();
+}
+
 function buildIngList(scale) {
   var d = _modalData;
   if (!d.ingredients || !d.ingredients.length) return '';
   var label = scale === 1 ? '📌 食材（1 人份）' : '📌 食材（' + scale + ' 人份）';
-  var rows = d.ingredients.map(function(ing) {
+  var rows = d.ingredients.map(function(ing, idx) {
     var parsed = parseIngAmt(ing[1]);
     var scaledAmt = scale === 1 ? ing[1] : formatScaled(parsed, scale);
     var changed = (scale !== 1 && parsed.parseable) ? ' changed' : '';
     var nutrScaled = scaleNutrStr(ing[2], scale);
+    var isMain = isMainIngredient(ing[0]) && parsed.parseable;
+    // 微調器（僅主要食材且能解析克數）
+    var gMatch = ing[1].match(/(\d+(?:\.\d+)?)\s*g/);
+    var canAdj = isMain && gMatch;
+    var origG = canAdj ? Math.round(parseFloat(gMatch[1]) * scale * 10) / 10 : 0;
+    var curG = (typeof _ingCustomGrams[idx] !== 'undefined') ? _ingCustomGrams[idx] : origG;
+    var adjHtml = canAdj
+      ? '<div class="ing-adj-row">' +
+          '<button class="ing-adj-stepper" onclick="ingAdjChange('+idx+',-5)">－</button>' +
+          '<input class="ing-adj-input" id="ing-adj-'+idx+'" type="number" value="'+curG+'" min="0" step="5" ' +
+            'oninput="ingAdjInput('+idx+',this.value)" onchange="ingAdjInput('+idx+',this.value)">' +
+          '<span class="ing-adj-unit">g</span>' +
+          '<button class="ing-adj-stepper" onclick="ingAdjChange('+idx+',5)">＋</button>' +
+          '<span class="ing-adj-nutr" id="ing-diff-'+idx+'"></span>' +
+        '</div>'
+      : '';
     return '<div class="recipe-ing-row">' +
       '<div class="recipe-ing-top">' +
         '<span class="recipe-ing-name">'+ing[0]+'</span>' +
         '<span class="recipe-ing-amt'+changed+'">'+scaledAmt+'</span>' +
       '</div>' +
       (nutrScaled ? '<div class="recipe-ing-nutr">'+nutrScaled+'</div>' : '') +
+      adjHtml +
     '</div>';
   }).join('');
   return '<div class="recipe-modal-sec" id="ing-label">'+label+'</div>' +
@@ -8215,6 +8432,8 @@ function rerenderScaled() {
       if (old) { var tmp = document.createElement('div'); tmp.innerHTML = buildNutrGrid(s); old.replaceWith(tmp.firstChild); }
     }
   }
+  // 份量改變時清空食材自訂克數（避免混算）
+  _ingCustomGrams = {};
   // 更新食材
   var ingLabel = document.getElementById('ing-label');
   var ingList  = document.getElementById('ing-list');
@@ -8259,6 +8478,7 @@ function openRecipeModal(num, isDessert) {
   _modalData = data;
   _modalDessert = isDessert;
   _modalServings = 1;
+  _ingCustomGrams = {};
 
   var topClass = isDessert ? 'recipe-modal-top dessert' : 'recipe-modal-top';
   var stepsHtml = (data.steps||[]).map(function(s,i){
@@ -8489,24 +8709,25 @@ function rcalcRenderTodayBar() {
   var totCarb = items.reduce(function(s,l){ return s + (parseFloat(l.carbs)||0); }, 0);
   var totFat  = items.reduce(function(s,l){ return s + (parseFloat(l.fat)||0); }, 0);
   var totCal  = items.reduce(function(s,l){ return s + (parseFloat(l.calories)||0); }, 0);
-  // 目標值來自 bodyData
+  // 目標值來自 bodyData + 今日日型
   var bd = typeof _bodyData !== 'undefined' ? _bodyData : {};
   var macros = (typeof calcDayMacros === 'function') ? calcDayMacros(bd) : null;
-  var goalPro  = macros ? macros.protein  : 95;
-  var goalCarb = macros ? macros.carbs    : 45;
-  var goalCal  = macros ? macros.goalCal  : 1400;
-  function pct(v, g) { return Math.min(100, Math.round(v / g * 100)); }
-  function fmtVal(v, g) {
-    var p = pct(v, g);
-    var col = p >= 100 ? '#c0392b' : p >= 80 ? '#e67e22' : 'var(--ac)';
-    return '<span style="color:' + col + '">' + Math.round(v) + '</span>/<span style="color:var(--tx3)">' + g + '</span>g';
-  }
+  // 讀取今天的日型（高碳/低碳/休息），fallback 用低碳日，再 fallback 用固定預設值
+  var todayDtype = (typeof _foodDayType !== 'undefined' && _foodDayType[todayKey()]) || 'low';
+  var dayMacro = macros ? (macros[todayDtype] || macros.low || macros.rest) : null;
+  var goalPro  = dayMacro ? dayMacro.pro  : (macros ? macros.high && macros.high.pro : null) || 95;
+  var goalCarb = dayMacro ? dayMacro.carb : 45;
+  var goalCal  = dayMacro ? dayMacro.cal  : (macros ? macros.goalCal : null) || 1400;
+  // 日型標籤
+  var dtypeLbl = { high:'🔴 高碳日', low:'🟡 低碳日', rest:'⚫ 休息日' };
+  var dtypeStr = dtypeLbl[todayDtype] || '';
+  function pct(v, g) { return g ? Math.min(100, Math.round(v / g * 100)) : 0; }
   var rows = [
-    { lbl:'蛋白質', v:totPro, g:goalPro, col:'#C87A30' },
+    { lbl:'蛋白質', v:totPro,  g:goalPro,  col:'#C87A30' },
     { lbl:'淨碳水', v:totCarb, g:goalCarb, col:'#5A9888' },
-    { lbl:'熱量', v:totCal, g:goalCal, col:'var(--ac)', unit:'kcal' },
+    { lbl:'熱量',   v:totCal,  g:goalCal,  col:'var(--ac)', unit:'kcal' },
   ];
-  bar.innerHTML = '<div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:6px">📊 今日攝取進度</div>' +
+  bar.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:6px">📊 今日攝取進度' + (dtypeStr ? ' <span style="font-size:11px;color:var(--tx3)">' + dtypeStr + '</span>' : '') + '</div>' +
     rows.map(function(r) {
       var p = pct(r.v, r.g);
       var fillCol = p >= 100 ? '#c0392b' : r.col;
@@ -8514,7 +8735,7 @@ function rcalcRenderTodayBar() {
       return '<div class="rcalc-today-item">' +
         '<span class="rcalc-today-lbl">' + r.lbl + '</span>' +
         '<div class="rcalc-today-bar-track"><div class="rcalc-today-bar-fill" style="width:' + p + '%;background:' + fillCol + '"></div></div>' +
-        '<span class="rcalc-today-val" style="color:' + fillCol + '">' + Math.round(r.v) + '/' + r.g + unit + '</span>' +
+        '<span class="rcalc-today-val" style="color:' + fillCol + '">' + Math.round(r.v) + '/' + (r.g||'?') + unit + '</span>' +
       '</div>';
     }).join('');
 }
@@ -8531,26 +8752,8 @@ function renderRecipeCalc() {
   var si = document.getElementById('rcalc-search'); if (si) si.value = '';
   // 今日進度條
   rcalcRenderTodayBar();
-  // 預設展開所有分類（初次進入時 _calcCatOpen 是空的，全部折疊看起來像空白）
-  if (typeof FOOD_DB_CATEGORIES !== 'undefined' && FOOD_DB_CATEGORIES.length) {
-    FOOD_DB_CATEGORIES.forEach(function(cat){
-      if (typeof _calcCatOpen[cat.cat] === 'undefined') {
-        _calcCatOpen[cat.cat] = false; // 預設折疊，但顯示分類標題
-      }
-    });
-    // 若所有分類都是 false，自動展開第一個
-    var anyOpen = FOOD_DB_CATEGORIES.some(function(cat){ return _calcCatOpen[cat.cat] === true; });
-    if (!anyOpen) _calcCatOpen[FOOD_DB_CATEGORIES[0].cat] = true;
-    rcalcRenderDB('');
-  } else {
-    setTimeout(function(){
-      if (typeof FOOD_DB_CATEGORIES !== 'undefined' && FOOD_DB_CATEGORIES.length) {
-        var anyOpen = FOOD_DB_CATEGORIES.some(function(cat){ return _calcCatOpen[cat.cat] === true; });
-        if (!anyOpen) _calcCatOpen[FOOD_DB_CATEGORIES[0].cat] = true;
-      }
-      rcalcRenderDB('');
-    }, 150);
-  }
+  // 直接渲染食物庫（rcalcRenderDB 內部已處理預設展開）
+  rcalcRenderDB('');
 }
 
 var RECIPE_DB = [
@@ -9026,6 +9229,8 @@ function renderRecipeSituation() {
 
 
 init();
+// 初始化標題列日型顯示
+if (typeof renderHdrDtype === 'function') renderHdrDtype();
 
 /* ═══════════════════════════════════════════════════
    📈 通用折線圖引擎
