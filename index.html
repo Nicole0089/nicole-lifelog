@@ -664,12 +664,12 @@ input::placeholder { color: var(--tx3); }
 .food-multi-row select { font-size: 12px; color: var(--tx2); border: 1px solid var(--bd); border-radius: 6px; background: var(--bg3); padding: 6px 2px; flex-shrink: 0; }
 .food-multi-remove { flex-shrink: 0; border: none; background: none; color: var(--tx3); font-size: 16px; cursor: pointer; padding: 4px 6px; }
 .food-fav-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; align-items: center; }
-.food-fav-chip-wrap { display: inline-flex; align-items: center; background: var(--bg3); border: 1px solid var(--bd); border-radius: 14px; overflow: hidden; }
-.food-fav-chip { padding: 5px 10px; border: none; border-radius: 0; background: transparent; font-size: 12px; color: var(--tx2); cursor: pointer; white-space: nowrap; }
+.food-fav-chip-wrap { display: inline-flex; align-items: center; border-radius: 14px; border: 1px solid var(--bd); background: var(--bg3); }
 .food-fav-chip-wrap.is-fav { border-color: var(--ac); background: var(--acl); }
-.food-fav-chip.is-fav { background: transparent; color: var(--acd); }
-.food-fav-chip-del { background: none; border: none; border-left: 1px solid var(--bd); color: var(--tx3); font-size: 13px; cursor: pointer; padding: 3px 7px; line-height: 1; flex-shrink: 0; align-self: stretch; display: flex; align-items: center; }
-.food-fav-chip-del:hover, .food-fav-chip-del:active { color: var(--ac); background: var(--acl); }
+.food-fav-chip { padding: 5px 6px 5px 10px; border: none; background: none; font-size: 12px; color: var(--tx2); cursor: pointer; white-space: nowrap; border-radius: 14px 0 0 14px; }
+.food-fav-chip.is-fav { color: var(--acd); }
+.food-fav-chip-del { border: none; background: none; color: var(--tx3); font-size: 14px; font-weight: 600; cursor: pointer; padding: 4px 8px 4px 4px; border-radius: 0 14px 14px 0; line-height: 1; }
+.food-fav-chip-del:active { color: #c0392b; }
 .food-edit-fav-btn.is-fav { border-color: var(--ac); background: var(--acl); color: var(--acd); }
 /* Calculator overlay */
 .food-calc-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 195; display: flex; align-items: flex-end; justify-content: center; }
@@ -2745,6 +2745,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <option value="🥜 堅果・油脂">🥜 堅果・油脂</option>
       <option value="🧃 飲料・補充品">🧃 飲料・補充品</option>
       <option value="🍽️ 外食">🍽️ 外食</option>
+      <option value="🧂 醬料">🧂 醬料</option>
     </select></div></div>
     <div class="custom-food-row">
       <div style="flex:1"><label>熱量 kcal/100g</label><input id="cf-cal" type="number" min="0" placeholder="0"></div>
@@ -5839,6 +5840,30 @@ var FOOD_DB_CATEGORIES=[
       {name:'臭豆腐(份)',cal:350,pro:16,carb:28,fat:18},
     ]
   },
+  { cat:'🧂 醬料',
+    items:[
+      {name:'醬油',     cal:67,  pro:6.5, carb:6.7, fat:0},
+      {name:'薄鹽醬油', cal:52,  pro:5.2, carb:5.5, fat:0},
+      {name:'蠔油',     cal:120, pro:5.0, carb:23,  fat:0.5},
+      {name:'魚露',     cal:40,  pro:5.0, carb:4.5, fat:0},
+      {name:'白醋',     cal:21,  pro:0,   carb:4.0, fat:0},
+      {name:'黑醋',     cal:35,  pro:0.5, carb:7.0, fat:0},
+      {name:'烏醋',     cal:35,  pro:0.5, carb:7.0, fat:0},
+      {name:'番茄醬',   cal:112, pro:1.5, carb:26,  fat:0.5},
+      {name:'美乃滋',   cal:600, pro:1.5, carb:2.5, fat:65},
+      {name:'沙茶醬',   cal:300, pro:6.5, carb:10,  fat:26},
+      {name:'豆瓣醬',   cal:130, pro:8.0, carb:16,  fat:3.5},
+      {name:'辣椒醬',   cal:65,  pro:2.0, carb:12,  fat:1.2},
+      {name:'甜辣醬',   cal:133, pro:1.5, carb:32,  fat:0},
+      {name:'芝麻醬',   cal:600, pro:17,  carb:20,  fat:53},
+      {name:'花生醬',   cal:632, pro:23,  carb:20,  fat:53},
+      {name:'味噌',     cal:225, pro:13,  carb:30,  fat:5.0},
+      {name:'麻油',     cal:884, pro:0,   carb:0,   fat:100},
+      {name:'橄欖油',   cal:884, pro:0,   carb:0,   fat:100},
+      {name:'奶油',     cal:717, pro:0.9, carb:0,   fat:81},
+      {name:'米酒',     cal:98,  pro:0.2, carb:4.0, fat:0},
+    ]
+  },
 ];
 /* 展平供關鍵字搜尋 */
 var FOOD_DB = FOOD_DB_CATEGORIES.reduce(function(acc, cat) {
@@ -8695,6 +8720,7 @@ var CALC_SAVE_CATS = [
   { cat:'🥜 堅果・油脂',   icon:'🥜' },
   { cat:'🧃 飲料・補充品', icon:'🧃' },
   { cat:'🍽️ 外食',        icon:'🍽️' },
+  { cat:'🧂 醬料',          icon:'🧂' },
 ];
 
 function showFoodSavePopup(e, log, triggerBtn) {
