@@ -8298,7 +8298,8 @@ function openRecipeModal(num, isDessert) {
 }
 
 function closeRecipeModal(e) {
-  if (e && e.target !== document.getElementById('recipe-modal-overlay')) return;
+  // 有 event 時：只有點到 overlay 背景本身才關閉（不是點到 modal 內容）
+  if (e && e.target && e.target.id !== 'recipe-modal-overlay') return;
   var overlay = document.getElementById('recipe-modal-overlay');
   if (overlay) overlay.classList.remove('open');
   document.body.style.overflow = '';
@@ -8413,16 +8414,15 @@ function rcalcRenderDB(keyword) {
           _privateFoods.map(function(f){ return itemHtml(Object.assign({ isPrivate: true }, f)); }).join('') + '</div>';
       }
     }
-    // 標準分類
-    if (typeof FOOD_DB_CATEGORIES !== 'undefined') {
-      FOOD_DB_CATEGORIES.forEach(function(cat, idx) {
+    // 標準分類：全部展開顯示，可點選分類標題折疊
+    if (typeof FOOD_DB_CATEGORIES !== 'undefined' && FOOD_DB_CATEGORIES.length) {
+      FOOD_DB_CATEGORIES.forEach(function(cat) {
         var visItems = cat.items.filter(function(item){ return !isDeleted(cat.cat, item.name); });
         var customs = (typeof _customFoods !== 'undefined') ? _customFoods.filter(function(f){ return (f.cat || '') === cat.cat; }) : [];
         var total = visItems.length + customs.length;
         if (!total) return;
-        // 第一個分類預設展開，其餘預設折疊
-        var catOpen = (typeof _calcCatOpen[cat.cat] === 'undefined') ? (idx === 0) : (_calcCatOpen[cat.cat] === true);
-        _calcCatOpen[cat.cat] = catOpen; // 寫回狀態
+        // 預設全部展開（undefined 或 true 都展開，只有明確設 false 才折疊）
+        var catOpen = _calcCatOpen[cat.cat] !== false;
         htmlStr += '<button class="food-calc-cat-toggle rcalc-cat-toggle" data-cat="' + esc(cat.cat) + '">' +
           '<span>' + cat.cat + ' <span style="font-size:10px;color:var(--tx3)">(' + total + ')</span></span>' +
           '<span class="cat-arrow">' + (catOpen ? '▲' : '▼') + '</span></button>';
@@ -8433,9 +8433,8 @@ function rcalcRenderDB(keyword) {
           htmlStr += '</div>';
         }
       });
-    }
-    if (!htmlStr) {
-      htmlStr = '<div style="text-align:center;padding:32px 20px;color:var(--tx3);font-size:13px">食物資料庫載入中…</div>';
+    } else {
+      htmlStr = '<div style="text-align:center;padding:32px 20px;color:var(--tx3);font-size:13px">⏳ 食物資料庫載入中…</div>';
     }
   }
 
