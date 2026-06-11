@@ -659,8 +659,11 @@ input::placeholder { color: var(--tx3); }
 .food-multi-row select { font-size: 12px; color: var(--tx2); border: 1px solid var(--bd); border-radius: 6px; background: var(--bg3); padding: 6px 2px; flex-shrink: 0; }
 .food-multi-remove { flex-shrink: 0; border: none; background: none; color: var(--tx3); font-size: 16px; cursor: pointer; padding: 4px 6px; }
 .food-fav-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.food-fav-chip { padding: 5px 10px; border: 1px solid var(--bd); border-radius: 14px; background: var(--bg3); font-size: 12px; color: var(--tx2); cursor: pointer; white-space: nowrap; }
+.food-fav-chip-wrap { position: relative; display: inline-flex; align-items: center; }
+.food-fav-chip { padding: 5px 20px 5px 10px; border: 1px solid var(--bd); border-radius: 14px; background: var(--bg3); font-size: 12px; color: var(--tx2); cursor: pointer; white-space: nowrap; }
 .food-fav-chip.is-fav { border-color: var(--ac); background: var(--acl); color: var(--acd); }
+.food-fav-chip-del { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--tx3); font-size: 11px; cursor: pointer; padding: 0; line-height: 1; }
+.food-fav-chip-del:hover { color: var(--ac); }
 .food-edit-fav-btn.is-fav { border-color: var(--ac); background: var(--acl); color: var(--acd); }
 /* Calculator overlay */
 .food-calc-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 195; display: flex; align-items: flex-end; justify-content: center; }
@@ -1084,7 +1087,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 /* ═══════════════════════════════════════════════════
    🥗 食譜庫頁面
    ═══════════════════════════════════════════════════ */
-#page-recipes.active { display: block !important; }
+#page-recipes.active { display: block !important; min-height: 100%; }
 .recipe-toolbar { padding: 8px 12px 6px; background: var(--bg); border-bottom: 0.5px solid var(--bd); flex-shrink: 0; }
 .recipe-search-wrap { position: relative; margin-bottom: 7px; }
 .recipe-search-input { width: 100%; padding: 9px 32px 9px 34px; background: var(--bg3); border: 0.5px solid var(--bd); border-radius: var(--rr); font-size: 15px; color: var(--tx); font-family: var(--font); }
@@ -1105,7 +1108,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .recipe-stat-num { font-size: 18px; font-weight: 700; color: var(--ac); display: block; }
 .recipe-stat-lbl { font-size: 12px; color: var(--tx3); }
 .recipe-result-info { font-size: 13px; color: var(--tx3); padding: 5px 14px 3px; flex-shrink: 0; }
-.recipe-grid { padding: 8px 10px 80px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.recipe-grid { padding: 8px 10px 100px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .recipe-card { background: var(--bg3); border: 0.5px solid var(--bd); border-radius: var(--r); cursor: pointer; overflow: hidden; display: flex; flex-direction: column; transition: border-color .15s; }
 .recipe-card:active { background: var(--acl); border-color: var(--ac); }
 .recipe-card-hdr { padding: 9px 9px 5px; display: flex; align-items: flex-start; gap: 5px; }
@@ -1441,13 +1444,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         <div class="food-nut-item"><div class="food-nut-lbl">碳水</div><div class="food-nut-val" id="food-sum-carb">─</div><div class="food-nut-unit">g</div><div class="food-nut-pct" id="food-sum-carb-pct"></div></div>
         <div class="food-nut-item"><div class="food-nut-lbl">脂肪</div><div class="food-nut-val" id="food-sum-fat">─</div><div class="food-nut-unit">g</div><div class="food-nut-pct" id="food-sum-fat-pct"></div></div>
       </div>
-      <!-- 今日日型 + 目標 -->
+      <!-- 今日目標 -->
       <div class="food-daytype-section" id="food-daytype-section">
-        <div class="food-dtype-btns" id="food-dtype-btns">
-          <button class="food-dtype-btn" data-dtype="high">🔴 高碳日</button>
-          <button class="food-dtype-btn" data-dtype="low">🟡 低碳日</button>
-          <button class="food-dtype-btn" data-dtype="rest">⚫ 休息日</button>
-        </div>
         <div class="food-target-bar" id="food-target-bar" style="display:none"></div>
       </div>
       <!-- Calculator button -->
@@ -1694,6 +1692,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
             <label class="bd-lbl">體重</label>
             <div class="bd-input-row"><input type="number" class="bd-num" id="bd-weight" min="30" max="250" step="0.1" placeholder="55"><span class="bd-unit">kg</span></div>
           </div>
+          <div class="bd-field">
+            <label class="bd-lbl">BMI</label>
+            <div class="bd-input-row"><span class="bd-num" id="bd-bmi" style="display:flex;align-items:center;font-weight:700;color:var(--ac);min-width:52px">—</span><span class="bd-unit" id="bd-bmi-label"></span></div>
+          </div>
         </div>
         <div class="bd-section-lbl">活動量</div>
         <div class="bd-chips" id="bd-activity-chips">
@@ -1775,7 +1777,18 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         </div>
         <input type="file" id="import-file-input" accept=".json" style="display:none">
       </div>
-      <div class="settings-section" style="margin-top:8px" id="notif-settings-section">
+      <div class="settings-section" style="margin-top:8px">
+        <div class="settings-section-title">匯出 Excel 報表</div>
+        <div class="settings-item" id="csv-all-btn" style="background:var(--acl)">
+          <span class="settings-item-icon">📊</span>
+          <div class="settings-item-body">
+            <div class="settings-item-title" style="font-weight:700">匯出全部資料（單一檔案）</div>
+            <div class="settings-item-sub">所有大項合併為一個試算表，各類各分頁</div>
+          </div>
+          <span class="settings-item-arrow">›</span>
+        </div>
+
+      </div>      <div class="settings-section" style="margin-top:8px;padding-bottom:80px" id="notif-settings-section">
         <div class="settings-section-title">待辦提醒</div>
         <div class="settings-item" id="notif-perm-btn">
           <span class="settings-item-icon">🔔</span>
@@ -1810,18 +1823,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         </div>
 
       </div>
-      <div class="settings-section" style="margin-top:8px;padding-bottom:80px">
-        <div class="settings-section-title">匯出 Excel 報表</div>
-        <div class="settings-item" id="csv-all-btn" style="background:var(--acl)">
-          <span class="settings-item-icon">📊</span>
-          <div class="settings-item-body">
-            <div class="settings-item-title" style="font-weight:700">匯出全部資料（單一檔案）</div>
-            <div class="settings-item-sub">所有大項合併為一個試算表，各類各分頁</div>
-          </div>
-          <span class="settings-item-arrow">›</span>
-        </div>
 
-      </div>
     </div>
 
     <!-- 📊 今日總覽 -->
@@ -1834,8 +1836,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
           <button class="dash-slogan-edit-btn" id="dash-slogan-edit-btn" title="編輯">✏️</button>
         </div>
       </div>
-      <div class="dash-grid" id="dash-grid"></div>
     <div id="checkin-section" class="checkin-section"></div>
+      <div class="dash-grid" id="dash-grid"></div>
     </div>
 
     <!-- 📅 當週健康週報 -->
@@ -1916,8 +1918,12 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 
       <!-- 🔢 試算頁籤 -->
       <div id="recipe-view-calc" style="display:none; padding-bottom:80px;">
-        <!-- 今日攝取進度條 -->
+        <!-- 今日攝取進度條 + 複製今日飲食 -->
         <div id="rcalc-today-bar" style="padding:10px 14px 4px; background:var(--bg2); border-bottom:0.5px solid var(--bd);"></div>
+        <div style="padding:6px 14px 8px;background:var(--bg2);border-bottom:0.5px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:12px;color:var(--tx3);flex-shrink:0">今日飲食記錄：</span>
+          <div id="rcalc-today-foods" style="display:flex;gap:5px;flex-wrap:wrap;flex:1"></div>
+        </div>
         <!-- 搜尋列 -->
         <div style="display:flex;gap:8px;padding:10px 12px 8px;background:var(--bg);border-bottom:0.5px solid var(--bd);position:sticky;top:44px;z-index:5;">
           <div style="position:relative;flex:1">
@@ -3402,7 +3408,19 @@ function repeatToLabel(rp) {
     var wdLabel  = ['週日','週一','週二','週三','週四','週五','週六'];
     s += '（' + (rp.monthWeekNth===-1?'最後一個':nthLabel[rp.monthWeekNth]||'') + ' ' + (wdLabel[rp.monthWeekWd]||'') + '）';
   }
-  if (rp.endType === 'date' && rp.endDate) s += '　至 ' + rp.endDate;
+  if (rp.endType === 'date' && rp.endDate) {
+    s += '　至 ' + rp.endDate;
+    // 計算剩餘天數
+    var endD = new Date(rp.endDate), todayD = new Date(todayKey());
+    var diffDays = Math.ceil((endD - todayD) / 86400000);
+    if (diffDays > 0) s += '（剩 ' + diffDays + ' 天）';
+    else if (diffDays === 0) s += '（今日到期）';
+    else s += '（已結束）';
+  }
+  if (rp.endType === 'count' && rp.endCount) {
+    // 計算已執行次數（從 doneAt 記錄推算）
+    s += '　共 ' + rp.endCount + ' 次';
+  }
   else if (rp.endType === 'count' && rp.endCount) s += '　共 ' + rp.endCount + ' 次';
   return s;
 }
@@ -4783,6 +4801,23 @@ function renderBodySettings() {
     '</div>';
   }
   if(macroBox) macroBox.innerHTML=mRow('🔴 高碳日',macros.high)+mRow('🟡 低碳日',macros.low)+mRow('⚫ 休息日',macros.rest);
+  // 自動計算 BMI
+  var bmiEl = $('bd-bmi'), bmiLblEl = $('bd-bmi-label');
+  if (bmiEl) {
+    var bd = _bodyData;
+    if (bd.weight && bd.height) {
+      var h = bd.height / 100;
+      var bmi = Math.round(bd.weight / (h * h) * 10) / 10;
+      var bmiLabel = bmi < 18.5 ? '過輕' : bmi < 24 ? '正常' : bmi < 27 ? '過重' : bmi < 30 ? '輕度肥胖' : '肥胖';
+      var bmiColor = bmi < 18.5 ? '#5A9888' : bmi < 24 ? 'var(--ac)' : bmi < 27 ? '#C87A30' : '#C04030';
+      bmiEl.textContent = bmi;
+      bmiEl.style.color = bmiColor;
+      if (bmiLblEl) { bmiLblEl.textContent = bmiLabel; bmiLblEl.style.color = bmiColor; }
+    } else {
+      bmiEl.textContent = '—';
+      if (bmiLblEl) bmiLblEl.textContent = '';
+    }
+  }
 }
 
 /* ── renderFoodDayType ── */
@@ -5429,7 +5464,10 @@ function renderFoodFavChips(){
   if(!all.length){ row.classList.add('hidden'); box.innerHTML=''; box._list=null; return; }
   row.classList.remove('hidden');
   box.innerHTML = all.map(function(f,i){
-    return '<div class="food-fav-chip'+(f.isFav?' is-fav':'')+'" data-idx="'+i+'">'+(f.isFav?'⭐ ':'')+esc(f.name)+'</div>';
+    return '<span class="food-fav-chip-wrap">' +
+      '<div class="food-fav-chip'+(f.isFav?' is-fav':'')+'" data-idx="'+i+'">'+(f.isFav?'⭐ ':'')+esc(f.name)+'</div>' +
+      (f.isFav ? '<button class="food-fav-chip-del" data-del-idx="'+i+'" title="移除常用">✕</button>' : '') +
+    '</span>';
   }).join('');
   box._list = all;
 }
@@ -5445,6 +5483,19 @@ function _updateFoodFavBtn(){
   var box=$('food-fav-chips');
   if(box){
     box.addEventListener('click',function(e){
+      // 刪除按鈕
+      var delBtn = e.target.closest('.food-fav-chip-del');
+      if (delBtn) {
+        e.stopPropagation();
+        var di = parseInt(delBtn.dataset.delIdx);
+        var all = box._list || [];
+        var f = all[di];
+        if (f && f.isFav) {
+          var fi = _favFoods.findIndex(function(x){ return x.name === f.name; });
+          if (fi >= 0) { _favFoods.splice(fi, 1); saveFavFoods(); renderFoodFavChips(); }
+        }
+        return;
+      }
       var item=e.target.closest('.food-fav-chip'); if(!item) return;
       var f=(this._list||[])[+item.dataset.idx]; if(!f) return;
       _foodEditPicked={name:f.name,cal:f.cal,pro:f.pro,carb:f.carb,fat:f.fat,unit:f.unit,base:f.base,isPrivate:f.isPrivate};
@@ -8626,7 +8677,7 @@ function rcalcRenderDB(keyword) {
     // 瀏覽模式：分類標題 + 可折疊列表
     // 私人菜單
     if (typeof _privateFoods !== 'undefined' && _privateFoods.length) {
-      var privOpen = _calcCatOpen['__private__'] !== false; // 預設展開
+      var privOpen = _calcCatOpen['__private__'] === true; // 預設收起
       htmlStr += '<button class="food-calc-cat-toggle rcalc-cat-toggle" data-cat="__private__">' +
         '<span>🍱 私人菜單</span><span class="cat-arrow">' + (privOpen ? '▲' : '▼') + '</span></button>';
       if (privOpen) {
@@ -8641,8 +8692,8 @@ function rcalcRenderDB(keyword) {
         var customs = (typeof _customFoods !== 'undefined') ? _customFoods.filter(function(f){ return (f.cat || '') === cat.cat; }) : [];
         var total = visItems.length + customs.length;
         if (!total) return;
-        // 預設全部展開（undefined 或 true 都展開，只有明確設 false 才折疊）
-        var catOpen = _calcCatOpen[cat.cat] !== false;
+        // 預設全部收起（只有明確設 true 才展開）
+        var catOpen = _calcCatOpen[cat.cat] === true;
         htmlStr += '<button class="food-calc-cat-toggle rcalc-cat-toggle" data-cat="' + esc(cat.cat) + '">' +
           '<span>' + cat.cat + ' <span style="font-size:10px;color:var(--tx3)">(' + total + ')</span></span>' +
           '<span class="cat-arrow">' + (catOpen ? '▲' : '▼') + '</span></button>';
@@ -8740,19 +8791,70 @@ function rcalcRenderTodayBar() {
     }).join('');
 }
 
+function rcalcRenderTodayFoods() {
+  var wrap = document.getElementById('rcalc-today-foods');
+  if (!wrap) return;
+  var items = (state.foodLogs || []).filter(function(l){ return l.date === todayKey(); });
+  if (!items.length) {
+    wrap.innerHTML = '<span style="font-size:12px;color:var(--tx3)">尚無記錄</span>';
+    return;
+  }
+  wrap.innerHTML = items.map(function(item) {
+    var label = item.name || '─';
+    var cal = item.calories ? Math.round(item.calories) + 'kcal' : '';
+    return '<button onclick="rcalcCopyFoodItem(this)" ' +
+      'data-name="' + esc(label) + '" ' +
+      'data-cal="' + (item.calories||0) + '" ' +
+      'data-pro="' + (item.protein||0) + '" ' +
+      'data-carb="' + (item.carbs||0) + '" ' +
+      'data-fat="' + (item.fat||0) + '" ' +
+      'style="padding:4px 8px;border-radius:var(--r);background:var(--bg3);border:1px solid var(--bd);font-size:12px;color:var(--tx2);cursor:pointer;font-family:var(--font);white-space:nowrap">' +
+      label + (cal ? ' <span style="color:var(--tx3)">' + cal + '</span>' : '') +
+      '</button>';
+  }).join('');
+}
+
+function rcalcCopyFoodItem(btn) {
+  // 把今日飲食紀錄的某一筆帶入試算工具的結果欄，方便複製到另一天
+  var name = btn.dataset.name;
+  var cal  = parseFloat(btn.dataset.cal)  || 0;
+  var pro  = parseFloat(btn.dataset.pro)  || 0;
+  var carb = parseFloat(btn.dataset.carb) || 0;
+  var fat  = parseFloat(btn.dataset.fat)  || 0;
+  // 顯示結果
+  var rc = document.getElementById('rcalc-res-cal');
+  var rp = document.getElementById('rcalc-res-pro');
+  var rb = document.getElementById('rcalc-res-carb');
+  var rf = document.getElementById('rcalc-res-fat');
+  if (rc) rc.textContent = Math.round(cal);
+  if (rp) rp.textContent = pro;
+  if (rb) rb.textContent = carb;
+  if (rf) rf.textContent = fat;
+  var res = document.getElementById('rcalc-result');
+  if (res) res.style.display = '';
+  // 修改加入記錄按鈕文字，標記來源
+  var addBtn = document.getElementById('rcalc-add-btn');
+  if (addBtn) addBtn.textContent = '➕ 複製「' + name + '」到' + _rcalcMeal;
+  // 設定假的 _rcalcSelected，讓 rcalcAddToLog 能正確帶入資料
+  _rcalcSelected = { name: name, cal: cal, pro: pro, carb: carb, fat: fat, isPrivate: true, unit: '份', _fixedNutr: true };
+  var gi = document.getElementById('rcalc-grams'); if (gi) gi.value = 1;
+  var ul = document.getElementById('rcalc-unit-label'); if (ul) ul.textContent = '份';
+  // 高亮選中
+  document.querySelectorAll('#rcalc-today-foods button').forEach(function(b){ b.style.background=''; b.style.borderColor=''; });
+  btn.style.background = 'var(--acl)';
+  btn.style.borderColor = 'var(--ac)';
+}
+
 function renderRecipeCalc() {
   _rcalcMeal = (typeof guessCurrentMeal === 'function') ? guessCurrentMeal() : '午餐';
-  // 更新餐別按鈕
   document.querySelectorAll('.rcalc-meal-btn').forEach(function(b){ b.classList.toggle('sel', b.dataset.meal === _rcalcMeal); });
   var addBtn = document.getElementById('rcalc-add-btn');
   if (addBtn) addBtn.textContent = '➕ 加入' + _rcalcMeal + '記錄';
-  // 清除上次選擇
   _rcalcSelected = null;
   var res = document.getElementById('rcalc-result'); if (res) res.style.display = 'none';
   var si = document.getElementById('rcalc-search'); if (si) si.value = '';
-  // 今日進度條
   rcalcRenderTodayBar();
-  // 直接渲染食物庫（rcalcRenderDB 內部已處理預設展開）
+  rcalcRenderTodayFoods();
   rcalcRenderDB('');
 }
 
