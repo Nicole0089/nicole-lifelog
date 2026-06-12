@@ -5856,10 +5856,8 @@ var FOOD_DB_CATEGORIES=[
       {name:'辣椒醬',   cal:65,  pro:2.0, carb:12,  fat:1.2},
       {name:'甜辣醬',   cal:133, pro:1.5, carb:32,  fat:0},
       {name:'芝麻醬',   cal:600, pro:17,  carb:20,  fat:53},
-      {name:'花生醬',   cal:632, pro:23,  carb:20,  fat:53},
       {name:'味噌',     cal:225, pro:13,  carb:30,  fat:5.0},
       {name:'麻油',     cal:884, pro:0,   carb:0,   fat:100},
-      {name:'橄欖油',   cal:884, pro:0,   carb:0,   fat:100},
       {name:'奶油',     cal:717, pro:0.9, carb:0,   fat:81},
       {name:'米酒',     cal:98,  pro:0.2, carb:4.0, fat:0},
     ]
@@ -8178,21 +8176,12 @@ function init() {
     if (addBtn) addBtn.addEventListener('click', rcalcAddToLog);
   })();
 
-  /* 食譜 Modal 關閉：click + touchend 雙保險，並避免行動裝置 ghost-click 造成重開 */
+  /* 食譜 Modal 關閉：點擊遮罩（非內容區）即關閉，僅用 click 事件避免行動裝置 touchend+click 重複觸發 */
   (function(){
     var ov = document.getElementById('recipe-modal-overlay');
     if (!ov) return;
-    var lastCloseTs = 0;
-    function doClose(e) {
-      if (e.target && e.target.closest && e.target.closest('.recipe-modal')) return;
-      lastCloseTs = Date.now();
-      closeRecipeModal();
-    }
-    ov.addEventListener('click', doClose);
-    ov.addEventListener('touchend', function(e){
-      // 避免同一次點擊先觸發 touchend 又觸發 click 而重複處理
-      if (Date.now() - lastCloseTs < 500) return;
-      doClose(e);
+    ov.addEventListener('click', function(e){
+      if (e.target === ov) closeRecipeModal();
     });
   })();
   /* Register Service Worker for mobile notifications */
