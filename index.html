@@ -1265,6 +1265,46 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .recipe-sit-row { font-size: 13px; color: var(--tx2); padding: 4px 0; border-bottom: 0.5px solid var(--bd); display: flex; justify-content: space-between; gap: 4px; cursor: pointer; }
 .recipe-sit-row:last-child { border-bottom: none; }
 .recipe-sit-val { color: var(--ac); font-weight: 700; white-space: nowrap; }
+/* ═══════════════════════════════════════════════════
+   ♿ 按鈕觸控範圍與文字大小優化
+   ═══════════════════════════════════════════════════ */
+/* 底部導覽列：放大圖示與文字、增加可點擊高度 */
+.nav-btn { font-size: 12px; min-height: 52px; padding-top: 4px; padding-bottom: 6px; }
+.nav-btn .nav-icon, .nav-more-btn .nav-icon { font-size: 21px; }
+.nav-more-btn { font-size: 12px; min-height: 52px; padding-top: 4px; padding-bottom: 6px; }
+
+/* 各頁籤（記錄/統計表/曲線圖/趨勢…）增加觸控高度與字級 */
+.bp-tab, .sleep-tab, .habit-tab-btn, .water-tab, .food-tab,
+.bp-hand-filter-btn, .bp-chart-hand-filter .bp-hand-filter-btn {
+  min-height: 44px; font-size: 14px;
+}
+
+/* 主要/次要按鈕：統一最小觸控高度 44px */
+.btn-primary, .btn-ghost, .modal-btns button, .ab-repeat-chip,
+.weekly-nav-btn, .type-btn, .chore-add-btn, .habit-add-top-btn,
+.sleep-add-btn, .bp-add-btn, .todo-save-btn {
+  min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* 小按鈕（如 +/- 切換、日期導覽箭頭）擴大可點擊區域，但不放大視覺尺寸 */
+.water-date-nav-btn, .sleep-date-nav-btn, .food-date-nav-btn,
+.sleep-tbl-nav-btn, .bp-tbl-nav-btn, .diary-cal-nav-btn,
+.bp-chart-week-nav button, #bp-chart-prev-btn, #bp-chart-next-btn,
+#count-cancel-btn, #count-confirm-btn {
+  min-width: 44px; min-height: 44px;
+}
+
+/* 顏色選擇圓點：放大尺寸方便點擊 */
+.color-picker > * { width: 32px; height: 32px; }
+
+/* 過小的輔助文字（10px）統一提升為 11px，提升可讀性 */
+.bd-macro-item-lbl, .food-target-u, .nutr-custom-note { font-size: 11px; }
+
+/* 標籤/徽章文字略微放大 */
+.priority-badge, .category-badge, .checkin-tag, .repeat-end-badge,
+.food-meal-chip, .food-nut-chip, .ab-chip {
+  font-size: 12px;
+}
 </style>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
