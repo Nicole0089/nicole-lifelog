@@ -1598,6 +1598,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         <button class="bp-tab active" data-tab="log" id="bp-tab-log">記錄</button>
         <button class="bp-tab" data-tab="stats" id="bp-tab-stats">統計表</button>
         <button class="bp-tab" data-tab="chart" id="bp-tab-chart">曲線圖</button>
+        <button class="bp-tab" data-tab="trend" id="bp-tab-trend">趨勢</button>
       </div>
       <div id="bp-log-view">
         <div class="bp-list" id="bp-list"></div>
@@ -1645,6 +1646,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
           <div id="bp-chart-container"></div>
         </div>
       </div>
+      <!-- 趨勢 view -->
+      <div id="bp-trend-view" style="display:none"></div>
     </div>
 
     <!-- 📖 日記頁面 -->
@@ -6965,12 +6968,14 @@ function saveBPForm() {
 function switchBPTab(tab) {
   _bpTab = tab;
   document.querySelectorAll('.bp-tab').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===tab); });
-  var lv=$('bp-log-view'), sv=$('bp-stats-view'), cv=$('bp-chart-view');
+  var lv=$('bp-log-view'), sv=$('bp-stats-view'), cv=$('bp-chart-view'), tv=$('bp-trend-view');
   if (lv) lv.style.display = tab==='log'   ? '' : 'none';
   if (sv) sv.style.display = tab==='stats' ? '' : 'none';
   if (cv) cv.style.display = tab==='chart' ? '' : 'none';
+  if (tv) tv.style.display = tab==='trend' ? '' : 'none';
   if (tab==='stats') renderBPTable();
   if (tab==='chart') renderBPChart();
+  if (tab==='trend') renderBPTrend();
 }
 document.querySelectorAll('.bp-tab').forEach(function(b) {
   b.addEventListener('click', function(){ switchBPTab(b.dataset.tab); });
@@ -9647,11 +9652,14 @@ function drawLineChart(svgId, data, opts) {
   var W = opts.width || 320, H = opts.height || 120;
   var PL = 30, PR = 10, PT = 14, PB = 24;
   var cW = W - PL - PR, cH = H - PT - PB;
+  var append = !!opts.append;
 
   var validData = data.filter(function(d) { return d.hasData; });
   if (!validData.length) {
-    svg.innerHTML = '<text x="' + (W/2) + '" y="' + (H/2) + '" text-anchor="middle" fill="var(--tx3)" font-size="11">尚無資料</text>';
-    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    if (!append) {
+      svg.innerHTML = '<text x="' + (W/2) + '" y="' + (H/2) + '" text-anchor="middle" fill="var(--tx3)" font-size="11">尚無資料</text>';
+      svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    }
     return;
   }
 
@@ -9666,8 +9674,8 @@ function drawLineChart(svgId, data, opts) {
 
   var parts = [];
 
-  /* Y grid + labels */
-  var gridCount = 3;
+  /* Y grid + labels（疊加模式下由第一條線負責繪製，避免重複） */
+  var gridCount = append ? 0 : 3;
   for (var gi = 0; gi < gridCount; gi++) {
     var gv = yMin + rng * gi / (gridCount - 1);
     var gy = vy(gv).toFixed(1);
@@ -9718,16 +9726,22 @@ function drawLineChart(svgId, data, opts) {
     }
   });
 
-  /* X labels (up to ~6) */
-  var step = Math.max(1, Math.ceil(data.length / 6));
-  data.forEach(function(d, i) {
-    if (i % step === 0 || i === data.length - 1) {
-      parts.push('<text x="' + gx(i).toFixed(1) + '" y="' + (H - 5) + '" font-size="7" fill="var(--tx3)" text-anchor="middle">' + d.x + '</text>');
-    }
-  });
+  /* X labels (up to ~6)，疊加模式不重複畫 */
+  if (!append) {
+    var step = Math.max(1, Math.ceil(data.length / 6));
+    data.forEach(function(d, i) {
+      if (i % step === 0 || i === data.length - 1) {
+        parts.push('<text x="' + gx(i).toFixed(1) + '" y="' + (H - 5) + '" font-size="7" fill="var(--tx3)" text-anchor="middle">' + d.x + '</text>');
+      }
+    });
+  }
 
-  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-  svg.innerHTML = parts.join('');
+  if (append) {
+    svg.innerHTML += parts.join('');
+  } else {
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.innerHTML = parts.join('');
+  }
 }
 
 function drawHabitMiniChart(svgId, data, color) {
@@ -9750,6 +9764,79 @@ function drawHabitMiniChart(svgId, data, color) {
   });
   svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
   svg.innerHTML = parts.join('');
+}
+
+/* ── 血壓趨勢（30天） ── */
+function renderBPTrend() {
+  var sec = $('bp-trend-view');
+  if (!sec) return;
+  var todayD = new Date();
+  var days = [];
+  for (var i = 29; i >= 0; i--) {
+    var dd = new Date(todayD); dd.setDate(dd.getDate() - i);
+    days.push(localDateStr(dd));
+  }
+  /* 依日期分組（左右手合併取平均） */
+  var byDate = {};
+  state.bpLogs.forEach(function(b) {
+    var dk = (b.datetime||'').slice(0,10);
+    if (!dk) return;
+    if (!byDate[dk]) byDate[dk] = [];
+    byDate[dk].push(b);
+  });
+  var sysData = [], diaData = [];
+  days.forEach(function(dk) {
+    var list = byDate[dk];
+    var label = parseInt(dk.slice(5,7)) + '/' + parseInt(dk.slice(8,10));
+    if (list && list.length) {
+      var avgSys = r1(list.reduce(function(s,b){return s+b.sys;},0)/list.length);
+      var avgDia = r1(list.reduce(function(s,b){return s+b.dia;},0)/list.length);
+      sysData.push({ x: label, y: avgSys, hasData: true });
+      diaData.push({ x: label, y: avgDia, hasData: true });
+    } else {
+      sysData.push({ x: label, y: 0, hasData: false });
+      diaData.push({ x: label, y: 0, hasData: false });
+    }
+  });
+
+  var validSys = sysData.filter(function(d){ return d.hasData; });
+  if (!validSys.length) {
+    sec.innerHTML = '<div class="trend-empty">還沒有血壓記錄<br><span style="font-size:12px">記錄後即可看到30天趨勢</span></div>';
+    return;
+  }
+  var validDia = diaData.filter(function(d){ return d.hasData; });
+  var avgSys = r1(validSys.reduce(function(s,d){return s+d.y;},0)/validSys.length);
+  var avgDia = r1(validDia.reduce(function(s,d){return s+d.y;},0)/validDia.length);
+
+  var html = '';
+  html += '<div class="trend-section">';
+  html += '<div class="trend-title">過去 30 天血壓趨勢</div>';
+  html += '<div class="trend-meta">平均收縮壓 <strong>' + avgSys + '</strong>　平均舒張壓 <strong>' + avgDia + '</strong>　共記錄 <strong>' + validSys.length + '</strong> 天</div>';
+  html += '<svg class="trend-svg" id="bp-trend-svg" viewBox="0 0 320 130"></svg>';
+  html += '<div class="trend-ref-legend"><span class="trend-ref-dot"></span>收縮壓140參考線　';
+  html += '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7878A0;margin-right:3px;vertical-align:middle"></span>舒張壓　';
+  html += '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#A07878;margin-right:3px;vertical-align:middle"></span>收縮壓</div>';
+  html += '</div>';
+  sec.innerHTML = html;
+
+  /* 統一兩條線的 Y 軸範圍，確保疊圖時刻度一致 */
+  var allV = validSys.map(function(d){return d.y;}).concat(validDia.map(function(d){return d.y;})).concat([140]);
+  var yMin = Math.max(0, Math.floor((Math.min.apply(null, allV) - 10)/10)*10);
+  var yMax = Math.ceil((Math.max.apply(null, allV) + 10)/10)*10;
+
+  /* 先畫舒張壓（含座標格線/X軸），再疊加收縮壓（含140參考線） */
+  drawLineChart('bp-trend-svg', diaData, {
+    width: 320, height: 130,
+    color: '#7878A0',
+    yMin: yMin, yMax: yMax
+  });
+  drawLineChart('bp-trend-svg', sysData, {
+    width: 320, height: 130,
+    color: '#A07878',
+    yMin: yMin, yMax: yMax,
+    refValue: 140,
+    append: true
+  });
 }
 
 /* ── 睡眠趨勢 ── */
