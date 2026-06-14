@@ -86,6 +86,21 @@ body { background: #F0E8E6; background: var(--bg); color: #3D2828; color: var(--
 .dash-slogan-edit-btn { background: none; border: none; font-size: 16px; color: var(--tx3); cursor: pointer; padding: 2px; }
 .dash-slogan-input { flex: 1; font-size: 14px; padding: 5px 8px; border: 1px solid var(--ac); border-radius: var(--r); background: var(--bg3); color: var(--tx); font-family: var(--font); }
 .dash-slogan-save-btn { background: var(--ac); color: #fff; border: none; border-radius: var(--r); padding: 5px 12px; font-size: 14px; cursor: pointer; font-family: var(--font); }
+/* temp memo card */
+.temp-memo-card { margin: 10px 16px 4px; background: var(--acl); border: 1px solid var(--ac); border-radius: var(--r); overflow: hidden; }
+.temp-memo-hdr { display: flex; align-items: center; gap: 8px; padding: 10px 12px; cursor: pointer; }
+.temp-memo-hdr-icon { font-size: 16px; }
+.temp-memo-hdr-title { flex: 1; font-size: 13px; font-weight: 700; color: var(--acd); letter-spacing: 1px; }
+.temp-memo-hdr-preview { font-size: 12px; color: var(--tx2); max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.temp-memo-hdr-arrow { font-size: 12px; color: var(--acd); transition: transform .2s; flex-shrink: 0; }
+.temp-memo-card.collapsed .temp-memo-hdr-arrow { transform: rotate(-90deg); }
+.temp-memo-body { padding: 0 12px 12px; }
+.temp-memo-card.collapsed .temp-memo-body { display: none; }
+.temp-memo-textarea { width: 100%; min-height: 70px; padding: 8px 10px; font-size: 14px; border: 1px solid var(--bd); border-radius: var(--r); background: var(--bg2); color: var(--tx); font-family: var(--font); box-sizing: border-box; resize: vertical; }
+.temp-memo-btns { display: flex; gap: 8px; margin-top: 8px; }
+.temp-memo-save-btn, .temp-memo-del-btn { flex: 1; border: none; border-radius: var(--r); padding: 8px 0; font-size: 13px; cursor: pointer; font-family: var(--font); }
+.temp-memo-save-btn { background: var(--ac); color: #fff; }
+.temp-memo-del-btn { background: var(--bg2); color: var(--tx2); border: 0.5px solid var(--bd); }
 /* water date nav */
 .water-date-nav { display: flex; align-items: center; justify-content: space-between; padding: 6px 16px 4px; }
 .water-date-nav-btn { background: none; border: none; font-size: 22px; color: var(--ac); cursor: pointer; padding: 4px 8px; }
@@ -1351,7 +1366,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
   <div id="content">
 
     <!-- ✅ 待辦事項頁面 -->
-    <div id="page-todos" class="page active">
+    <div id="page-todos" class="page">
       <!-- 搜尋列 -->
       <div class="todo-search-bar">
         <input type="text" id="todo-search-input" class="todo-search-input" placeholder="搜尋待辦事項…" autocomplete="off">
@@ -1936,7 +1951,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
     </div>
 
     <!-- 📊 今日總覽 -->
-    <div id="page-dashboard" class="page">
+    <div id="page-dashboard" class="page active">
       <div class="dash-header">
         <div class="dash-date" id="dash-date"></div>
         <div class="dash-greeting" id="dash-greeting">今天也要加油！</div>
@@ -1945,6 +1960,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
           <button class="dash-slogan-edit-btn" id="dash-slogan-edit-btn" title="編輯">✏️</button>
         </div>
       </div>
+    <div id="temp-memo-card" class="temp-memo-card collapsed"></div>
     <div id="checkin-section" class="checkin-section"></div>
       <div class="dash-grid" id="dash-grid"></div>
     </div>
@@ -2885,7 +2901,7 @@ const state = {
   calView:      {},
   choreCalOpen: {},
   choreCalView: {},
-  currentPage:  'todos',
+  currentPage:  'dashboard',
 };
 
 function saveTodos()   { saveStorage('myapp_todos',  state.todos);  }
@@ -8278,11 +8294,12 @@ function init() {
   updateTitleBadge();
   updateAddBarUI();
   renderNavbar();
-  var startPage = state.currentPage || 'todos';
+  var startPage = state.currentPage || 'dashboard';
   state.currentPage = startPage;
   document.querySelectorAll('.page').forEach(function(el){
     el.classList.toggle('active', el.id === 'page-' + startPage);
   });
+  if (startPage === 'dashboard') renderDashboard();
   if (startPage === 'todos')    renderTodos();
   if (startPage === 'habits')   { renderWeekHeader(); renderHabits(); }
   if (startPage === 'water')    renderWater();
@@ -8294,7 +8311,7 @@ function init() {
   if (startPage === 'diary')    renderDiary();
   if (startPage === 'settings') renderSettings();
   if (startPage === 'recipes')  { setTimeout(function(){ if(typeof renderRecipePage==='function') renderRecipePage(); }, 0); }
-  if (!startPage || startPage === 'todos') renderTodos();
+  if (!startPage) renderDashboard();
 }
 // ── 份量調整狀態 ────────────────────────────────────────────
 var _modalData = null;
@@ -10362,7 +10379,53 @@ function renderDashboard() {
   }
   var seBtn = $('dash-slogan-edit-btn');
   if (seBtn) seBtn.onclick = function(){ openSloganEdit(); };
+  renderTempMemo();
   renderCheckin();
+}
+
+function renderTempMemo() {
+  var card = $('temp-memo-card'); if (!card) return;
+  var content = loadStorage('myapp_temp_memo', '');
+  var collapsed = card.classList.contains('collapsed');
+  /* 若有內容且尚未被使用者手動收合過，預設展開；無內容則收合 */
+  if (!content) collapsed = true;
+  else if (card.dataset.inited !== '1') collapsed = false;
+  card.dataset.inited = '1';
+
+  var preview = content ? esc(content.split('\n')[0].slice(0,12)) : '';
+  card.className = 'temp-memo-card' + (collapsed ? ' collapsed' : '');
+  card.innerHTML =
+    '<div class="temp-memo-hdr" id="temp-memo-hdr">' +
+      '<span class="temp-memo-hdr-icon">📌</span>' +
+      '<span class="temp-memo-hdr-title">臨時 MEMO</span>' +
+      '<span class="temp-memo-hdr-preview">' + preview + '</span>' +
+      '<span class="temp-memo-hdr-arrow">▾</span>' +
+    '</div>' +
+    '<div class="temp-memo-body">' +
+      '<textarea class="temp-memo-textarea" id="temp-memo-text" placeholder="隨手記點什麼…">' + esc(content) + '</textarea>' +
+      '<div class="temp-memo-btns">' +
+        '<button class="temp-memo-save-btn" id="temp-memo-save">💾 儲存</button>' +
+        '<button class="temp-memo-del-btn" id="temp-memo-del">🗑 清除</button>' +
+      '</div>' +
+    '</div>';
+
+  $('temp-memo-hdr').onclick = function() {
+    card.classList.toggle('collapsed');
+  };
+  $('temp-memo-save').onclick = function(e) {
+    e.stopPropagation();
+    var val = ($('temp-memo-text')||{}).value || '';
+    saveStorage('myapp_temp_memo', val);
+    showToast('已儲存');
+    renderTempMemo();
+  };
+  $('temp-memo-del').onclick = function(e) {
+    e.stopPropagation();
+    saveStorage('myapp_temp_memo', '');
+    card.dataset.inited = '';
+    showToast('已清除');
+    renderTempMemo();
+  };
 }
 
 function renderCheckin() {
