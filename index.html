@@ -5587,7 +5587,7 @@ function renderFoodFavChips(){
   var freqList = Object.keys(freq).map(function(k){
     var f=freq[k];
     return {name:f.name,cal:r1(f.cal/f.count),pro:r1(f.pro/f.count),carb:r1(f.carb/f.count),fat:r1(f.fat/f.count),unit:'份',base:1,isPrivate:true};
-  }).filter(function(f){ return favNames.indexOf(f.name)===-1 && freq[f.name].count>=2; })
+  }).filter(function(f){ return favNames.indexOf(f.name)===-1 && _foodFavHidden.indexOf(f.name)===-1 && freq[f.name].count>=2; })
     .sort(function(a,b){ return freq[b.name].count - freq[a.name].count; })
     .slice(0,6);
   var favList = _favFoods.map(function(f){
@@ -5599,7 +5599,7 @@ function renderFoodFavChips(){
   box.innerHTML = all.map(function(f,i){
     return '<span class="food-fav-chip-wrap'+(f.isFav?' is-fav':'')+'">' +
       '<div class="food-fav-chip'+(f.isFav?' is-fav':'')+'" data-idx="'+i+'">'+(f.isFav?'⭐ ':'')+esc(f.name)+'</div>' +
-      (f.isFav ? '<button class="food-fav-chip-del" data-del-idx="'+i+'" title="移除常用">✕</button>' : '') +
+      '<button class="food-fav-chip-del" data-del-idx="'+i+'" title="'+(f.isFav?'移除常用':'不再顯示')+'">✕</button>' +
     '</span>';
   }).join('');
   box._list = all;
@@ -5623,9 +5623,14 @@ function _updateFoodFavBtn(){
         var di = parseInt(delBtn.dataset.delIdx);
         var all = box._list || [];
         var f = all[di];
-        if (f && f.isFav) {
-          var fi = _favFoods.findIndex(function(x){ return x.name === f.name; });
-          if (fi >= 0) { _favFoods.splice(fi, 1); saveFavFoods(); renderFoodFavChips(); }
+        if (f) {
+          if (f.isFav) {
+            var fi = _favFoods.findIndex(function(x){ return x.name === f.name; });
+            if (fi >= 0) { _favFoods.splice(fi, 1); saveFavFoods(); }
+          } else {
+            if (_foodFavHidden.indexOf(f.name) === -1) { _foodFavHidden.push(f.name); saveFoodFavHidden(); }
+          }
+          renderFoodFavChips();
         }
         return;
       }
@@ -5649,7 +5654,11 @@ function _updateFoodFavBtn(){
       if(!_foodEditPicked) return;
       var f=_foodEditPicked;
       var i=_favFoods.findIndex(function(x){return x.name===f.name;});
-      if(i>=0){ _favFoods.splice(i,1); } else { _favFoods.push({name:f.name,cal:f.cal,pro:f.pro,carb:f.carb,fat:f.fat,unit:f.unit,base:f.base,isPrivate:f.isPrivate}); }
+      if(i>=0){ _favFoods.splice(i,1); } else {
+        _favFoods.push({name:f.name,cal:f.cal,pro:f.pro,carb:f.carb,fat:f.fat,unit:f.unit,base:f.base,isPrivate:f.isPrivate});
+        var hi=_foodFavHidden.indexOf(f.name);
+        if(hi>=0){ _foodFavHidden.splice(hi,1); saveFoodFavHidden(); }
+      }
       saveFavFoods();
       _updateFoodFavBtn();
       renderFoodFavChips();
@@ -5936,6 +5945,8 @@ var _customFoods = loadStorage('myapp_custom_foods', []);
 var _privateFoods = loadStorage('myapp_private_foods', []);
 var _favFoods = loadStorage('myapp_fav_foods', []);
 function saveFavFoods(){ saveStorage('myapp_fav_foods', _favFoods); }
+var _foodFavHidden = loadStorage('myapp_fav_foods_hidden', []);
+function saveFoodFavHidden(){ saveStorage('myapp_fav_foods_hidden', _foodFavHidden); }
 var _foodDayNotes = loadStorage('myapp_food_notes', {});
 var _foodDayCarbs  = loadStorage('myapp_food_carbs', {});
 var _bodyData     = loadStorage('myapp_body_data', {gender:'female',age:30,height:165,weight:55,activity:'light',goal:'cut'});
@@ -8975,6 +8986,9 @@ function showFoodSavePopup(e, log, triggerBtn) {
     }
     _favFoods.push({ name:foodData.name, cal:foodData.cal, pro:foodData.pro, carb:foodData.carb, fat:foodData.fat, unit:'份', base:1, isPrivate:true });
     saveFavFoods();
+    var _hi=_foodFavHidden.indexOf(foodData.name);
+    if(_hi>=0){ _foodFavHidden.splice(_hi,1); saveFoodFavHidden(); }
+    renderFoodFavChips();
     showToast('⭐ 已加入常用清單：' + foodData.name);
     triggerBtn.textContent = '✅'; triggerBtn.style.color = 'var(--ac)';
     setTimeout(function(){ triggerBtn.textContent = '📥'; triggerBtn.style.color = ''; }, 1500);
