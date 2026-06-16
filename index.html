@@ -599,11 +599,46 @@ input::placeholder { color: var(--tx3); }
 .fast-status { font-size: 14px; color: var(--tx3); text-align: center; margin-bottom: 12px; }
 .fast-btns { display: flex; gap: 10px; }
 .fast-btns button { flex: 1; padding: 10px; font-size: 14px; font-family: var(--font); border-radius: var(--r); cursor: pointer; }
-.fast-stats-row { display: flex; gap: 6px; margin-bottom: 8px; }
+.fast-stats-row { display: flex; gap: 6px; margin-bottom: 12px; }
 .fast-stat-card { flex: 1; background: var(--bg3); border: 0.5px solid var(--bd); border-radius: var(--r); padding: 8px 6px; text-align: center; }
 .fast-stat-val  { font-size: 15px; font-weight: 600; color: var(--ac); }
 .fast-stat-lbl  { font-size: 11px; color: var(--tx3); }
-.fast-chart-title { font-size: 11px; color: var(--ac); letter-spacing: 1.5px; margin-bottom: 6px; }
+.fast-stats-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px 4px; }
+.fast-stats-title { font-size: 11px; color: var(--ac); letter-spacing: 2px; }
+.fast-stats-toggle-btn { background: var(--bg2); border: 0.5px solid var(--bd); border-radius: var(--r); padding: 3px 10px; font-size: 12px; color: var(--tx3); cursor: pointer; font-family: var(--font); }
+.fast-ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 14px; }
+.fast-ring-svg-wrap { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
+.fast-ring-svg-wrap svg { position: absolute; inset: 0; }
+.fast-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.fast-ring-val { font-size: 22px; font-weight: 700; color: var(--ac); line-height: 1; }
+.fast-ring-unit { font-size: 11px; color: var(--tx3); margin-top: 3px; }
+.fast-ring-info { width: 100%; text-align: center; }
+.fast-ring-pct { font-size: 28px; font-weight: 700; color: var(--tx); line-height: 1; }
+.fast-ring-pct-unit { font-size: 14px; color: var(--tx2); }
+.fast-ring-status { font-size: 12px; color: var(--tx2); margin-top: 4px; margin-bottom: 10px; }
+.fast-goal-row { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.fast-goal-label { font-size: 12px; color: var(--tx3); white-space: nowrap; }
+.fast-goal-chip { border: 0.5px solid var(--bd); border-radius: 20px; padding: 0; font-size: 12px; background: var(--bg3); color: var(--tx2); cursor: pointer; font-family: var(--font); width: 48px; height: 26px; line-height: 26px; text-align: center; flex-shrink: 0; }
+.fast-goal-chip.sel { background: var(--ac); color: #fff; border-color: var(--ac); }
+.fast-goal-custom { width: 48px; height: 26px; font-size: 12px; padding: 0; border: 0.5px solid var(--bd); border-radius: 20px; background: var(--bg3); color: var(--tx); font-family: var(--font); text-align: center; box-sizing: border-box; flex-shrink: 0; -webkit-appearance: none; appearance: none; line-height: 26px; }
+.fast-goal-custom::-webkit-inner-spin-button, .fast-goal-custom::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.fast-goal-custom:focus { outline: none; border-color: var(--ac); }
+/* 卡片式斷食日誌 */
+.fast-log-cards { display: flex; flex-direction: column; gap: 8px; }
+.fast-log-card { background: var(--bg2); border-radius: 10px; padding: 10px 12px; border: 0.5px solid var(--bd); }
+.fast-log-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.fast-log-card-date { font-size: 12px; color: var(--tx3); }
+.fast-log-card-hours { font-size: 18px; font-weight: 700; color: var(--ac); line-height: 1; }
+.fast-log-card-times { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.fast-log-card-time-item { display: flex; flex-direction: column; align-items: center; background: var(--bg3); border-radius: 7px; padding: 6px 10px; flex: 1; }
+.fast-log-card-time-label { font-size: 10px; color: var(--tx3); margin-bottom: 2px; }
+.fast-log-card-time-val { font-size: 15px; font-weight: 600; color: var(--tx); }
+.fast-log-card-arrow { font-size: 14px; color: var(--tx3); flex-shrink: 0; }
+.fast-log-card-note { font-size: 13px; color: var(--tx2); background: var(--bg); border-radius: 6px; padding: 5px 8px; margin-top: 4px; line-height: 1.5; word-break: break-all; }
+.fast-log-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+.fast-log-edit-btn, .fast-log-del-btn { border: none; border-radius: 6px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-family: var(--font); }
+.fast-log-edit-btn { background: var(--acl); color: var(--acd); }
+.fast-log-del-btn { background: #f0d0d0; color: #904040; }
 .fast-start-btn { background: var(--ac); border: none; color: #fff; }
 .fast-stop-btn  { background: #B07878; border: none; color: #fff; }
 .fast-reset-btn { background: transparent; border: 0.5px solid var(--bd); color: var(--tx2); }
@@ -5224,68 +5259,118 @@ function fmtLocalTime(ts) {
   return d.getFullYear()+'-'+ ('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)+
     ' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
 }
+var _fastGoal = loadStorage('myapp_fast_goal', 16);
+var _fastStatsOpen = false;
+function _saveFastGoal(v){ _fastGoal=v; saveStorage('myapp_fast_goal', v); }
 function renderFastStats(){
   var wrap=$('fast-stats-wrap');if(!wrap)return;
   if(!_fastLogs.length){ wrap.innerHTML=''; return; }
   var sessions=_fastLogs.length;
   var avgH=(_fastLogs.reduce(function(s,l){return s+l.hours;},0)/sessions).toFixed(1);
   var maxH=_fastLogs.reduce(function(mx,l){return l.hours>mx?l.hours:mx;},0).toFixed(1);
-  var html='<div class="fast-stats-row">'+
-    '<div class="fast-stat-card"><div class="fast-stat-val">'+sessions+'</div><div class="fast-stat-lbl">累計次數</div></div>'+
-    '<div class="fast-stat-card"><div class="fast-stat-val">'+avgH+'</div><div class="fast-stat-lbl">平均時數</div></div>'+
-    '<div class="fast-stat-card"><div class="fast-stat-val">'+maxH+'</div><div class="fast-stat-lbl">最長時數</div></div>'+
-  '</div>';
-  var recent=_fastLogs.slice(-20);
-  var maxVal=recent.reduce(function(mx,l){return l.hours>mx?l.hours:mx;},0.1);
-  var W=300,H=70,barW=Math.max(4,Math.floor((W-4)/recent.length)-2),pad=2;
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block;overflow:visible">';
-  recent.forEach(function(l,i){
-    var bh=Math.max(4,Math.round((l.hours/maxVal)*(H-18)));
-    var x=pad+i*(barW+2), y=H-bh-14;
-    svg+='<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+bh+'" rx="2" fill="var(--ac)" opacity="0.7"/>';
-    if(barW>=16) svg+='<text x="'+(x+barW/2)+'" y="'+(y-2)+'" font-size="7" text-anchor="middle" fill="var(--tx3)">'+l.hours+'</text>';
-  });
-  svg+='</svg>';
-  html+='<div class="fast-chart-title">最近斷食記錄（小時）</div>'+svg;
-  /* log table */
-  var _fl_display = _fastLogOpen ? 'block' : 'none';
-  html+='<div class="fast-log-section">'+
-    '<div class="fast-log-title">斷食日誌 '+
-      '<span style="display:flex;gap:6px">'+
-        '<button class="fast-log-add-btn" id="fast-log-add-btn">＋ 補記錄</button>'+
-        '<button class="fast-log-add-btn" id="fast-log-toggle-btn" style="background:var(--bg2);color:var(--tx3)">'+(_fastLogOpen?'▲ 收起':'▼ 展開')+'</button>'+
-      '</span>'+
+  var lastLog = _fastLogs[_fastLogs.length-1];
+  var lastH = lastLog ? lastLog.hours : 0;
+  var goal = _fastGoal || 16;
+  var pct = Math.min(100, Math.round(lastH / goal * 100));
+  var R=44, C=2*Math.PI*R, filled=C*(pct/100), gap=C-filled;
+  var presets=[12,16,18];
+  var isCustom = presets.indexOf(goal)===-1;
+  var statusTxt = pct>=100 ? '🎉 已達成目標！' : '最近一次：'+lastH+'h';
+  var bodyDisplay = _fastStatsOpen ? 'block' : 'none';
+  var toggleTxt = _fastStatsOpen ? '▲ 收起' : '▼ 展開';
+  var html=
+  '<div class="fast-stats-header">'+
+    '<span class="fast-stats-title">⏱ 斷食統計</span>'+
+    '<button class="fast-stats-toggle-btn" id="fast-stats-toggle-btn">'+toggleTxt+'</button>'+
+  '</div>'+
+  '<div id="fast-stats-body" style="display:'+bodyDisplay+'">'+
+    '<div class="fast-ring-wrap">'+
+      '<div class="fast-ring-svg-wrap">'+
+        '<svg viewBox="0 0 110 110" width="110" height="110">'+
+          '<circle cx="55" cy="55" r="'+R+'" fill="none" stroke="var(--bg3)" stroke-width="9"/>'+
+          '<circle cx="55" cy="55" r="'+R+'" fill="none" stroke="var(--ac)" stroke-width="9"'+
+            ' stroke-dasharray="'+filled.toFixed(1)+' '+gap.toFixed(1)+'"'+
+            ' stroke-linecap="round" transform="rotate(-90 55 55)" opacity="0.85"/>'+
+        '</svg>'+
+        '<div class="fast-ring-center">'+
+          '<div class="fast-ring-val">'+lastH+'</div>'+
+          '<div class="fast-ring-unit">小時</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="fast-ring-info">'+
+        '<div><span class="fast-ring-pct">'+pct+'</span><span class="fast-ring-pct-unit"> %</span></div>'+
+        '<div class="fast-ring-status">'+statusTxt+'</div>'+
+        '<div class="fast-goal-row">'+
+          '<span class="fast-goal-label">目標</span>'+
+          presets.map(function(p){
+            return '<button class="fast-goal-chip'+((!isCustom&&goal===p)?' sel':'')+' " data-goal="'+p+'">'+p+'h</button>';
+          }).join('')+
+          '<input class="fast-goal-custom" id="fast-goal-custom-input" type="number" min="1" max="48"'+
+            ' value="'+(isCustom?goal:'')+'" placeholder="自訂h">'+
+        '</div>'+
+      '</div>'+
     '</div>'+
-    '<div class="fast-log-body" id="fast-log-body" style="display:'+_fl_display+'">'+
-    '<div style="overflow-x:auto"><table class="fast-log-tbl">'+
-    '<thead><tr><th>日期</th><th>開始</th><th>結束</th><th>時數</th><th>備註</th><th></th></tr></thead><tbody>'+
-    _fastLogs.slice().reverse().map(function(l){
-      var startStr = l.startTime ? fmtLocalTime(l.startTime).slice(11,16) : '─';
-      var endStr   = l.endTime   ? fmtLocalTime(l.endTime).slice(11,16)   : '─';
-      var startDate = l.startTime ? fmtLocalTime(l.startTime).slice(0,10) : (l.date||'─');
-      return '<tr>'+
-        '<td>'+startDate+'</td>'+
-        '<td>'+startStr+'</td>'+
-        '<td>'+endStr+'</td>'+
-        '<td style="font-weight:600;color:var(--ac)">'+l.hours+'h</td>'+
-        '<td style="max-width:80px;word-break:break-all">'+(l.note||'─')+'</td>'+
-        '<td><div class="fast-log-actions">'+
-          '<button class="fast-log-edit-btn" data-fid="'+l.id+'">修改</button>'+
-          '<button class="fast-log-del-btn" data-fid="'+l.id+'">刪除</button>'+
-        '</div></td>'+
-      '</tr>';
-    }).join('')+
-    '</tbody></table></div></div></div>';
+    '<div class="fast-stats-row">'+
+      '<div class="fast-stat-card"><div class="fast-stat-val">'+sessions+'</div><div class="fast-stat-lbl">累計次數</div></div>'+
+      '<div class="fast-stat-card"><div class="fast-stat-val">'+avgH+'</div><div class="fast-stat-lbl">平均時數</div></div>'+
+      '<div class="fast-stat-card"><div class="fast-stat-val">'+maxH+'</div><div class="fast-stat-lbl">最長時數</div></div>'+
+    '</div>'+
+    '<div class="fast-log-section">'+
+      '<div class="fast-log-title">斷食日誌'+
+        '<button class="fast-log-add-btn" id="fast-log-add-btn">＋ 補記錄</button>'+
+      '</div>'+
+      '<div class="fast-log-cards">'+
+      _fastLogs.slice().reverse().map(function(l){
+        var startStr  = l.startTime ? fmtLocalTime(l.startTime).slice(11,16) : '─';
+        var endStr    = l.endTime   ? fmtLocalTime(l.endTime).slice(11,16)   : '─';
+        var startDate = l.startTime ? fmtLocalTime(l.startTime).slice(0,10)  : (l.date||'─');
+        var noteHtml  = l.note ? '<div class="fast-log-card-note">📝 '+l.note+'</div>' : '';
+        return '<div class="fast-log-card">'+
+          '<div class="fast-log-card-top">'+
+            '<span class="fast-log-card-date">📅 '+startDate+'</span>'+
+            '<span class="fast-log-card-hours">'+l.hours+'h</span>'+
+          '</div>'+
+          '<div class="fast-log-card-times">'+
+            '<div class="fast-log-card-time-item"><span class="fast-log-card-time-label">開始</span><span class="fast-log-card-time-val">'+startStr+'</span></div>'+
+            '<span class="fast-log-card-arrow">→</span>'+
+            '<div class="fast-log-card-time-item"><span class="fast-log-card-time-label">結束</span><span class="fast-log-card-time-val">'+endStr+'</span></div>'+
+          '</div>'+
+          noteHtml+
+          '<div class="fast-log-actions">'+
+            '<button class="fast-log-edit-btn" data-fid="'+l.id+'">修改</button>'+
+            '<button class="fast-log-del-btn" data-fid="'+l.id+'">刪除</button>'+
+          '</div>'+
+        '</div>';
+      }).join('')+
+      '</div>'+
+    '</div>'+
+  '</div>';
   wrap.innerHTML=html;
-  /* bind toggle */
-  var togBtn = document.querySelector('#fast-stats-wrap #fast-log-toggle-btn');
-  var logBody = document.querySelector('#fast-stats-wrap #fast-log-body');
-  if (togBtn && logBody) {
-    togBtn.onclick = function() {
-      _fastLogOpen = !_fastLogOpen;
-      logBody.style.display = _fastLogOpen ? 'block' : 'none';
-      togBtn.textContent = _fastLogOpen ? '▲ 收起' : '▼ 展開';
+  /* bind main toggle */
+  var togBtn = wrap.querySelector('#fast-stats-toggle-btn');
+  var statsBody = wrap.querySelector('#fast-stats-body');
+  if(togBtn && statsBody){
+    togBtn.onclick = function(){
+      _fastStatsOpen = !_fastStatsOpen;
+      statsBody.style.display = _fastStatsOpen ? 'block' : 'none';
+      togBtn.textContent = _fastStatsOpen ? '▲ 收起' : '▼ 展開';
     };
+  }
+  /* bind goal chips */
+  wrap.querySelectorAll('.fast-goal-chip').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var v=parseInt(btn.dataset.goal,10);
+      _saveFastGoal(v);
+      renderFastStats();
+    });
+  });
+  /* bind custom input */
+  var customInput = wrap.querySelector('#fast-goal-custom-input');
+  if(customInput){
+    customInput.addEventListener('change', function(){
+      var v=parseInt(customInput.value,10);
+      if(v>=1&&v<=48){ _saveFastGoal(v); renderFastStats(); }
+    });
   }
   /* bind add button */
   var addBtn=$('fast-log-add-btn');
