@@ -122,6 +122,19 @@ body { background: #F0E8E6; background: var(--bg); color: #3D2828; color: var(--
 .fast-log-edit-btn, .fast-log-del-btn { border: none; border-radius: 4px; padding: 3px 8px; font-size: 12px; cursor: pointer; font-family: var(--font); }
 .fast-log-edit-btn { background: var(--acl); color: var(--acd); }
 .fast-log-del-btn { background: #f0d0d0; color: #904040; }
+/* 斷食日誌群組（仿歷史飲食） */
+.fast-log-group { background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); margin-bottom: 8px; overflow: hidden; }
+.fast-log-group-hdr { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; }
+.fast-log-group-body { padding: 0 14px; border-top: 0.5px solid var(--bd); }
+.fast-log-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 9px 0; border-bottom: 0.5px solid var(--bd); }
+.fast-log-row:last-child { border-bottom: none; }
+.fast-log-row-main { flex: 1; min-width: 0; }
+.fast-log-row-times { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.fast-log-row-time { font-size: 14px; font-weight: 500; color: var(--tx); }
+.fast-log-row-arrow { font-size: 12px; color: var(--tx3); }
+.fast-log-row-hours { font-size: 13px; font-weight: 600; color: var(--ac); margin-left: 4px; }
+.fast-log-row-note { font-size: 12px; color: var(--tx3); margin-top: 2px; }
+.fast-log-row-actions { display: flex; gap: 4px; flex-shrink: 0; align-items: center; }
 /* fast log form overlay */
 .fast-form-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
 .fast-form-overlay.hidden { display: none; }
@@ -485,6 +498,25 @@ input::placeholder { color: var(--tx3); }
 
 /* ── 月曆（展開）── */
 .habit-cal { margin: 0 12px 12px; padding: 12px; background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); }
+/* 家務時間軸 */
+.chore-timeline { margin: 0 12px 12px; background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); overflow: hidden; }
+.chore-tl-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 0.5px solid var(--bd); }
+.chore-tl-since { font-size: 12px; color: var(--tx2); }
+.chore-tl-since b { color: var(--ac); }
+.chore-tl-add { background: var(--ac); color: #fff; border: none; border-radius: var(--rr); padding: 4px 12px; font-size: 12px; cursor: pointer; font-family: var(--font); white-space: nowrap; flex-shrink: 0; }
+.chore-tl-add:disabled { background: var(--acl); color: var(--acd); cursor: default; }
+.chore-log-list { padding: 4px 12px; }
+.chore-log-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 0.5px solid var(--bd); }
+.chore-log-row:last-child { border-bottom: none; }
+.chore-log-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ac); flex-shrink: 0; }
+.chore-log-date { font-size: 13px; color: var(--tx); flex: 1; }
+.chore-log-diff { font-size: 12px; color: var(--tx3); white-space: nowrap; }
+.chore-log-del { background: none; border: none; color: var(--tx3); font-size: 14px; cursor: pointer; padding: 0 2px; flex-shrink: 0; }
+.chore-tl-more { text-align: center; padding: 6px 0 8px; }
+.chore-tl-show-all { background: none; border: 0.5px solid var(--bd); border-radius: 20px; padding: 3px 14px; font-size: 12px; color: var(--tx2); cursor: pointer; font-family: var(--font); }
+.chore-tl-show-all:active { background: var(--acl); color: var(--acd); }
+.chore-last-txt { font-size: 11px; color: var(--tx3); margin-top: 1px; }
+.chore-last-txt.done { color: var(--ac); font-weight: 500; }
 .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .cal-nav button { background: none; border: none; font-size: 20px; color: var(--tx2); cursor: pointer; padding: 2px 10px; line-height: 1; }
 .cal-nav span { font-size: 14px; font-weight: 500; color: var(--tx); }
@@ -595,8 +627,8 @@ input::placeholder { color: var(--tx3); }
 .fast-label { font-size: 11px; color: var(--ac); letter-spacing: 2px; }
 .fast-card-toggle { font-size: 14px; color: var(--tx3); background: none; border: none; cursor: pointer; }
 .fast-card-body { padding: 0 16px 16px; }
-.fast-timer { font-size: 32px; font-weight: 300; color: var(--tx); letter-spacing: 2px; text-align: center; padding: 6px 0; }
-.fast-status { font-size: 14px; color: var(--tx3); text-align: center; margin-bottom: 12px; }
+.fast-timer { font-size: 32px; font-weight: 300; color: var(--tx); letter-spacing: 2px; text-align: center; padding: 6px 0 12px; }
+.fast-stats-divider { border: none; border-top: 0.5px solid var(--bd); margin: 4px 0 10px; }
 .fast-btns { display: flex; gap: 10px; }
 .fast-btns button { flex: 1; padding: 10px; font-size: 14px; font-family: var(--font); border-radius: var(--r); cursor: pointer; }
 .fast-stats-row { display: flex; gap: 6px; margin-bottom: 12px; }
@@ -623,6 +655,8 @@ input::placeholder { color: var(--tx3); }
 .fast-goal-custom { width: 48px; height: 26px; font-size: 12px; padding: 0; border: 0.5px solid var(--bd); border-radius: 20px; background: var(--bg3); color: var(--tx); font-family: var(--font); text-align: center; box-sizing: border-box; flex-shrink: 0; -webkit-appearance: none; appearance: none; line-height: 26px; }
 .fast-goal-custom::-webkit-inner-spin-button, .fast-goal-custom::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .fast-goal-custom:focus { outline: none; border-color: var(--ac); }
+.fast-goal-reset-btn { border: 0.5px solid var(--bd); border-radius: 20px; padding: 0; font-size: 11px; background: var(--bg); color: var(--tx3); cursor: pointer; font-family: var(--font); width: 36px; height: 26px; line-height: 26px; text-align: center; flex-shrink: 0; }
+.fast-goal-reset-btn:active { background: var(--bg3); }
 /* 卡片式斷食日誌 */
 .fast-log-cards { display: flex; flex-direction: column; gap: 8px; }
 .fast-log-card { background: var(--bg2); border-radius: 10px; padding: 10px 12px; border: 0.5px solid var(--bd); }
@@ -688,6 +722,7 @@ input::placeholder { color: var(--tx3); }
 .food-history-date { font-size: 14px; font-weight: 500; color: var(--tx); }
 .food-history-totals { font-size: 12px; color: var(--tx3); }
 .food-history-items { padding: 0 14px; border-top: 0.5px solid var(--bd); }
+.food-hist-day-note { font-size: 12px; color: var(--tx3); padding: 7px 0 4px; border-bottom: 0.5px solid var(--bd); line-height: 1.5; word-break: break-all; }
 /* Food edit overlay */
 .food-edit-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 190; display: flex; align-items: flex-end; justify-content: center; }
 .food-edit-overlay.hidden { display: none; }
@@ -1552,24 +1587,22 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 
 <!-- 🍽 飲食頁面 -->
     <div id="page-food" class="page" style="padding-bottom:0">
-      <!-- 斷食計時 (collapsible) -->
+      <!-- 斷食卡片（合併計時＋統計，預設收起） -->
       <div class="fast-card">
         <div class="fast-card-header" id="fast-card-header">
           <span class="fast-label">⏱ 斷食記錄</span>
-          <button class="fast-card-toggle" id="fast-card-toggle">▲ 收起</button>
+          <button class="fast-card-toggle" id="fast-card-toggle">▼ 展開</button>
         </div>
-        <div class="fast-card-body" id="fast-card-body">
+        <div class="fast-card-body" id="fast-card-body" style="display:none">
           <div class="fast-timer" id="fast-timer">00:00:00</div>
-          <div class="fast-status" id="fast-status">尚未開始</div>
           <div class="fast-btns">
             <button class="fast-start-btn" id="fast-start-btn">🚫 開始斷食</button>
             <button class="fast-stop-btn" id="fast-stop-btn" style="display:none">⏹ 結束斷食</button>
             <button class="fast-reset-btn" id="fast-reset-btn">重設</button>
           </div>
+          <div id="fast-stats-wrap"></div>
         </div>
       </div>
-      <!-- Fasting stats/chart -->
-      <div id="fast-stats-wrap" style="padding:0 12px;margin-top:8px"></div>
       <!-- Date navigation -->
       <div class="food-date-nav">
         <button class="food-date-nav-btn" id="food-date-prev">‹</button>
@@ -3995,6 +4028,7 @@ function renderHabits() {
 
   var goodHabits = habits.filter(function(h){ return (h.category || 'good') === 'good'; });
   var badHabits  = habits.filter(function(h){ return h.category === 'bad'; });
+  var todayStr = todayKey();
   var html = '';
 
   function buildSection(list, cat) {
@@ -4010,6 +4044,18 @@ function renderHabits() {
       var streak = calcStreak(h.logs || {}, type);
       var isOpen = !!state.calOpen[h.id];
       var rowCls = isGood ? '' : ' bad-habit';
+      /* 上次打卡距今 */
+      var hLogs = h.logs || {};
+      var lastD = Object.keys(hLogs).filter(function(d){
+        var v=hLogs[d]; return type==='count'?(typeof v==='number'&&v>0):!!v;
+      }).sort(function(a,b){return a<b?1:-1;})[0];
+      var lastTxt;
+      if (!lastD) { lastTxt = '尚未打卡'; }
+      else {
+        var df = Math.floor((new Date(todayStr) - new Date(lastD)) / 86400000);
+        lastTxt = df === 0 ? '今天' : df + ' 天前';
+      }
+      var todayDoneH = (function(){ var v=hLogs[todayStr]; return type==='count'?(typeof v==='number'&&v>0):!!v; })();
       s += '<div class="habit-item' + rowCls + '" data-id="' + h.id + '">' +
         '<div class="habit-main-row">' +
           '<div class="habit-name-area" data-action="cal" data-id="' + h.id + '">' +
@@ -4017,6 +4063,7 @@ function renderHabits() {
             '<div class="habit-name-wrap">' +
               '<div class="habit-name-text">' + esc(h.name) + '</div>' +
               (streak > 0 ? '<div class="habit-streak-text">連續 ' + streak + ' 天 ' + (isGood?'🔥':'⚠️') + '</div>' : '') +
+              '<div class="chore-last-txt' + (todayDoneH?' done':'') + '">上次：' + lastTxt + '</div>' +
             '</div>' +
           '</div>' +
           '<div class="habit-days-scroll" data-scroll-sync="1">' +
@@ -4060,23 +4107,69 @@ function renderHabits() {
   container.querySelectorAll('[data-action="del"]').forEach(function(btn) {
     btn.addEventListener('click', function(){ deleteHabit(btn.dataset.id); });
   });
-  container.querySelectorAll('.cal-prev-btn').forEach(function(btn) {
-    btn.addEventListener('click', function(){ moveCalMonth(btn.dataset.id, -1); });
+  /* 時間軸：今日打卡按鈕（好習慣） */
+  container.querySelectorAll('.habit-tl-add').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleHabitDate(btn.dataset.hid, btn.dataset.date);
+    });
   });
-  container.querySelectorAll('.cal-next-btn').forEach(function(btn) {
-    btn.addEventListener('click', function(){ moveCalMonth(btn.dataset.id, +1); });
+  /* 時間軸：刪除單筆記錄 */
+  container.querySelectorAll('.habit-log-del').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var hid = btn.dataset.hid, date = btn.dataset.date;
+      if (!confirm('刪除 ' + date + ' 的打卡記錄？')) return;
+      state.habits = state.habits.map(function(h) {
+        if (h.id !== hid) return h;
+        var l = Object.assign({}, h.logs || {});
+        delete l[date];
+        return Object.assign({}, h, { logs: l });
+      });
+      saveHabits(); renderHabits();
+    });
   });
-  container.querySelectorAll('.cal-cell[data-date]').forEach(function(cell) {
-    cell.addEventListener('click', function() {
-      var h = state.habits.find(function(x){ return x.id === cell.dataset.hid; });
+  /* 時間軸：顯示全部 */
+  container.querySelectorAll('.habit-show-all').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var hid = btn.dataset.hid;
+      var h = state.habits.find(function(x){ return x.id === hid; });
       if (!h) return;
-      var type = h.type || 'yesno';
-      if (type === 'count') {
-        var cur = (h.logs || {})[cell.dataset.date] || 0;
-        openCountOverlay(cell.dataset.hid, cell.dataset.date, h.unit || '次', String(cur));
-      } else {
-        toggleHabitDate(cell.dataset.hid, cell.dataset.date);
-      }
+      var logs = h.logs || {}, type = h.type || 'yesno', today = todayKey();
+      var allDates = Object.keys(logs).filter(function(d){
+        var v=logs[d]; return type==='count'?(typeof v==='number'&&v>0):!!v;
+      }).sort(function(a,b){ return a<b?1:-1; });
+      var rows = allDates.map(function(d) {
+        var diff = Math.floor((new Date(today) - new Date(d)) / 86400000);
+        var diffTxt = diff === 0 ? '今天' : diff + ' 天前';
+        var val = logs[d];
+        var valTxt = (type === 'count' && typeof val === 'number') ? ' ×' + val + (h.unit||'') : '';
+        return '<div class="chore-log-row" data-hid="' + hid + '" data-date="' + d + '">' +
+          '<span class="chore-log-dot" style="background:' + (h.color||'var(--ac)') + '"></span>' +
+          '<span class="chore-log-date">' + d + valTxt + '</span>' +
+          '<span class="chore-log-diff">' + diffTxt + '</span>' +
+          '<button class="habit-log-del" data-hid="' + hid + '" data-date="' + d + '">✕</button>' +
+        '</div>';
+      }).join('');
+      var timeline = btn.closest('.chore-timeline');
+      var listDiv = timeline.querySelector('.chore-log-list');
+      if (listDiv) listDiv.innerHTML = rows;
+      btn.closest('.chore-tl-more').remove();
+      /* 重新 bind 刪除 */
+      timeline.querySelectorAll('.habit-log-del').forEach(function(delBtn) {
+        delBtn.addEventListener('click', function(ev) {
+          ev.stopPropagation();
+          var dhid = delBtn.dataset.hid, ddate = delBtn.dataset.date;
+          if (!confirm('刪除 ' + ddate + ' 的打卡記錄？')) return;
+          state.habits = state.habits.map(function(cx) {
+            if (cx.id !== dhid) return cx;
+            var l = Object.assign({}, cx.logs || {}); delete l[ddate];
+            return Object.assign({}, cx, { logs: l });
+          });
+          saveHabits(); renderHabits();
+        });
+      });
     });
   });
 
@@ -4192,33 +4285,50 @@ function deleteHabit(id) {
    📅 月曆 HTML
    ═══════════════════════════════════════════════════ */
 function buildCalendarHTML(habit) {
-  var today = todayKey(), now = new Date();
-  if (!state.calView[habit.id]) state.calView[habit.id] = { year: now.getFullYear(), month: now.getMonth() };
-  var y = state.calView[habit.id].year, m = state.calView[habit.id].month;
-  var firstDay  = new Date(y, m, 1).getDay();
-  var totalDays = new Date(y, m+1, 0).getDate();
-  var prefix    = y + '-' + String(m+1).padStart(2,'0');
-  var checked   = Object.keys(habit.logs || {}).filter(function(d){ return d.startsWith(prefix); }).length;
-  var type      = habit.type || 'yesno';
-
-  var cells = WEEKDAYS.map(function(w){ return '<div class="cal-cell head">' + w + '</div>'; }).join('');
-  for (var i = 0; i < firstDay; i++) cells += '<div class="cal-cell"></div>';
-  for (var d = 1; d <= totalDays; d++) {
-    var ds  = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-    var val = (habit.logs || {})[ds];
-    var chk = (type === 'count') ? (typeof val === 'number' && val > 0) : !!val;
-    var cls = 'cal-cell' + (chk?' checked':'') + (ds === today?' today':'');
-    cells += '<div class="' + cls + '" data-hid="' + habit.id + '" data-date="' + ds + '">' + d + '</div>';
+  var today = todayKey();
+  var logs = habit.logs || {};
+  var type = habit.type || 'yesno';
+  var isGood = (habit.category || 'good') === 'good';
+  /* 取所有有效打卡日期，由新到舊 */
+  var allDates = Object.keys(logs).filter(function(d){
+    var v = logs[d];
+    return type === 'count' ? (typeof v === 'number' && v > 0) : !!v;
+  }).sort(function(a,b){ return a<b?1:-1; });
+  var recent = allDates.slice(0, 8);
+  /* 上次打卡 */
+  var daysSince = '─';
+  if (allDates.length) {
+    var diff = Math.floor((new Date(today) - new Date(allDates[0])) / 86400000);
+    daysSince = diff === 0 ? '今天' : diff + ' 天前';
   }
-
-  return '<div class="habit-cal">' +
-    '<div class="cal-nav">' +
-      '<button class="cal-prev-btn" data-id="' + habit.id + '">‹</button>' +
-      '<span>' + y + '年' + (m+1) + '月　打卡 ' + checked + ' 天</span>' +
-      '<button class="cal-next-btn" data-id="' + habit.id + '">›</button>' +
-    '</div>' +
-    '<div class="cal-grid">' + cells + '</div>' +
+  var todayDone = (function(){
+    var v = logs[today];
+    return type === 'count' ? (typeof v === 'number' && v > 0) : !!v;
+  })();
+  var rows = recent.map(function(d) {
+    var diff = Math.floor((new Date(today) - new Date(d)) / 86400000);
+    var diffTxt = diff === 0 ? '今天' : diff + ' 天前';
+    var val = logs[d];
+    var valTxt = (type === 'count' && typeof val === 'number') ? ' ×' + val + (habit.unit||'') : '';
+    return '<div class="chore-log-row" data-hid="' + habit.id + '" data-date="' + d + '">' +
+      '<span class="chore-log-dot" style="background:' + (habit.color||'var(--ac)') + '"></span>' +
+      '<span class="chore-log-date">' + d + valTxt + '</span>' +
+      '<span class="chore-log-diff">' + diffTxt + '</span>' +
+      '<button class="habit-log-del" data-hid="' + habit.id + '" data-date="' + d + '">✕</button>' +
     '</div>';
+  }).join('');
+  var emptyTxt = allDates.length ? '' : '<div style="color:var(--tx3);font-size:12px;text-align:center;padding:8px 0">尚無打卡記錄</div>';
+  var addBtn = isGood
+    ? '<button class="chore-tl-add habit-tl-add" data-hid="' + habit.id + '" data-date="' + today + '">' + (todayDone?'✓ 今日已打卡':'＋ 今日打卡') + '</button>'
+    : '';
+  return '<div class="chore-timeline">' +
+    '<div class="chore-tl-header">' +
+      '<span class="chore-tl-since">上次：<b>' + daysSince + '</b>　共 ' + allDates.length + ' 次</span>' +
+      addBtn +
+    '</div>' +
+    (rows ? '<div class="chore-log-list">' + rows + '</div>' : emptyTxt) +
+    (allDates.length > 8 ? '<div class="chore-tl-more"><button class="chore-tl-show-all habit-show-all" data-hid="' + habit.id + '">顯示全部 ' + allDates.length + ' 筆</button></div>' : '') +
+  '</div>';
 }
 
 /* ═══════════════════════════════════════════════════
@@ -4368,17 +4478,29 @@ function renderChores() {
   }
 
   var html = '';
+  var today = todayKey();
   chores.forEach(function(h) {
     var type   = h.type || 'yesno';
     var streak = calcStreak(h.logs || {}, type);
     var isOpen = !!state.choreCalOpen[h.id];
+    /* 計算上次打卡 */
+    var logs = h.logs || {};
+    var lastDate = Object.keys(logs).filter(function(d){ return !!logs[d]; }).sort(function(a,b){ return a<b?1:-1; })[0];
+    var lastTxt;
+    if (!lastDate) {
+      lastTxt = '尚未打卡';
+    } else {
+      var diff = Math.floor((new Date(today) - new Date(lastDate)) / 86400000);
+      lastTxt = diff === 0 ? '今天' : diff + ' 天前';
+    }
+    var todayDone = !!logs[today];
     html += '<div class="habit-item" data-id="' + h.id + '">' +
       '<div class="habit-main-row">' +
         '<div class="habit-name-area" data-action="chorecal" data-id="' + h.id + '">' +
           '<div class="habit-dot" style="background:' + h.color + ';"></div>' +
           '<div class="habit-name-wrap">' +
             '<div class="habit-name-text">' + esc(h.name) + '</div>' +
-            (streak > 0 ? '<div class="habit-streak-text">連續 ' + streak + ' 天</div>' : '') +
+            '<div class="chore-last-txt' + (todayDone ? ' done' : '') + '">上次：' + lastTxt + '</div>' +
           '</div>' +
         '</div>' +
         '<div class="habit-days-scroll" data-scroll-sync-chore="1">' +
@@ -4426,31 +4548,74 @@ function renderChores() {
       openChoreActionSheet(btn.dataset.id);
     });
   });
-  container.querySelectorAll('.cal-prev-btn').forEach(function(btn) {
+  /* 時間軸：今日打卡按鈕 */
+  container.querySelectorAll('.chore-tl-add').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      var id = btn.dataset.id;
-      if (!state.choreCalView[id]) { var n=new Date(); state.choreCalView[id]={year:n.getFullYear(),month:n.getMonth()}; }
-      var y=state.choreCalView[id].year, m=state.choreCalView[id].month-1;
-      if (m<0){m=11;y--;} state.choreCalView[id]={year:y,month:m}; renderChores();
-    });
-  });
-  container.querySelectorAll('.cal-next-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var id = btn.dataset.id;
-      if (!state.choreCalView[id]) { var n=new Date(); state.choreCalView[id]={year:n.getFullYear(),month:n.getMonth()}; }
-      var y=state.choreCalView[id].year, m=state.choreCalView[id].month+1;
-      if (m>11){m=0;y++;} state.choreCalView[id]={year:y,month:m}; renderChores();
-    });
-  });
-  container.querySelectorAll('.cal-cell[data-date]').forEach(function(cell) {
-    cell.addEventListener('click', function() {
+      var hid = btn.dataset.hid, date = btn.dataset.date;
       state.chores = state.chores.map(function(h) {
-        if (h.id !== cell.dataset.hid) return h;
+        if (h.id !== hid) return h;
         var l = Object.assign({}, h.logs || {});
-        if (l[cell.dataset.date]) delete l[cell.dataset.date]; else l[cell.dataset.date] = 1;
+        if (l[date]) delete l[date]; else l[date] = 1;
         return Object.assign({}, h, { logs: l });
       });
       saveChores(); renderChores();
+    });
+  });
+  /* 時間軸：刪除單筆記錄 */
+  container.querySelectorAll('.chore-log-del').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var hid = btn.dataset.hid, date = btn.dataset.date;
+      if (!confirm('刪除 ' + date + ' 的打卡記錄？')) return;
+      state.chores = state.chores.map(function(h) {
+        if (h.id !== hid) return h;
+        var l = Object.assign({}, h.logs || {});
+        delete l[date];
+        return Object.assign({}, h, { logs: l });
+      });
+      saveChores(); renderChores();
+    });
+  });
+  /* 時間軸：顯示全部 */
+  container.querySelectorAll('.chore-tl-show-all').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var hid = btn.dataset.hid;
+      var h = state.chores.find(function(x){ return x.id === hid; });
+      if (!h) return;
+      var logs = h.logs || {};
+      var allDates = Object.keys(logs).filter(function(d){ return !!logs[d]; }).sort(function(a,b){ return a<b?1:-1; });
+      var today = todayKey();
+      var rows = allDates.map(function(d) {
+        var diff = Math.floor((new Date(today) - new Date(d)) / 86400000);
+        var diffTxt = diff === 0 ? '今天' : diff + ' 天前';
+        return '<div class="chore-log-row" data-hid="' + hid + '" data-date="' + d + '">' +
+          '<span class="chore-log-dot"></span>' +
+          '<span class="chore-log-date">' + d + '</span>' +
+          '<span class="chore-log-diff">' + diffTxt + '</span>' +
+          '<button class="chore-log-del" data-hid="' + hid + '" data-date="' + d + '">✕</button>' +
+        '</div>';
+      }).join('');
+      /* 取得當前 chore-timeline，展開全部 */
+      var timeline = btn.closest('.chore-timeline');
+      var listDiv = timeline.querySelector('.chore-log-list');
+      if (listDiv) listDiv.innerHTML = rows;
+      btn.closest('.chore-tl-more').remove();
+      /* 重新 bind 刪除按鈕 */
+      timeline.querySelectorAll('.chore-log-del').forEach(function(delBtn) {
+        delBtn.addEventListener('click', function(ev) {
+          ev.stopPropagation();
+          var dhid = delBtn.dataset.hid, ddate = delBtn.dataset.date;
+          if (!confirm('刪除 ' + ddate + ' 的打卡記錄？')) return;
+          state.chores = state.chores.map(function(cx) {
+            if (cx.id !== dhid) return cx;
+            var l = Object.assign({}, cx.logs || {});
+            delete l[ddate];
+            return Object.assign({}, cx, { logs: l });
+          });
+          saveChores(); renderChores();
+        });
+      });
     });
   });
 
@@ -4471,27 +4636,42 @@ function renderChores() {
 }
 
 function buildChoreCalHTML(chore) {
-  var today = todayKey(), now = new Date();
-  if (!state.choreCalView[chore.id]) state.choreCalView[chore.id] = { year: now.getFullYear(), month: now.getMonth() };
-  var y = state.choreCalView[chore.id].year, m = state.choreCalView[chore.id].month;
-  var firstDay  = new Date(y, m, 1).getDay();
-  var totalDays = new Date(y, m+1, 0).getDate();
-  var prefix    = y + '-' + String(m+1).padStart(2,'0');
-  var checked   = Object.keys(chore.logs || {}).filter(function(d){ return d.startsWith(prefix); }).length;
-  var cells = WEEKDAYS.map(function(w){ return '<div class="cal-cell head">' + w + '</div>'; }).join('');
-  for (var i=0; i<firstDay; i++) cells += '<div class="cal-cell"></div>';
-  for (var d=1; d<=totalDays; d++) {
-    var ds  = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
-    var chk = !!(chore.logs || {})[ds];
-    var cls = 'cal-cell' + (chk?' checked':'') + (ds === today?' today':'');
-    cells += '<div class="' + cls + '" data-hid="' + chore.id + '" data-date="' + ds + '">' + d + '</div>';
+  var today = todayKey();
+  var logs = chore.logs || {};
+  /* 取所有打卡日期，由新到舊排列，最多顯示 10 筆 */
+  var allDates = Object.keys(logs).filter(function(d){ return !!logs[d]; }).sort(function(a,b){ return a<b?1:-1; });
+  var recent = allDates.slice(0, 8);
+  /* 計算距上次打卡天數 */
+  var daysSince = '─';
+  if (allDates.length) {
+    var last = allDates[0];
+    var diff = Math.floor((new Date(today) - new Date(last)) / 86400000);
+    daysSince = diff === 0 ? '今天' : diff + ' 天前';
   }
-  return '<div class="habit-cal">' +
-    '<div class="cal-nav">' +
-      '<button class="cal-prev-btn" data-id="' + chore.id + '">‹</button>' +
-      '<span>' + y + '年' + (m+1) + '月　打卡 ' + checked + ' 天</span>' +
-      '<button class="cal-next-btn" data-id="' + chore.id + '">›</button>' +
-    '</div><div class="cal-grid">' + cells + '</div></div>';
+  /* 是否今日已打卡 */
+  var todayDone = !!logs[today];
+  var rows = recent.map(function(d) {
+    var isToday = d === today;
+    var diffD = Math.floor((new Date(today) - new Date(d)) / 86400000);
+    var diffTxt = isToday ? '今天' : diffD + ' 天前';
+    return '<div class="chore-log-row" data-hid="' + chore.id + '" data-date="' + d + '">' +
+      '<span class="chore-log-dot"></span>' +
+      '<span class="chore-log-date">' + d + '</span>' +
+      '<span class="chore-log-diff">' + diffTxt + '</span>' +
+      '<button class="chore-log-del" data-hid="' + chore.id + '" data-date="' + d + '">✕</button>' +
+    '</div>';
+  }).join('');
+  var emptyTxt = allDates.length ? '' : '<div style="color:var(--tx3);font-size:12px;text-align:center;padding:8px 0">尚無打卡記錄</div>';
+  return '<div class="chore-timeline">' +
+    '<div class="chore-tl-header">' +
+      '<span class="chore-tl-since">上次：<b>' + daysSince + '</b>　共 ' + allDates.length + ' 次</span>' +
+      '<button class="chore-tl-add" data-hid="' + chore.id + '" data-date="' + today + '">' +
+        (todayDone ? '✓ 今日已打卡' : '＋ 今日打卡') +
+      '</button>' +
+    '</div>' +
+    (rows ? '<div class="chore-log-list">' + rows + '</div>' : emptyTxt) +
+    (allDates.length > 8 ? '<div class="chore-tl-more"><button class="chore-tl-show-all" data-hid="' + chore.id + '">顯示全部 ' + allDates.length + ' 筆</button></div>' : '') +
+  '</div>';
 }
 
 var _choreSelColor = CONFIG.habitColors[0];
@@ -4864,7 +5044,7 @@ $('water-custom-input').addEventListener('keydown', function(e) {
    🍽 飲食
    ═══════════════════════════════════════════════════ */
 var _fastInterval = null;
-var _fastCollapsed = false;
+var _fastCollapsed = !loadStorage('myapp_fast',{running:false}).running;
 var _foodCollapsed = false;
 var _foodViewDate = todayKey();
 var _foodEditMeal = '早餐';
@@ -5107,6 +5287,7 @@ function renderFoodHistory() {
     var carb=items.reduce(function(a,x){return a+(+x.carbs||0);},0);
     var lbl=foodDateLabel(dk);
     var totTxt=(cal>0?r1(cal)+'kcal':'')+( pro>0?' · 蛋白質'+r1(pro)+'g':'')+( carb>0?' · 碳水'+r1(carb)+'g':'');
+    var dayNote=(_foodDayNotes&&_foodDayNotes[dk])?_foodDayNotes[dk].trim():'';
     return '<div class="food-history-group">'+
       '<div class="food-history-group-hdr" data-dk="'+dk+'">'+
         '<span class="food-history-date">'+lbl.main+'</span>'+
@@ -5114,6 +5295,7 @@ function renderFoodHistory() {
         '<button class="food-hist-add-date-btn" data-hist-add="'+dk+'" title="補記飲食">＋補記</button>'+
       '</div>'+
       '<div class="food-history-items"'+(kw?'':' style="display:none"')+'>'+
+      (dayNote?'<div class="food-hist-day-note">📝 '+esc(dayNote)+'</div>':'')+
         items.map(function(l){
           var nutChips=(l.calories?'<span class="food-nut-chip">'+r1(l.calories)+'kcal</span>':'')+
                        (l.protein?'<span class="food-nut-chip"> 蛋白'+r1(l.protein)+'g</span>':'');
@@ -5233,7 +5415,7 @@ function renderFood() {
 var _fastState = loadStorage('myapp_fast', { running: false, startTime: null });
 var _fastLogs  = loadStorage('myapp_fast_logs', []);
 function renderFastTimer() {
-  var timerEl=$('fast-timer'),statusEl=$('fast-status');
+  var timerEl=$('fast-timer');
   var startBtn=$('fast-start-btn'),stopBtn=$('fast-stop-btn');
   if(!timerEl)return;
   if(_fastState.running){
@@ -5241,15 +5423,13 @@ function renderFastTimer() {
     var elapsed=Date.now()-_fastState.startTime;
     var h=Math.floor(elapsed/3600000),m=Math.floor((elapsed%3600000)/60000),s=Math.floor((elapsed%60000)/1000);
     timerEl.textContent=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
-    statusEl.textContent='斷食進行中';
   } else {
     startBtn.style.display=''; stopBtn.style.display='none';
     if(_fastState.startTime){
       var dur=(_fastState.endTime||Date.now())-_fastState.startTime;
-      var h2=Math.floor(dur/3600000),m2=Math.floor((dur%3600000)/60000);
-      statusEl.textContent='上次斷食：'+h2+' 小時 '+m2+' 分';
-      timerEl.textContent=String(h2).padStart(2,'0')+':'+String(m2).padStart(2,'0')+':00';
-    } else { timerEl.textContent='00:00:00'; statusEl.textContent='尚未開始'; }
+      var h2=Math.floor(dur/3600000),m2=Math.floor((dur%3600000)/60000),s2=Math.floor((dur%60000)/1000);
+      timerEl.textContent=String(h2).padStart(2,'0')+':'+String(m2).padStart(2,'0')+':'+String(s2).padStart(2,'0');
+    } else { timerEl.textContent='00:00:00'; }
   }
 }
 
@@ -5276,15 +5456,9 @@ function renderFastStats(){
   var presets=[12,16,18];
   var isCustom = presets.indexOf(goal)===-1;
   var statusTxt = pct>=100 ? '🎉 已達成目標！' : '最近一次：'+lastH+'h';
-  var bodyDisplay = _fastStatsOpen ? 'block' : 'none';
-  var toggleTxt = _fastStatsOpen ? '▲ 收起' : '▼ 展開';
   var html=
-  '<div class="fast-stats-header">'+
-    '<span class="fast-stats-title">⏱ 斷食統計</span>'+
-    '<button class="fast-stats-toggle-btn" id="fast-stats-toggle-btn">'+toggleTxt+'</button>'+
-  '</div>'+
-  '<div id="fast-stats-body" style="display:'+bodyDisplay+'">'+
-    '<div class="fast-ring-wrap">'+
+  '<hr class="fast-stats-divider">'+
+  '<div class="fast-ring-wrap">'+
       '<div class="fast-ring-svg-wrap">'+
         '<svg viewBox="0 0 110 110" width="110" height="110">'+
           '<circle cx="55" cy="55" r="'+R+'" fill="none" stroke="var(--bg3)" stroke-width="9"/>'+
@@ -5307,55 +5481,58 @@ function renderFastStats(){
           }).join('')+
           '<input class="fast-goal-custom" id="fast-goal-custom-input" type="number" min="1" max="48"'+
             ' value="'+(isCustom?goal:'')+'" placeholder="自訂h">'+
+          (goal!==16 ? '<button class="fast-goal-reset-btn" id="fast-goal-reset-btn">重設</button>' : '')+
         '</div>'+
       '</div>'+
     '</div>'+
-    '<div class="fast-stats-row">'+
-      '<div class="fast-stat-card"><div class="fast-stat-val">'+sessions+'</div><div class="fast-stat-lbl">累計次數</div></div>'+
-      '<div class="fast-stat-card"><div class="fast-stat-val">'+avgH+'</div><div class="fast-stat-lbl">平均時數</div></div>'+
-      '<div class="fast-stat-card"><div class="fast-stat-val">'+maxH+'</div><div class="fast-stat-lbl">最長時數</div></div>'+
-    '</div>'+
     '<div class="fast-log-section">'+
-      '<div class="fast-log-title">斷食日誌'+
-        '<button class="fast-log-add-btn" id="fast-log-add-btn">＋ 補記錄</button>'+
+      '<div class="fast-log-title">斷食日誌 <button class="fast-log-add-btn" id="fast-log-add-btn">＋ 補記錄</button></div>'+
+      '<div id="fast-log-list">'+
+      (function(){
+        if(!_fastLogs.length) return '<div style="text-align:center;color:var(--tx3);font-size:12px;padding:12px">尚無記錄</div>';
+        var groups={};
+        _fastLogs.forEach(function(l){
+          var dk=l.startTime?fmtLocalTime(l.startTime).slice(0,10):(l.date||'─');
+          if(!groups[dk])groups[dk]=[];
+          groups[dk].push(l);
+        });
+        var dates=Object.keys(groups).sort(function(a,b){return a<b?1:-1;});
+        return dates.map(function(dk){
+          var items=groups[dk];
+          var totalH=items.reduce(function(s,l){return s+(+l.hours||0);},0);
+          var lbl=foodDateLabel(dk);
+          return '<div class="fast-log-group">'+
+            '<div class="fast-log-group-hdr" data-fdk="'+dk+'">'+
+              '<span class="food-history-date">'+lbl.main+'</span>'+
+              '<span class="food-history-totals">共 '+totalH.toFixed(1)+'h</span>'+
+            '</div>'+
+            '<div class="fast-log-group-body" style="display:none">'+
+            items.slice().reverse().map(function(l){
+              var startStr=l.startTime?fmtLocalTime(l.startTime).slice(11,16):'─';
+              var endStr=l.endTime?fmtLocalTime(l.endTime).slice(11,16):'─';
+              return '<div class="fast-log-row">'+
+                '<div class="fast-log-row-main">'+
+                  '<div class="fast-log-row-times">'+
+                    '<span class="fast-log-row-time">'+startStr+'</span>'+
+                    '<span class="fast-log-row-arrow">→</span>'+
+                    '<span class="fast-log-row-time">'+endStr+'</span>'+
+                    '<span class="fast-log-row-hours">'+l.hours+'h</span>'+
+                  '</div>'+
+                  (l.note?'<div class="fast-log-row-note">📝 '+l.note+'</div>':'')+
+                '</div>'+
+                '<div class="fast-log-row-actions">'+
+                  '<button class="food-hist-action-btn fast-log-edit-btn" data-fid="'+l.id+'">✏️</button>'+
+                  '<button class="food-hist-action-btn fast-log-del-btn" data-fid="'+l.id+'">🗑</button>'+
+                '</div>'+
+              '</div>';
+            }).join('')+
+            '</div>'+
+          '</div>';
+        }).join('');
+      })()+
       '</div>'+
-      '<div class="fast-log-cards">'+
-      _fastLogs.slice().reverse().map(function(l){
-        var startStr  = l.startTime ? fmtLocalTime(l.startTime).slice(11,16) : '─';
-        var endStr    = l.endTime   ? fmtLocalTime(l.endTime).slice(11,16)   : '─';
-        var startDate = l.startTime ? fmtLocalTime(l.startTime).slice(0,10)  : (l.date||'─');
-        var noteHtml  = l.note ? '<div class="fast-log-card-note">📝 '+l.note+'</div>' : '';
-        return '<div class="fast-log-card">'+
-          '<div class="fast-log-card-top">'+
-            '<span class="fast-log-card-date">📅 '+startDate+'</span>'+
-            '<span class="fast-log-card-hours">'+l.hours+'h</span>'+
-          '</div>'+
-          '<div class="fast-log-card-times">'+
-            '<div class="fast-log-card-time-item"><span class="fast-log-card-time-label">開始</span><span class="fast-log-card-time-val">'+startStr+'</span></div>'+
-            '<span class="fast-log-card-arrow">→</span>'+
-            '<div class="fast-log-card-time-item"><span class="fast-log-card-time-label">結束</span><span class="fast-log-card-time-val">'+endStr+'</span></div>'+
-          '</div>'+
-          noteHtml+
-          '<div class="fast-log-actions">'+
-            '<button class="fast-log-edit-btn" data-fid="'+l.id+'">修改</button>'+
-            '<button class="fast-log-del-btn" data-fid="'+l.id+'">刪除</button>'+
-          '</div>'+
-        '</div>';
-      }).join('')+
-      '</div>'+
-    '</div>'+
-  '</div>';
+    '</div>';
   wrap.innerHTML=html;
-  /* bind main toggle */
-  var togBtn = wrap.querySelector('#fast-stats-toggle-btn');
-  var statsBody = wrap.querySelector('#fast-stats-body');
-  if(togBtn && statsBody){
-    togBtn.onclick = function(){
-      _fastStatsOpen = !_fastStatsOpen;
-      statsBody.style.display = _fastStatsOpen ? 'block' : 'none';
-      togBtn.textContent = _fastStatsOpen ? '▲ 收起' : '▼ 展開';
-    };
-  }
   /* bind goal chips */
   wrap.querySelectorAll('.fast-goal-chip').forEach(function(btn){
     btn.addEventListener('click', function(){
@@ -5372,15 +5549,28 @@ function renderFastStats(){
       if(v>=1&&v<=48){ _saveFastGoal(v); renderFastStats(); }
     });
   }
+  /* bind reset */
+  var resetBtn = wrap.querySelector('#fast-goal-reset-btn');
+  if(resetBtn){
+    resetBtn.addEventListener('click', function(){ _saveFastGoal(16); renderFastStats(); });
+  }
   /* bind add button */
-  var addBtn=$('fast-log-add-btn');
+  var addBtn=wrap.querySelector('#fast-log-add-btn');
   if(addBtn) addBtn.addEventListener('click', function(){ openFastForm(null); });
+  /* bind group headers */
+  wrap.querySelectorAll('.fast-log-group-hdr').forEach(function(hdr){
+    hdr.addEventListener('click', function(){
+      var body=hdr.nextElementSibling;
+      body.style.display=body.style.display==='none'?'':'none';
+    });
+  });
   /* bind edit/delete */
   wrap.querySelectorAll('.fast-log-edit-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){ openFastForm(btn.dataset.fid); });
+    btn.addEventListener('click', function(e){ e.stopPropagation(); openFastForm(btn.dataset.fid); });
   });
   wrap.querySelectorAll('.fast-log-del-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
       if(!confirm('確定刪除這筆斷食記錄？')) return;
       _fastLogs = _fastLogs.filter(function(l){ return l.id!==btn.dataset.fid; });
       saveStorage('myapp_fast_logs',_fastLogs);
@@ -5466,10 +5656,15 @@ $('fast-reset-btn').addEventListener('click',function(){
 
 /* Fasting card collapse */
 var _fastCardToggle=$('fast-card-toggle'),_fastCardBody=$('fast-card-body');
+/* 依初始狀態同步 DOM */
+if(_fastCardBody) _fastCardBody.style.display=_fastCollapsed?'none':'';
+if(_fastCardToggle) _fastCardToggle.textContent=_fastCollapsed?'▼ 展開':'▲ 收起';
+if(!_fastCollapsed) renderFastStats();
 if(_fastCardToggle)_fastCardToggle.addEventListener('click',function(){
   _fastCollapsed=!_fastCollapsed;
   if(_fastCardBody)_fastCardBody.style.display=_fastCollapsed?'none':'';
   _fastCardToggle.textContent=_fastCollapsed?'▼ 展開':'▲ 收起';
+  if(!_fastCollapsed) renderFastStats();
 });
 
 /* Date nav */
