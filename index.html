@@ -5448,14 +5448,23 @@ function renderFastStats(){
   var sessions=_fastLogs.length;
   var avgH=(_fastLogs.reduce(function(s,l){return s+l.hours;},0)/sessions).toFixed(1);
   var maxH=_fastLogs.reduce(function(mx,l){return l.hours>mx?l.hours:mx;},0).toFixed(1);
-  var lastLog = _fastLogs[_fastLogs.length-1];
-  var lastH = lastLog ? lastLog.hours : 0;
+  /* 若斷食進行中，用即時時數；否則用最近一筆記錄 */
+  var lastH, statusTxt;
+  if (_fastState.running && _fastState.startTime) {
+    var elapsedMs = Date.now() - _fastState.startTime;
+    lastH = Math.round(elapsedMs / 360000) / 10;  /* 小數一位 */
+    statusTxt = '⏱ 進行中：' + lastH + 'h';
+  } else {
+    var lastLog = _fastLogs[_fastLogs.length-1];
+    lastH = lastLog ? lastLog.hours : 0;
+    statusTxt = '最近一次：' + lastH + 'h';
+  }
   var goal = _fastGoal || 16;
   var pct = Math.min(100, Math.round(lastH / goal * 100));
+  if (pct >= 100) statusTxt = '🎉 已達成目標！';
   var R=44, C=2*Math.PI*R, filled=C*(pct/100), gap=C-filled;
   var presets=[12,16,18];
   var isCustom = presets.indexOf(goal)===-1;
-  var statusTxt = pct>=100 ? '🎉 已達成目標！' : '最近一次：'+lastH+'h';
   var html=
   '<hr class="fast-stats-divider">'+
   '<div class="fast-ring-wrap">'+
@@ -5626,7 +5635,13 @@ $('ff-cancel-btn').addEventListener('click', closeFastForm);
 $('ff-save-btn').addEventListener('click', saveFastForm);
 $('fast-form-overlay').addEventListener('click', function(e){ if(e.target===this) closeFastForm(); });
 if(_fastState.running&&!_fastInterval){
-  _fastInterval=setInterval(function(){if(state.currentPage==='food')renderFastTimer();},1000);
+  _fastInterval=setInterval(function(){
+    if(state.currentPage==='food'){
+      renderFastTimer();
+      /* 每10秒更新一次進度環（避免過於頻繁重繪） */
+      if(Math.floor(Date.now()/1000)%10===0) renderFastStats();
+    }
+  },1000);
 }
 $('fast-start-btn').addEventListener('click',function(){
   _fastState={running:true,startTime:Date.now(),endTime:null};
