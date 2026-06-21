@@ -1001,6 +1001,8 @@ input::placeholder { color: var(--tx3); }
 .bp-tbl td.dt-col { text-align: left; color: var(--tx); font-size: 11px; }
 .bp-sys-high { color: #C0392B; font-weight: 600; }
 .bp-sys-normal { color: #3A7A3A; }
+.bp-pp-low { color: #C0392B; font-weight: 700; }
+.bp-pp-low-icon { font-size: 10px; margin-left: 1px; }
 /* BP status badge */
 .bp-status-badge { font-size: 11px; padding: 1px 7px; border-radius: 8px; font-weight: 600; display: inline-block; white-space: nowrap; }
 .bp-status-badge.normal   { background: #D4ECD4; color: #2A7A2A; }
@@ -7534,9 +7536,24 @@ function renderBPChart() {
       '<div class="bp-bar-legend-item" style="margin-left:auto;font-size:10px;color:var(--tx3)">參考線：140/90</div>'+
     '</div>';
 
+    var ppSvgId = 'bp-chart-pp-svg-' + hand;
     section.innerHTML='<div class="bp-chart-title">'+handLabels[hand]+'（最近 '+n+' 筆）</div>'+
-      '<div class="bp-chart-svg-box">'+legend+svg.join('')+'</div>';
+      '<div class="bp-chart-svg-box">'+legend+svg.join('')+'</div>'+
+      '<div class="bp-chart-title" style="margin-top:14px">'+handLabels[hand]+' 脈壓差曲線</div>'+
+      '<div class="bp-chart-svg-box" style="padding:10px 6px 6px"><svg class="trend-svg" id="'+ppSvgId+'" viewBox="0 0 320 110"></svg></div>'+
+      '<div class="bp-chart-legend"><div class="bp-chart-legend-item"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#C0392B;margin-right:3px"></span>脈壓差 ＜ 20（過低）</div>'+
+      '<div class="bp-chart-legend-item"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D68A30;margin-right:3px"></span>脈壓差 ≥ 20</div></div>';
     container.appendChild(section);
+
+    var ppData = logs.map(function(b){
+      return { x: (b.datetime||'').slice(5,10).replace('-','/'), y: b.sys - b.dia, hasData: true };
+    });
+    drawLineChart(ppSvgId, ppData, {
+      width: 320, height: 110,
+      color: '#D68A30',
+      lowThreshold: 20,
+      lowColor: '#C0392B'
+    });
   });
 }
 
@@ -7570,25 +7587,33 @@ function renderBPTable() {
   var leftLogs  = logs.filter(function(b){ return (b.hand||'left')==='left'; });
   var rightLogs = logs.filter(function(b){ return b.hand==='right'; });
   function avg(arr, key) { var v=arr.filter(function(x){return x[key]>0;}); return v.length?(v.reduce(function(s,x){return s+x[key];},0)/v.length).toFixed(0):'─'; }
-  function avgPP(arr){var v=arr.filter(function(x){return x.sys>0&&x.dia>0;});return v.length?(v.reduce(function(s,x){return s+(x.sys-x.dia);},0)/v.length).toFixed(0):'─';}
+  function avgPP(arr){
+    var v=arr.filter(function(x){return x.sys>0&&x.dia>0;});
+    if (!v.length) return { txt: '─', low: false };
+    var raw = v.reduce(function(s,x){return s+(x.sys-x.dia);},0)/v.length;
+    return { txt: raw.toFixed(0), low: raw < 20 };
+  }
+  var leftPP = avgPP(leftLogs), rightPP = avgPP(rightLogs);
   var sumEl = $('bp-tbl-summary');
   if (sumEl) sumEl.innerHTML =
     '<div class="bp-tbl-sum-card"><div class="bp-tbl-sum-title">💙 左手 收縮壓</div><div class="bp-tbl-sum-val">'+avg(leftLogs,'sys')+'</div></div>' +
     '<div class="bp-tbl-sum-card"><div class="bp-tbl-sum-title">💙 左手 舒張壓</div><div class="bp-tbl-sum-val">'+avg(leftLogs,'dia')+'</div></div>' +
-    '<div class="bp-tbl-sum-card"><div class="bp-tbl-sum-title">💙 左手 脈壓差</div><div class="bp-tbl-sum-val">'+avgPP(leftLogs)+'</div></div>' +
+    '<div class="bp-tbl-sum-card"><div class="bp-tbl-sum-title">💙 左手 脈壓差</div><div class="bp-tbl-sum-val'+(leftPP.low?' bp-pp-low':'')+'">'+leftPP.txt+(leftPP.low?'<span class="bp-pp-low-icon">⚠️</span>':'')+'</div></div>' +
     '<div class="bp-tbl-sum-card"><div class="bp-tbl-sum-title">🧡 右手 收縮壓</div><div class="bp-tbl-sum-val">'+avg(rightLogs,'sys')+'</div></div>' +
     '<div class="bp-tbl-sum-card"><div class="bp-tbl-sum-title">🧡 右手 舒張壓</div><div class="bp-tbl-sum-val">'+avg(rightLogs,'dia')+'</div></div>' +
-    '<div class="bp-tbl-sum-card"><div class="bp-tbl-sum-title">🧡 右手 脈壓差</div><div class="bp-tbl-sum-val">'+avgPP(rightLogs)+'</div></div>';
+    '<div class="bp-tbl-sum-card"><div class="bp-tbl-sum-title">🧡 右手 脈壓差</div><div class="bp-tbl-sum-val'+(rightPP.low?' bp-pp-low':'')+'">'+rightPP.txt+(rightPP.low?'<span class="bp-pp-low-icon">⚠️</span>':'')+'</div></div>';
 
   var rows = filtered.length ? filtered.map(function(b) {
     var dt = (b.datetime||'').replace('T',' ').slice(5,16);
     var sHigh = b.sys>=140, dHigh = b.dia>=90;
     var handLabel = (b.hand||'left')==='left' ? '💙左' : '🧡右';
+    var ppVal = (b.sys && b.dia) ? (b.sys - b.dia) : null;
+    var ppLow = ppVal !== null && ppVal < 20;
     return '<tr>' +
       '<td class="dt-col">'+dt+'</td>' +
       '<td class="'+(sHigh?'bp-sys-high':'bp-sys-normal')+'">'+b.sys+'</td>' +
       '<td class="'+(dHigh?'bp-sys-high':'bp-sys-normal')+'">'+b.dia+'</td>' +
-      '<td>'+(b.sys&&b.dia?(b.sys-b.dia):'─')+'</td>' +
+      '<td class="'+(ppLow?'bp-pp-low':'')+'">'+(ppVal!==null?ppVal:'─')+(ppLow?'<span class="bp-pp-low-icon">⚠️</span>':'')+'</td>' +
       '<td>'+(b.pulse||'─')+'</td>' +
       '<td>'+handLabel+'</td>' +
       '<td style="text-align:left;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(b.note||'')+'</td>' +
@@ -10299,6 +10324,12 @@ function drawLineChart(svgId, data, opts) {
     parts.push('<line x1="' + PL + '" y1="' + ry + '" x2="' + (PL + cW) + '" y2="' + ry + '" stroke="var(--ac)" stroke-width="1" stroke-dasharray="3,3" opacity="0.65"/>');
   }
 
+  /* Low-threshold warning line（例如脈壓差 < 20 警戒線） */
+  if (opts.lowThreshold !== undefined && opts.lowThreshold >= yMin && opts.lowThreshold <= yMax) {
+    var lty = vy(opts.lowThreshold).toFixed(1);
+    parts.push('<line x1="' + PL + '" y1="' + lty + '" x2="' + (PL + cW) + '" y2="' + lty + '" stroke="' + (opts.lowColor || '#C0392B') + '" stroke-width="1" stroke-dasharray="3,3" opacity="0.55"/>');
+  }
+
   /* Fill area under line */
   if (opts.fillColor) {
     var areaPath = '';
@@ -10331,7 +10362,10 @@ function drawLineChart(svgId, data, opts) {
   /* Dots */
   data.forEach(function(d, i) {
     if (d.hasData) {
-      parts.push('<circle cx="' + gx(i).toFixed(1) + '" cy="' + vy(d.y).toFixed(1) + '" r="2.5" fill="' + (opts.color || 'var(--ac)') + '" stroke="var(--bg3)" stroke-width="1"/>');
+      var isLow = opts.lowThreshold !== undefined && d.y < opts.lowThreshold;
+      var dotColor = isLow ? (opts.lowColor || '#C0392B') : (opts.color || 'var(--ac)');
+      var dotR = isLow ? 3.4 : 2.5;
+      parts.push('<circle cx="' + gx(i).toFixed(1) + '" cy="' + vy(d.y).toFixed(1) + '" r="' + dotR + '" fill="' + dotColor + '" stroke="var(--bg3)" stroke-width="1"/>');
     }
   });
 
@@ -10393,7 +10427,7 @@ function renderBPTrend() {
     if (!byDate[dk]) byDate[dk] = [];
     byDate[dk].push(b);
   });
-  var sysData = [], diaData = [];
+  var sysData = [], diaData = [], ppData = [];
   days.forEach(function(dk) {
     var list = byDate[dk];
     var label = parseInt(dk.slice(5,7)) + '/' + parseInt(dk.slice(8,10));
@@ -10402,9 +10436,17 @@ function renderBPTrend() {
       var avgDia = r1(list.reduce(function(s,b){return s+b.dia;},0)/list.length);
       sysData.push({ x: label, y: avgSys, hasData: true });
       diaData.push({ x: label, y: avgDia, hasData: true });
+      var ppList = list.filter(function(b){ return b.sys>0 && b.dia>0; });
+      if (ppList.length) {
+        var avgPPv = r1(ppList.reduce(function(s,b){return s+(b.sys-b.dia);},0)/ppList.length);
+        ppData.push({ x: label, y: avgPPv, hasData: true });
+      } else {
+        ppData.push({ x: label, y: 0, hasData: false });
+      }
     } else {
       sysData.push({ x: label, y: 0, hasData: false });
       diaData.push({ x: label, y: 0, hasData: false });
+      ppData.push({ x: label, y: 0, hasData: false });
     }
   });
 
@@ -10446,6 +10488,31 @@ function renderBPTrend() {
     refValue: 140,
     append: true
   });
+
+  /* ── 脈壓差（PP）30天趨勢，低於20特別標記 ── */
+  var validPP = ppData.filter(function(d){ return d.hasData; });
+  if (validPP.length) {
+    var avgPPAll = r1(validPP.reduce(function(s,d){return s+d.y;},0)/validPP.length);
+    var lowPPCount = validPP.filter(function(d){ return d.y < 20; }).length;
+    var html2 = '';
+    html2 += '<div class="trend-section">';
+    html2 += '<div class="trend-title">過去 30 天脈壓差趨勢</div>';
+    html2 += '<div class="trend-meta">平均脈壓差 <strong'+(avgPPAll<20?' style="color:#C0392B"':'')+'>' + avgPPAll + '</strong>　共記錄 <strong>' + validPP.length + '</strong> 天' +
+      (lowPPCount ? '　<strong style="color:#C0392B">⚠️ 過低 ' + lowPPCount + ' 天</strong>' : '') + '</div>';
+    html2 += '<svg class="trend-svg" id="bp-pp-trend-svg" viewBox="0 0 320 130"></svg>';
+    html2 += '<div class="trend-ref-legend"><span style="display:inline-block;width:18px;height:1px;border-top:1.5px dashed #C0392B;margin-right:2px"></span>過低警戒線（20）　';
+    html2 += '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#C0392B;margin-right:3px;vertical-align:middle"></span>脈壓差 ＜ 20</div>';
+    html2 += '</div>';
+    sec.insertAdjacentHTML('beforeend', html2);
+
+    drawLineChart('bp-pp-trend-svg', ppData, {
+      width: 320, height: 130,
+      color: '#D68A30',
+      fillColor: 'rgba(214,138,48,0.10)',
+      lowThreshold: 20,
+      lowColor: '#C0392B'
+    });
+  }
 }
 
 /* ── 睡眠趨勢 ── */
