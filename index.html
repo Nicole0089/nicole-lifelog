@@ -1951,8 +1951,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
           <div class="settings-item" style="cursor:default">
             <span class="settings-item-icon">⏰</span>
             <div class="settings-item-body">
-              <div class="settings-item-title">自動備份</div>
-              <div class="settings-item-sub">每次開啟 App 自動備份至 Drive</div>
+              <div class="settings-item-title">自動同步備份</div>
+              <div class="settings-item-sub">資料變動後自動同步至 Drive（停止編輯約 5 秒後）</div>
             </div>
             <label class="toggle-switch">
               <input type="checkbox" id="gdrive-auto-toggle">
@@ -2952,6 +2952,26 @@ function loadStorage(key, def) {
 function saveStorage(key, val) {
   if (!_storageOK) return;
   try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+  scheduleGDriveSync(key);
+}
+
+/* ── Google Drive 同步備份：資料異動後 debounce 自動同步 ──
+   任何 saveStorage() 寫入都會呼叫這裡（gdrive 自身的 meta key 除外，
+   避免觸發無限迴圈）。停止編輯 _GDRIVE_SYNC_DEBOUNCE_MS 毫秒後才真正執行備份，
+   讓連續操作只觸發一次網路請求。 */
+var _gdriveSyncTimer = null;
+var _GDRIVE_SYNC_DEBOUNCE_MS = 5000;
+var _GDRIVE_SYNC_EXCLUDE_KEYS = ['myapp_gdrive_cid','myapp_gdrive_disconnected','myapp_gdrive_auto','myapp_gdrive_last'];
+function scheduleGDriveSync(key) {
+  if (_GDRIVE_SYNC_EXCLUDE_KEYS.indexOf(key) >= 0) return;
+  if (typeof _gdriveClientId === 'undefined' || !_gdriveClientId) return;
+  if (typeof _gdriveDisconnected !== 'undefined' && _gdriveDisconnected) return;
+  if (typeof _gdriveAutoBackup !== 'undefined' && !_gdriveAutoBackup) return;
+  if (_gdriveSyncTimer) clearTimeout(_gdriveSyncTimer);
+  _gdriveSyncTimer = setTimeout(function() {
+    _gdriveSyncTimer = null;
+    if (typeof gdriveBackup === 'function') gdriveBackup(true);
+  }, _GDRIVE_SYNC_DEBOUNCE_MS);
 }
 
 /* ═══════════════════════════════════════════════════
@@ -8204,10 +8224,11 @@ window.addEventListener('load', function() {
     if(wait>8000)clearInterval(t);
   },300);
 });
-/* auto-backup on page hide */
+/* auto-backup on page hide：若有尚未觸發的 debounce 同步，立即 flush，
+   避免使用者切到背景/關閉分頁時，最後幾秒的變更來不及同步 */
 document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState==='hidden'&&_gdriveClientId&&_gdriveAutoBackup&&_gdriveToken){
-    gdriveBackup(true);
+  if(document.visibilityState==='hidden'&&_gdriveClientId&&!_gdriveDisconnected&&_gdriveAutoBackup&&_gdriveToken){
+    if(_gdriveSyncTimer){ clearTimeout(_gdriveSyncTimer); _gdriveSyncTimer=null; gdriveBackup(true); }
   }
 });
 
