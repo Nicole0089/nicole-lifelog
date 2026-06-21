@@ -3381,7 +3381,19 @@ function buildTodoHTML(t) {
   if (t.repeat && t.repeat.unit) {
     var rp = t.repeat;
     var unitMap = {'day':'天','week':'週','month':'月','year':'年'};
-    var rpLabel = '🔁 ' + (rp.interval||1) + unitMap[rp.unit];
+    var intervalTxt = (rp.interval && rp.interval > 1) ? rp.interval : '';
+    var rpLabel = '🔁 每' + intervalTxt + unitMap[rp.unit];
+    if (rp.unit === 'week' && rp.weekdays && rp.weekdays.length) {
+      var wdNames = ['日','一','二','三','四','五','六'];
+      var wdArr = rp.weekdays.slice().sort(function(a,b){ return a-b; }).map(function(w){ return wdNames[w]; });
+      rpLabel += '（' + wdArr.join('、') + '）';
+    } else if (rp.unit === 'month' && rp.monthDayType === 'day' && rp.monthDay) {
+      rpLabel += '（' + rp.monthDay + '號）';
+    } else if (rp.unit === 'month' && rp.monthDayType === 'week' && rp.monthWeekNth) {
+      var nthLabel = ['','第一','第二','第三','第四'];
+      var wdLabel2 = ['日','一','二','三','四','五','六'];
+      rpLabel += '（' + (rp.monthWeekNth===-1?'最後一個':(nthLabel[rp.monthWeekNth]||'')+'個') + '週' + (wdLabel2[rp.monthWeekWd]||'') + '）';
+    }
     metaHtml += '<span class="repeat-chip">' + rpLabel + '</span>';
 
     // 顯示結束日期 / 剩餘次數
