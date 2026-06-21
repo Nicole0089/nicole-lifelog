@@ -1959,6 +1959,11 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
               <span class="toggle-slider"></span>
             </label>
           </div>
+          <div style="font-size:10px;color:var(--tx3);padding:6px 2px 0;line-height:1.5">
+            ℹ️ 每天會另外在 Drive「Nicole日誌備份_歷史快照」資料夾存一份當天的獨立備份，
+            就算主備份檔的版本記錄被洗掉，仍可從這裡找回某一天的資料。
+            快照會自動清理：保留最近 90 天，每個月 1 號的快照永久保留。
+          </div>
         </div>
 
         <!-- 本機備份（備用） -->
@@ -2030,6 +2035,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
           <button class="dash-slogan-edit-btn" id="dash-slogan-edit-btn" title="編輯">✏️</button>
         </div>
       </div>
+    <div id="gdrive-sync-banner" style="display:none"></div>
+    <div id="local-export-reminder" style="display:none"></div>
     <div id="temp-memo-card" class="temp-memo-card collapsed"></div>
     <div id="checkin-section" class="checkin-section"></div>
       <div class="dash-grid" id="dash-grid"></div>
@@ -2961,7 +2968,7 @@ function saveStorage(key, val) {
    讓連續操作只觸發一次網路請求。 */
 var _gdriveSyncTimer = null;
 var _GDRIVE_SYNC_DEBOUNCE_MS = 5000;
-var _GDRIVE_SYNC_EXCLUDE_KEYS = ['myapp_gdrive_cid','myapp_gdrive_disconnected','myapp_gdrive_auto','myapp_gdrive_last'];
+var _GDRIVE_SYNC_EXCLUDE_KEYS = ['myapp_gdrive_cid','myapp_gdrive_disconnected','myapp_gdrive_auto','myapp_gdrive_last','myapp_gdrive_sync_failing','myapp_gdrive_snapshot_date','myapp_gdrive_last_synced_mtime','myapp_gdrive_conflict'];
 function scheduleGDriveSync(key) {
   if (_GDRIVE_SYNC_EXCLUDE_KEYS.indexOf(key) >= 0) return;
   if (typeof _gdriveClientId === 'undefined' || !_gdriveClientId) return;
@@ -8065,6 +8072,26 @@ var _gdriveToken     = null;
 var _gdriveTokenClient = null;
 var _gdrivePending   = null;
 var _gdrivePendingSilent = false;
+/* 同步失敗持續標記：靜默授權失敗時設為 true，成功備份一次後清除為 false。
+   用來在總覽頁顯示持續性警告，而不是只靠幾秒就消失的 toast（2026-06 加入） */
+var _gdriveSyncFailing = loadStorage('myapp_gdrive_sync_failing', false);
+/* 每日歷史快照：獨立於主備份檔，每天最多建立/更新一份，
+   不依賴 Google Drive 對單一檔案的版本保留上限（30天/100版）（2026-06 加入） */
+var _GDRIVE_SNAPSHOT_FOLDER = 'Nicole日誌備份_歷史快照';
+var _gdriveSnapshotDate = loadStorage('myapp_gdrive_snapshot_date', '');
+/* 多裝置衝突偵測：記錄「這台裝置上次成功同步/還原時，雲端檔案的 modifiedTime」。
+   下次要上傳前，先比對雲端目前的 modifiedTime 是否還是同一個值——
+   如果不是，代表雲端在這之間被「其他裝置」更新過，這台裝置手上的資料可能已經過期，
+   貿然上傳會整份蓋掉那台裝置的修改。第一次使用（空字串）時不做比對，
+   等成功同步過一次之後才開始生效（2026-06 加入） */
+var _gdriveLastSyncedModifiedTime = loadStorage('myapp_gdrive_last_synced_mtime', '');
+var _gdriveConflict = loadStorage('myapp_gdrive_conflict', false);
+
+/* 本機匯出提醒：太久沒按過「📤 匯出 JSON」時，在總覽頁顯示提醒。
+   目的是避免所有備份（主檔案＋每日快照）都只活在同一個 Google 帳號裡，
+   完全沒有不依賴該帳號的獨立副本（2026-06 加入） */
+var _localExportLast = loadStorage('myapp_local_export_last', '');
+var _LOCAL_EXPORT_REMINDER_DAYS = 35;
 
 function buildBackupData() {
   return { version:1, exportDate:new Date().toISOString(),
@@ -8096,10 +8123,15 @@ function initGDriveClient() {
     callback: function(resp) {
       if (resp.error) {
         if (_gdrivePendingSilent) {
-          /* 靜默授權失敗（未登入或需同意），只顯示 toast */
+          /* 靜默授權失敗（未登入或需同意）：toast 只會顯示幾秒就消失，
+             另外設定持續性旗標，在總覽頁顯示常駐警告，避免使用者沒注意到 */
           _gdrivePendingSilent = false; _gdrivePending = null;
+          _gdriveSyncFailing = true; saveStorage('myapp_gdrive_sync_failing', true);
+          if (typeof renderGDriveSyncBanner === 'function') renderGDriveSyncBanner();
           showToast('自動備份待授權，請手動點一次「同步至 Google Drive」', true);
         } else {
+          _gdriveSyncFailing = true; saveStorage('myapp_gdrive_sync_failing', true);
+          if (typeof renderGDriveSyncBanner === 'function') renderGDriveSyncBanner();
           alert('Google 授權失敗：' + resp.error); _gdrivePending = null;
         }
         return;
@@ -8137,28 +8169,79 @@ function requireGToken(cb, silent) {
   _doRequest();
 }
 
-async function gdriveFindFile(token, name) {
+async function gdriveFindFile(token, name, parentId) {
+  var q = 'name%3D%22'+encodeURIComponent(name)+'%22+and+trashed%3Dfalse';
+  if (parentId) q += '+and+%27'+parentId+'%27+in+parents';
   var r = await fetch(
-    'https://www.googleapis.com/drive/v3/files?q=name%3D%22'+encodeURIComponent(name)+'%22+and+trashed%3Dfalse&spaces=drive&fields=files(id,name,modifiedTime)',
+    'https://www.googleapis.com/drive/v3/files?q='+q+'&spaces=drive&fields=files(id,name,modifiedTime)',
     { headers: { Authorization: 'Bearer '+token } }
   );
   var d = await r.json();
   return (d.files && d.files.length) ? d.files[0] : null;
 }
 
-async function gdriveUpload(token, name, jsonStr, fileId) {
-  var meta = JSON.stringify({ name: name, mimeType: 'application/json' });
+/* 尋找（或建立）一個 Drive 資料夾，回傳資料夾 id；失敗回傳 null。
+   用於把每日歷史快照集中放在獨立資料夾，避免散落在 Drive 根目錄（2026-06 加入） */
+async function gdriveFindOrCreateFolder(token, name) {
+  try {
+    var q = 'name%3D%22'+encodeURIComponent(name)+'%22+and+mimeType%3D%22application%2Fvnd.google-apps.folder%22+and+trashed%3Dfalse';
+    var r = await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&spaces=drive&fields=files(id,name)',
+      { headers: { Authorization: 'Bearer '+token } });
+    var d = await r.json();
+    if (d.files && d.files.length) return d.files[0].id;
+    var cr = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer '+token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, mimeType: 'application/vnd.google-apps.folder' })
+    });
+    if (!cr.ok) return null;
+    var cd = await cr.json();
+    return cd.id || null;
+  } catch(e) { return null; }
+}
+
+async function gdriveUpload(token, name, jsonStr, fileId, parentId) {
+  var metaObj = { name: name, mimeType: 'application/json' };
+  if (parentId && !fileId) metaObj.parents = [parentId];
+  var meta = JSON.stringify(metaObj);
   var form = new FormData();
   form.append('metadata', new Blob([meta], { type: 'application/json' }));
   form.append('file', new Blob([jsonStr], { type: 'application/json' }));
   var url = fileId
-    ? 'https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart'
-    : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    ? 'https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart&fields=id,modifiedTime'
+    : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime';
   return fetch(url, {
     method: fileId ? 'PATCH' : 'POST',
     headers: { Authorization: 'Bearer '+token },
     body: form
   });
+}
+
+/* 清理過期的每日歷史快照：保留最近 _GDRIVE_SNAPSHOT_KEEP_DAYS 天內的快照，
+   以及每個月 1 號（檔名 -01 結尾）的快照永久保留，其餘自動刪除。
+   只在當天「新建立」一份快照之後才呼叫一次，自然限制最多每天執行一次。
+   整體或單一檔案刪除失敗都靜默略過，不影響備份本身、下次再試（2026-06 加入） */
+var _GDRIVE_SNAPSHOT_KEEP_DAYS = 90;
+async function gdrivePruneSnapshots(token, folderId) {
+  try {
+    var q = '%27'+folderId+'%27+in+parents+and+trashed%3Dfalse';
+    var r = await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&spaces=drive&fields=files(id,name)&pageSize=1000',
+      { headers: { Authorization: 'Bearer '+token } });
+    var d = await r.json();
+    var files = d.files || [];
+    var keepFromDate = localDateStr(new Date(Date.now() - _GDRIVE_SNAPSHOT_KEEP_DAYS*86400000));
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      var m = /nicole_journal_backup_(\d{4}-\d{2}-\d{2})\.json$/.exec(f.name);
+      if (!m) continue; /* 檔名格式不符就跳過，不亂刪非預期的檔案 */
+      var dateStr = m[1];
+      if (dateStr.slice(8,10) === '01') continue; /* 每月 1 號永久保留 */
+      if (dateStr >= keepFromDate) continue; /* 還在保留天數內 */
+      try {
+        await fetch('https://www.googleapis.com/drive/v3/files/'+f.id, { method:'DELETE', headers:{ Authorization:'Bearer '+token } });
+      } catch(e) { /* 單一檔案刪除失敗，略過繼續處理下一個 */ }
+    }
+  } catch(e) { /* 整體清理失敗不影響備份本身 */ }
 }
 
 /* 下載雲端備份檔內容並解析為物件；失敗回傳 null（不丟例外，方便呼叫端直接判斷） */
@@ -8194,6 +8277,24 @@ function gdriveBackup(silent) {
       var newCount = _backupRecordCount(newData);
       var existing = await gdriveFindFile(_gdriveToken, name);
       if (existing) {
+        /* 多裝置衝突偵測：雲端目前的 modifiedTime 如果跟「這台裝置上次同步時」記錄的不一樣，
+           代表雲端在這之間被其他裝置更新過，這台裝置手上的資料可能已經過期 */
+        if (_gdriveLastSyncedModifiedTime && existing.modifiedTime !== _gdriveLastSyncedModifiedTime) {
+          if (silent) {
+            if (lbl) lbl.textContent = '⚠️ 已暫停自動同步（偵測到其他裝置的更新）';
+            _gdriveConflict = true; saveStorage('myapp_gdrive_conflict', true);
+            if (typeof renderGDriveSyncBanner === 'function') renderGDriveSyncBanner();
+            showToast('⚠️ 偵測到另一台裝置已更新雲端資料，已暫停自動同步，請手動確認後再同步', true);
+            return;
+          }
+          var proceedConflict = confirm(
+            '⚠️ 警告：雲端上的資料已經被其他裝置更新過（比這台裝置上次同步之後還新）！\n\n'+
+            '如果繼續，可能會蓋掉另一台裝置剛剛的修改。\n\n'+
+            '建議先取消，去那台裝置確認資料、或在這台裝置先「從 Drive 還原」同步最新版本，再決定是否要覆蓋。\n\n'+
+            '確定要忽略此警告，強制用這台裝置的資料覆蓋雲端嗎？'
+          );
+          if (!proceedConflict) { if (lbl) lbl.textContent = '已取消備份'; return; }
+        }
         var oldData = await gdriveDownloadFile(_gdriveToken, existing.id);
         var oldCount = _backupRecordCount(oldData);
         /* 安全檢查：本機資料筆數明顯比雲端備份少很多時，不直接無聲覆蓋
@@ -8220,10 +8321,35 @@ function gdriveBackup(silent) {
         if (err.error && err.error.code === 401) { _gdriveToken=null; if(!silent)gdriveBackup(silent); else showToast('授權已過期，請手動同步一次以重新授權', true); return; }
         throw new Error(resp.statusText);
       }
+      var respData = await resp.json().catch(function(){return null;});
+      if (respData && respData.modifiedTime) {
+        _gdriveLastSyncedModifiedTime = respData.modifiedTime;
+        saveStorage('myapp_gdrive_last_synced_mtime', respData.modifiedTime);
+      }
+      if (_gdriveConflict) { _gdriveConflict = false; saveStorage('myapp_gdrive_conflict', false); }
       var now = new Date();
       _gdriveLastBackup = now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
       saveStorage('myapp_gdrive_last', _gdriveLastBackup);
+      if (_gdriveSyncFailing) { _gdriveSyncFailing = false; saveStorage('myapp_gdrive_sync_failing', false); }
+      if (typeof renderGDriveSyncBanner === 'function') renderGDriveSyncBanner();
       if (lbl) lbl.textContent = '上次備份：'+_gdriveLastBackup;
+      /* 每日歷史快照：每天最多建立/更新一次，獨立於主備份檔，
+         不受 Google Drive 對單一檔案的版本保留上限（30天/100版）影響。
+         快照失敗不影響本次主備份結果，靜默略過、下次備份會再試一次 */
+      if (_gdriveSnapshotDate !== todayKey()) {
+        try {
+          var folderId = await gdriveFindOrCreateFolder(_gdriveToken, _GDRIVE_SNAPSHOT_FOLDER);
+          if (folderId) {
+            var snapName = 'nicole_journal_backup_'+todayKey()+'.json';
+            var snapExisting = await gdriveFindFile(_gdriveToken, snapName, folderId);
+            var snapResp = await gdriveUpload(_gdriveToken, snapName, json, snapExisting ? snapExisting.id : null, folderId);
+            if (snapResp.ok) {
+              _gdriveSnapshotDate = todayKey(); saveStorage('myapp_gdrive_snapshot_date', _gdriveSnapshotDate);
+              gdrivePruneSnapshots(_gdriveToken, folderId);
+            }
+          }
+        } catch(e) { /* 快照失敗不影響主備份，略過 */ }
+      }
       if (!silent) alert('✅ 備份成功！已儲存至 Google Drive');
     } catch(e) { if (lbl && !silent) lbl.textContent = '備份失敗，請重試'; if (!silent) alert('備份失敗：'+e.message); }
   }, silent);
@@ -8242,6 +8368,10 @@ function gdriveRestore() {
         ? '\n\n⚠️ 注意：雲端備份只有 '+driveCount+' 筆，比目前 App 內的 '+localCount+' 筆少很多，還原後可能會遺失目前的資料！'
         : '';
       if (!confirm('確定要從 Google Drive 還原備份嗎？\n\n雲端備份：'+driveCount+' 筆\n目前 App 內：'+localCount+' 筆\n\n還原後目前 App 內的所有資料都將被覆蓋！'+warn)) return;
+      /* 還原 = 拉取雲端最新版本，藉此把這台裝置的同步基準值更新成雲端目前的 modifiedTime，
+         並解除多裝置衝突警告（既然已經同步到最新版本，衝突自然解除） */
+      if (file.modifiedTime) { _gdriveLastSyncedModifiedTime = file.modifiedTime; saveStorage('myapp_gdrive_last_synced_mtime', file.modifiedTime); }
+      if (_gdriveConflict) { _gdriveConflict = false; saveStorage('myapp_gdrive_conflict', false); }
       importBackup_data(data, {skipCountCheck:true});
     } catch(e) { alert('還原失敗：'+e.message); }
   }, false);
@@ -8292,6 +8422,12 @@ function exportBackup() {
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a'); a.href=url; a.download='Nicole日誌備份_'+todayKey()+'.json'; a.click();
   URL.revokeObjectURL(url);
+  /* 記錄本機匯出時間，供總覽頁「太久沒匯出本機備份」提醒使用（2026-06 加入）。
+     僅能確認瀏覽器有觸發下載，無法確認使用者真的把檔案存到安全的地方，
+     但已是純前端網頁能拿到的最佳訊號 */
+  _localExportLast = Date.now();
+  saveStorage('myapp_local_export_last', _localExportLast);
+  if (typeof renderLocalExportReminder === 'function') renderLocalExportReminder();
 }
 
 function importBackup_data(data, opts) {
@@ -10922,6 +11058,43 @@ function renderDashboard() {
   if (seBtn) seBtn.onclick = function(){ openSloganEdit(); };
   renderTempMemo();
   renderCheckin();
+  renderGDriveSyncBanner();
+  renderLocalExportReminder();
+}
+
+/* 本機匯出提醒 banner：太久沒按過「匯出 JSON」時持續顯示，
+   點擊直接觸發匯出（2026-06 加入）。
+   用淺色系（沿用主題的玫瑰色）跟 Drive 警告 banner 的橘色區分，
+   表達「這是溫和提醒」而不是「目前出問題了」 */
+function renderLocalExportReminder() {
+  var el = $('local-export-reminder'); if (!el) return;
+  var hasData = _backupRecordCount(buildBackupData()) >= 5;
+  var stale = !_localExportLast || (Date.now() - (+_localExportLast)) > _LOCAL_EXPORT_REMINDER_DAYS*86400000;
+  if (!hasData || !stale) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  var subMsg = _localExportLast
+    ? '上次匯出：'+localDateStr(new Date(+_localExportLast))+'（超過 '+_LOCAL_EXPORT_REMINDER_DAYS+' 天）'
+    : '尚未匯出過本機備份';
+  el.style.cssText = 'display:flex;align-items:center;gap:8px;background:#f5efec;border:1px solid #A07878;border-radius:10px;padding:10px 12px;margin:0 0 10px;font-size:12.5px;color:#7a5c52;cursor:pointer';
+  el.innerHTML = '<span style="font-size:16px;flex-shrink:0">💾</span>'+
+    '<span style="flex:1;line-height:1.4">建議定期把資料匯出存到自己的電腦，不要只放在 Google 帳號裡。'+subMsg+'，點此立即匯出 JSON</span>'+
+    '<span style="font-size:14px;flex-shrink:0">›</span>';
+  el.onclick = function(){ exportBackup(); showToast('已匯出，請記得把檔案存到安全的地方'); };
+}
+
+/* 總覽頁同步狀態警告 banner：自動同步已開啟但目前處於失敗狀態時持續顯示，
+   點擊可直接觸發互動授權重新同步（2026-06 加入，取代容易被忽略的短暫 toast） */
+function renderGDriveSyncBanner() {
+  var el = $('gdrive-sync-banner'); if (!el) return;
+  var enabled = !!(_gdriveClientId && !_gdriveDisconnected && _gdriveAutoBackup);
+  if (!enabled || (!_gdriveSyncFailing && !_gdriveConflict)) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.cssText = 'display:flex;align-items:center;gap:8px;background:#fdf3ee;border:1px solid #c87;border-radius:10px;padding:10px 12px;margin:0 0 10px;font-size:12.5px;color:#a05a3a;cursor:pointer';
+  var msg = _gdriveConflict
+    ? '偵測到另一台裝置已更新雲端資料，自動同步已暫停以避免互相覆蓋。點此查看處理方式'
+    : 'Google Drive 自動同步目前未授權，最新資料還沒同步到雲端。點此重新授權';
+  el.innerHTML = '<span style="font-size:16px;flex-shrink:0">⚠️</span>'+
+    '<span style="flex:1;line-height:1.4">'+msg+'</span>'+
+    '<span style="font-size:14px;flex-shrink:0">›</span>';
+  el.onclick = function(){ gdriveBackup(false); };
 }
 
 function renderTempMemo() {
