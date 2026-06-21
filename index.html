@@ -8078,6 +8078,13 @@ function buildBackupData() {
     privateFoods:(typeof _privateFoods!=='undefined'?_privateFoods:[]),
     bodyData:(typeof _bodyData!=='undefined'?_bodyData:{}),
     foodDayType:(typeof _foodDayType!=='undefined'?_foodDayType:{}),
+    /* 2026-06 補上：原本完全不在備份範圍內的欄位（曾發生救援時這些資料救不回來的風險） */
+    customFoods:(typeof _customFoods!=='undefined'?_customFoods:[]),
+    favFoods:(typeof _favFoods!=='undefined'?_favFoods:[]),
+    deletedStdFoods:(typeof _deletedStdFoods!=='undefined'?_deletedStdFoods:[]),
+    sleepCustomFields:(typeof _sfCustomFields!=='undefined'?_sfCustomFields:[]),
+    tempMemo:loadStorage('myapp_temp_memo',''),
+    fastGoal:(typeof _fastGoal!=='undefined'?_fastGoal:loadStorage('myapp_fast_goal',16)),
     slogan:loadStorage('myapp_slogan','') };
 }
 
@@ -8169,7 +8176,8 @@ async function gdriveDownloadFile(token, fileId) {
 function _backupRecordCount(data) {
   if (!data) return 0;
   var arrs = [data.todos, data.habits, data.chores, data.sleepLogs, data.bpLogs,
-              data.waterLogs, data.foodLogs, data.memos, data.diaryEntries, data.fastLogs];
+              data.waterLogs, data.foodLogs, data.memos, data.diaryEntries, data.fastLogs,
+              data.privateFoods, data.customFoods, data.favFoods];
   var n = 0;
   arrs.forEach(function(a){ if (Array.isArray(a)) n += a.length; });
   return n;
@@ -8234,7 +8242,7 @@ function gdriveRestore() {
         ? '\n\n⚠️ 注意：雲端備份只有 '+driveCount+' 筆，比目前 App 內的 '+localCount+' 筆少很多，還原後可能會遺失目前的資料！'
         : '';
       if (!confirm('確定要從 Google Drive 還原備份嗎？\n\n雲端備份：'+driveCount+' 筆\n目前 App 內：'+localCount+' 筆\n\n還原後目前 App 內的所有資料都將被覆蓋！'+warn)) return;
-      importBackup_data(data);
+      importBackup_data(data, {skipCountCheck:true});
     } catch(e) { alert('還原失敗：'+e.message); }
   }, false);
 }
@@ -8286,8 +8294,22 @@ function exportBackup() {
   URL.revokeObjectURL(url);
 }
 
-function importBackup_data(data) {
+function importBackup_data(data, opts) {
+  opts = opts || {};
   if (!data.version) { alert('備份檔格式錯誤'); return; }
+  /* 安全檢查：匯入資料筆數若比目前本機資料少很多，先警告再決定是否繼續
+     （呼叫端若已經在自己的 confirm 裡顯示過筆數比對，可傳 skipCountCheck:true 避免重複跳窗） */
+  if (!opts.skipCountCheck) {
+    var incomingCount = _backupRecordCount(data);
+    var localCount = _backupRecordCount(buildBackupData());
+    if (localCount >= 5 && incomingCount < localCount * 0.5) {
+      var proceed = confirm(
+        '⚠️ 警告：要匯入的資料只有 '+incomingCount+' 筆，比目前 App 內的 '+localCount+' 筆少很多！\n\n'+
+        '繼續匯入會覆蓋掉目前的資料，可能造成資料遺失。\n\n確定要繼續嗎？'
+      );
+      if (!proceed) return;
+    }
+  }
   if (data.todos)        { state.todos        = data.todos;        saveTodos(); }
   if (data.habits)       { state.habits       = data.habits;       saveHabits(); }
   if (data.chores)       { state.chores       = data.chores;       saveChores(); }
@@ -8305,6 +8327,12 @@ function importBackup_data(data) {
   if (data.privateFoods) { saveStorage('myapp_private_foods', data.privateFoods); }
   if (data.bodyData) { saveStorage('myapp_body_data', data.bodyData); }
   if (data.foodDayType) { saveStorage('myapp_food_day_type', data.foodDayType); }
+  if (data.customFoods) { saveStorage('myapp_custom_foods', data.customFoods); }
+  if (data.favFoods) { saveStorage('myapp_fav_foods', data.favFoods); }
+  if (data.deletedStdFoods) { saveStorage('myapp_deleted_std_foods', data.deletedStdFoods); }
+  if (data.sleepCustomFields) { saveStorage('myapp_sleep_custom_fields', data.sleepCustomFields); }
+  if (data.tempMemo !== undefined) { saveStorage('myapp_temp_memo', data.tempMemo); }
+  if (data.fastGoal) { saveStorage('myapp_fast_goal', data.fastGoal); }
   if (data.slogan !== undefined) { saveStorage('myapp_slogan', data.slogan); }
   alert('備份還原成功！'); location.reload();
 }
