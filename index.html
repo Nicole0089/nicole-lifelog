@@ -8154,6 +8154,27 @@ async function gdriveUpload(token, name, jsonStr, fileId) {
   });
 }
 
+/* 下載雲端備份檔內容並解析為物件；失敗回傳 null（不丟例外，方便呼叫端直接判斷） */
+async function gdriveDownloadFile(token, fileId) {
+  try {
+    var r = await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media',
+      { headers: { Authorization: 'Bearer '+token } });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+/* 計算備份資料的主要陣列總筆數（todos/habits/chores/...），用來判斷資料是否異常減少，
+   作為備份/還原前的安全防呆依據（2026-06 加入，避免空資料無聲覆蓋雲端好備份） */
+function _backupRecordCount(data) {
+  if (!data) return 0;
+  var arrs = [data.todos, data.habits, data.chores, data.sleepLogs, data.bpLogs,
+              data.waterLogs, data.foodLogs, data.memos, data.diaryEntries, data.fastLogs];
+  var n = 0;
+  arrs.forEach(function(a){ if (Array.isArray(a)) n += a.length; });
+  return n;
+}
+
 function gdriveBackup(silent) {
   if (silent) _gdrivePendingSilent = true;
   requireGToken(async function() {
@@ -8161,8 +8182,30 @@ function gdriveBackup(silent) {
     if (lbl && !silent) lbl.textContent = '備份中…';
     try {
       var name = 'nicole_journal_backup.json';
-      var json = JSON.stringify(buildBackupData(), null, 2);
+      var newData = buildBackupData();
+      var newCount = _backupRecordCount(newData);
       var existing = await gdriveFindFile(_gdriveToken, name);
+      if (existing) {
+        var oldData = await gdriveDownloadFile(_gdriveToken, existing.id);
+        var oldCount = _backupRecordCount(oldData);
+        /* 安全檢查：本機資料筆數明顯比雲端備份少很多時，不直接無聲覆蓋
+           （常見情境：App 更新/清除瀏覽器資料導致 localStorage 被清空） */
+        if (oldCount >= 5 && newCount < oldCount * 0.5) {
+          if (silent) {
+            if (lbl) lbl.textContent = '⚠️ 已暫停自動同步（資料異常減少）';
+            showToast('⚠️ 本機資料（'+newCount+' 筆）遠少於雲端備份（'+oldCount+' 筆），已暫停自動同步以保護資料，請至設定頁手動確認', true);
+            return;
+          }
+          var proceed = confirm(
+            '⚠️ 警告：目前 App 內資料共 '+newCount+' 筆，比雲端備份的 '+oldCount+' 筆少很多！\n\n'+
+            '如果繼續，雲端備份將被目前較少的資料覆蓋，舊資料可能無法復原。\n\n'+
+            '建議先取消，去 Google Drive「版本記錄」確認雲端資料沒問題後，再考慮是否要繼續。\n\n'+
+            '確定要繼續覆蓋雲端備份嗎？'
+          );
+          if (!proceed) { if (lbl) lbl.textContent = '已取消備份'; return; }
+        }
+      }
+      var json = JSON.stringify(newData, null, 2);
       var resp = await gdriveUpload(_gdriveToken, name, json, existing ? existing.id : null);
       if (!resp.ok) {
         var err = await resp.json().catch(function(){return{};});
@@ -8179,15 +8222,18 @@ function gdriveBackup(silent) {
 }
 
 function gdriveRestore() {
-  if (!confirm('確定要從 Google Drive 還原備份？目前的所有資料都將被覆蓋！')) return;
   requireGToken(async function() {
     try {
       var file = await gdriveFindFile(_gdriveToken, 'nicole_journal_backup.json');
       if (!file) { alert('Google Drive 中找不到備份檔案'); return; }
-      var r = await fetch('https://www.googleapis.com/drive/v3/files/'+file.id+'?alt=media',
-        { headers: { Authorization: 'Bearer '+_gdriveToken } });
-      if (!r.ok) throw new Error(r.statusText);
-      var data = await r.json();
+      var data = await gdriveDownloadFile(_gdriveToken, file.id);
+      if (!data) { alert('讀取雲端備份失敗，請重試'); return; }
+      var driveCount = _backupRecordCount(data);
+      var localCount = _backupRecordCount(buildBackupData());
+      var warn = (localCount >= 5 && driveCount < localCount * 0.5)
+        ? '\n\n⚠️ 注意：雲端備份只有 '+driveCount+' 筆，比目前 App 內的 '+localCount+' 筆少很多，還原後可能會遺失目前的資料！'
+        : '';
+      if (!confirm('確定要從 Google Drive 還原備份嗎？\n\n雲端備份：'+driveCount+' 筆\n目前 App 內：'+localCount+' 筆\n\n還原後目前 App 內的所有資料都將被覆蓋！'+warn)) return;
       importBackup_data(data);
     } catch(e) { alert('還原失敗：'+e.message); }
   }, false);
