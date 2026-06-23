@@ -1225,7 +1225,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .recipe-stat-lbl { font-size: 12px; color: var(--tx3); }
 .recipe-result-info { font-size: 13px; color: var(--tx3); padding: 5px 14px 3px; flex-shrink: 0; }
 .recipe-grid { padding: 8px 10px 100px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.recipe-card { background: var(--bg3); border: 0.5px solid var(--bd); border-radius: var(--r); cursor: pointer; overflow: hidden; display: flex; flex-direction: column; transition: border-color .15s; }
+.recipe-card { background: var(--bg3); border: 0.5px solid var(--bd); border-radius: var(--r); cursor: pointer; overflow: hidden; display: flex; flex-direction: column; transition: border-color .15s; position: relative; }
 .recipe-card:active { background: var(--acl); border-color: var(--ac); }
 .recipe-card-hdr { padding: 9px 9px 5px; display: flex; align-items: flex-start; gap: 5px; }
 .recipe-card-num { font-size: 17px; font-weight: 900; color: var(--ac); min-width: 24px; line-height: 1.2; flex-shrink: 0; }
@@ -1329,6 +1329,13 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 /* 食譜 → 飲食串聯按鈕 */
 .recipe-log-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; background: var(--ac); color: #fff; border: none; border-radius: var(--rr); font-size: 15px; font-weight: 700; font-family: var(--font); cursor: pointer; margin-top: 4px; margin-bottom: 8px; }
 .recipe-log-btn:active { background: var(--acd); }
+/* 食譜收藏按鈕 */
+.recipe-fav-btn { position:absolute; top:8px; right:8px; background:none; border:none; font-size:18px; cursor:pointer; opacity:0.5; transition:opacity .2s, transform .15s; padding:2px 4px; line-height:1; z-index:2; }
+.recipe-fav-btn:active { transform:scale(1.3); }
+.recipe-fav-btn.active { opacity:1; }
+/* 常用食譜空狀態 */
+.recipe-fav-empty { text-align:center; padding:60px 20px; color:var(--tx3); font-size:14px; line-height:2; }
+.recipe-fav-hint { font-size:12px; color:var(--tx3); padding:10px 14px 4px; }
 .recipe-log-meal-row { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
 .recipe-log-meal-btn { flex: 1; padding: 7px 6px; border-radius: var(--rr); font-size: 14px; font-weight: 600; background: var(--bg3); border: 1.5px solid var(--bd); color: var(--tx2); cursor: pointer; font-family: var(--font); text-align: center; white-space: nowrap; }
 .recipe-log-meal-btn.sel { background: var(--acl); border-color: var(--ac); color: var(--acd); }
@@ -2062,6 +2069,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
     <div id="page-recipes" class="page">
       <div class="recipe-page-tabs" id="recipe-page-tabs">
         <button class="recipe-tab active" data-rtab="list" onclick="switchRecipeTab(this)">📋 食譜庫</button>
+        <button class="recipe-tab" data-rtab="fav" onclick="switchRecipeTab(this)">⭐ 常用</button>
         <button class="recipe-tab" data-rtab="calc" onclick="switchRecipeTab(this)">🔢 試算</button>
         <button class="recipe-tab" data-rtab="ranking" onclick="switchRecipeTab(this)">🏆 排行榜</button>
         <button class="recipe-tab" data-rtab="situation" onclick="switchRecipeTab(this)">⚡ 情境</button>
@@ -2115,6 +2123,11 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
           </div>
         </div>
         <div class="recipe-grid" id="dessert-grid"></div>
+      </div>
+
+      <!-- ⭐ 常用食譜頁籤 -->
+      <div id="recipe-view-fav" style="display:none; padding-bottom:70px;">
+        <div id="recipe-fav-content"></div>
       </div>
 
       <!-- 🔢 試算頁籤（完全連結飲食頁試算工具，共用 renderCalcDB 邏輯） -->
@@ -6369,6 +6382,8 @@ var _customFoods = loadStorage('myapp_custom_foods', []);
 var _privateFoods = loadStorage('myapp_private_foods', []);
 var _favFoods = loadStorage('myapp_fav_foods', []);
 function saveFavFoods(){ saveStorage('myapp_fav_foods', _favFoods); }
+var _favRecipes = loadStorage('myapp_fav_recipes', []);
+function saveFavRecipes(){ saveStorage('myapp_fav_recipes', _favRecipes); }
 var _foodFavHidden = loadStorage('myapp_fav_foods_hidden', []);
 function saveFoodFavHidden(){ saveStorage('myapp_fav_foods_hidden', _foodFavHidden); }
 var _foodDayNotes = loadStorage('myapp_food_notes', {});
@@ -8112,7 +8127,8 @@ function buildBackupData() {
     sleepCustomFields:(typeof _sfCustomFields!=='undefined'?_sfCustomFields:[]),
     tempMemo:loadStorage('myapp_temp_memo',''),
     fastGoal:(typeof _fastGoal!=='undefined'?_fastGoal:loadStorage('myapp_fast_goal',16)),
-    slogan:loadStorage('myapp_slogan','') };
+    slogan:loadStorage('myapp_slogan',''),
+    favRecipes:(typeof _favRecipes!=='undefined'?_favRecipes:[]) };
 }
 
 function initGDriveClient() {
@@ -8470,6 +8486,7 @@ function importBackup_data(data, opts) {
   if (data.tempMemo !== undefined) { saveStorage('myapp_temp_memo', data.tempMemo); }
   if (data.fastGoal) { saveStorage('myapp_fast_goal', data.fastGoal); }
   if (data.slogan !== undefined) { saveStorage('myapp_slogan', data.slogan); }
+  if (data.favRecipes) { saveStorage('myapp_fav_recipes', data.favRecipes); }
   alert('備份還原成功！'); location.reload();
 }
 function importBackup(file) {
@@ -10384,11 +10401,12 @@ var _dessertSearch = '';
 function switchRecipeTab(el) {
   _recipeTab = el.dataset.rtab;
   document.querySelectorAll('.recipe-tab').forEach(function(t){ t.classList.toggle('active', t.dataset.rtab === _recipeTab); });
-  ['list','ranking','situation','dessert','calc'].forEach(function(v){
+  ['list','fav','ranking','situation','dessert','calc'].forEach(function(v){
     var el = document.getElementById('recipe-view-' + v);
     if (el) { el.style.display = v === _recipeTab ? '' : 'none'; el.style.flex = v === _recipeTab ? '1' : ''; }
   });
   if (_recipeTab === 'list')      renderRecipeGrid();
+  if (_recipeTab === 'fav')       renderFavRecipeGrid();
   if (_recipeTab === 'ranking')   renderRecipeRanking();
   if (_recipeTab === 'situation') renderRecipeSituation();
   if (_recipeTab === 'dessert')   renderDessertGrid();
@@ -10398,11 +10416,47 @@ function switchRecipeTab(el) {
 function renderRecipePage() {
   _recipeTab = 'list';
   document.querySelectorAll('.recipe-tab').forEach(function(t){ t.classList.toggle('active', t.dataset.rtab === 'list'); });
-  ['list','ranking','situation','dessert','calc'].forEach(function(v){
+  ['list','fav','ranking','situation','dessert','calc'].forEach(function(v){
     var el = document.getElementById('recipe-view-' + v);
     if (el) { el.style.display = v === 'list' ? '' : 'none'; el.style.flex = v === 'list' ? '1' : ''; }
   });
   renderRecipeGrid();
+}
+
+function renderFavRecipeGrid() {
+  var cont = document.getElementById('recipe-fav-content');
+  if (!cont) return;
+  if (!_favRecipes.length) {
+    cont.innerHTML = '<div class="recipe-fav-empty">❤️<br><br>尚未收藏任何食譜<br><span style="font-size:12px">在食譜庫或甜點頁點選 🤍 即可加入常用</span></div>';
+    return;
+  }
+  /* 分主食與甜點 */
+  var mainList = [], dessertList = [];
+  _favRecipes.forEach(function(x){
+    if (x.isDessert) {
+      var r = DESSERT_DB.find(function(d){ return d.num === x.num; });
+      if (r) dessertList.push(r);
+    } else {
+      var r = RECIPE_DB.find(function(d){ return d.num === x.num; });
+      if (r) mainList.push(r);
+    }
+  });
+  var html = '';
+  if (mainList.length) {
+    html += '<div class="recipe-fav-hint" style="color:#00695C;font-weight:700;padding:12px 14px 4px">🍽️ 主食（'+mainList.length+'道）</div>';
+    html += '<div class="recipe-grid" style="padding:8px 10px 4px">' +
+      mainList.map(function(r){ return recipeCardHtml(r, false); }).join('') + '</div>';
+  }
+  if (dessertList.length) {
+    html += '<div class="recipe-fav-hint" style="color:#9A6898;font-weight:700;padding:12px 14px 4px">🍮 甜點（'+dessertList.length+'道）</div>';
+    html += '<div class="recipe-grid" style="padding:8px 10px 4px">' +
+      dessertList.map(function(r){ return recipeCardHtml(r, true); }).join('') + '</div>';
+  }
+  if (!mainList.length && !dessertList.length) {
+    cont.innerHTML = '<div class="recipe-fav-empty">❤️<br><br>收藏的食譜似乎已被刪除<br><span style="font-size:12px">請重新收藏</span></div>';
+    return;
+  }
+  cont.innerHTML = html;
 }
 
 function onRecipeSearch(v) {
@@ -10457,12 +10511,32 @@ function getFilteredRecipes() {
 
 var SRC_LBL = {'V3':'V3原版','V3更新':'V3更新','新增第1批':'第1批','新增第2批':'第2批','新增第3批':'第3批','新增第4批':'第4批','新增甜點第1批':'甜點第1批','新增甜點第2批':'甜點第2批'};
 
+function isRecipeFav(num, isDessert) {
+  return _favRecipes.some(function(x){ return x.num === num && !!x.isDessert === !!isDessert; });
+}
+function toggleRecipeFav(num, isDessert, e) {
+  e.stopPropagation();
+  var idx = _favRecipes.findIndex(function(x){ return x.num === num && !!x.isDessert === !!isDessert; });
+  if (idx >= 0) { _favRecipes.splice(idx, 1); } else { _favRecipes.push({num:num, isDessert:!!isDessert}); }
+  saveFavRecipes();
+  /* 更新按鈕外觀 */
+  var btn = e.currentTarget;
+  var fav = isRecipeFav(num, isDessert);
+  btn.textContent = fav ? '❤️' : '🤍';
+  btn.classList.toggle('active', fav);
+  /* 若在常用頁籤則重新渲染 */
+  if (_recipeTab === 'fav') renderFavRecipeGrid();
+}
+
 function recipeCardHtml(r, isDessert) {
   var tagHtml = !isDessert && r.tags && r.tags.length
     ? r.tags.map(function(t){ return '<span class="rtag rtag-'+t+'">'+t+'</span>'; }).join('')
     : '';
   var numColor = isDessert ? 'color:#9A6898' : '';
+  var fav = isRecipeFav(r.num, isDessert);
+  var favBtn = '<button class="recipe-fav-btn'+(fav?' active':'')+     '" onclick="toggleRecipeFav(\''+r.num+'\','+isDessert+',event)" title="'+     (fav?'取消收藏':'加入常用')+'">'+(fav?'❤️':'🤍')+'</button>';
   return '<div class="recipe-card" onclick="openRecipeModal(\''+r.num+'\','+isDessert+')">' +
+    favBtn +
     '<div class="recipe-card-hdr">' +
       '<div class="recipe-card-num" style="'+numColor+'">'+r.num+'</div>' +
       '<div><div class="recipe-card-name">'+r.name+'</div>' +
