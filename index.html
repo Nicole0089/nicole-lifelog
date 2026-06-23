@@ -773,6 +773,9 @@ input::placeholder { color: var(--tx3); }
 .food-day-note { width: 100%; box-sizing: border-box; font-size: 14px; font-family: var(--font); resize: none; border: 0.5px solid var(--bd); border-radius: var(--r); background: var(--bg); color: var(--tx); padding: 7px 10px; margin-top: 8px; }
 .food-day-note:focus { outline: none; border-color: var(--ac); }
 .food-carb-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.food-skip-btn { border:1px solid var(--bd); background:var(--bg3); color:var(--tx2); border-radius:var(--r); padding:6px 8px; font-size:14px; font-family:var(--font); cursor:pointer; text-align:center; transition:background 0.15s; white-space:nowrap; }
+.food-skip-btn.active { background:#7a5c5c; border-color:#7a5c5c; color:#fff; }
+.food-skip-banner { background:rgba(120,80,80,0.12); border:1px solid rgba(120,80,80,0.3); border-radius:var(--r); padding:8px 12px; margin-bottom:6px; font-size:12px; color:var(--tx2); display:flex; align-items:center; gap:6px; }
 .food-carb-btn { flex: 1; min-width: 0; padding: 6px 4px; border-radius: var(--r); border: 1px solid var(--bd); background: var(--bg3); color: var(--tx2); font-size: 14px; font-family: var(--font); cursor: pointer; text-align: center; transition: background 0.15s; }
 .food-carb-btn.sel { background: var(--acl); border-color: var(--ac); color: var(--acd); font-weight: 600; }
 .food-calc-cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
@@ -1641,10 +1644,13 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <button class="food-calc-btn" id="food-calc-open-btn">📊 試算工具（查詢食物營養 · 加入記錄）</button>
       <!-- 飲食日備註（置於今日記錄上方） -->
       <div id="food-dayblock" style="margin:0 12px 8px">
-        <div class="food-carb-row" id="food-carb-row">
-          <button class="food-carb-btn" data-carb="low">碳水 40g 以下</button>
-          <button class="food-carb-btn" data-carb="mid">碳水 50–90g</button>
-          <button class="food-carb-btn" data-carb="high">爆碳</button>
+        <div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap">
+          <div class="food-carb-row" id="food-carb-row" style="margin-top:0;flex:1">
+            <button class="food-carb-btn" data-carb="low">碳水 40g 以下</button>
+            <button class="food-carb-btn" data-carb="mid">碳水 50–90g</button>
+            <button class="food-carb-btn" data-carb="high">爆碳</button>
+          </div>
+          <button class="food-skip-btn" id="food-skip-btn" title="標記這天外食或無法記錄，蛋白質圖表將排除此日" onclick="toggleFoodSkipDay()">🍽️ 外食/無記錄</button>
         </div>
         <textarea class="food-day-note" id="food-day-note" rows="4" placeholder="今日備註（聚餐、特殊飲食狀況…）"></textarea>
       </div>
@@ -5303,13 +5309,20 @@ function renderProteinChart() {
   var bw=Math.floor(cW/7*0.55), gap=(cW-bw*7)/6;
   var today=todayKey();
   var svgParts=['<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">'];
+  /* build date key array in same order */
+  var dateKeys=[];
+  for(var di=6;di>=0;di--) dateKeys.push(offsetDate(todayKey(),-di));
   vals.forEach(function(v,i){
+    var dk=dateKeys[i];
+    var isSkip=_foodSkipDays&&_foodSkipDays[dk];
     var x=PL+i*(bw+gap);
     var bh=v>0?Math.max(3,Math.round(v/maxV*cH)):0;
     var y=PT+cH-bh;
     var isTdy=(i===6);
-    svgParts.push('<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+bh+'" rx="3" fill="'+(isTdy?'var(--ac)':'var(--acl)')+'"/>');
-    if(v>0) svgParts.push('<text x="'+(x+bw/2)+'" y="'+(y-3)+'" font-size="8" fill="var(--tx2)" text-anchor="middle">'+v+'</text>');
+    var fillColor=isSkip?'#b0a0a0':(isTdy?'var(--ac)':'var(--acl)');
+    svgParts.push('<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+bh+'" rx="3" fill="'+fillColor+'"/>');
+    if(isSkip) svgParts.push('<text x="'+(x+bw/2)+'" y="'+(PT+cH-2)+'" font-size="9" fill="#b0a0a0" text-anchor="middle">🍽</text>');
+    else if(v>0) svgParts.push('<text x="'+(x+bw/2)+'" y="'+(y-3)+'" font-size="8" fill="var(--tx2)" text-anchor="middle">'+v+'</text>');
     var lblParts=labels[i].split('\n');
     svgParts.push('<text x="'+(x+bw/2)+'" y="'+(PT+cH+12)+'" font-size="8" fill="'+(isTdy?'var(--ac)':'var(--tx3)')+'" text-anchor="middle">'+lblParts[0]+'</text>');
     svgParts.push('<text x="'+(x+bw/2)+'" y="'+(PT+cH+22)+'" font-size="7.5" fill="var(--tx3)" text-anchor="middle">'+lblParts[1]+'</text>');
@@ -5355,6 +5368,7 @@ function renderFoodHistory() {
     return '<div class="food-history-group">'+
       '<div class="food-history-group-hdr" data-dk="'+dk+'">'+
         '<span class="food-history-date">'+lbl.main+'</span>'+
+        ((_foodSkipDays&&_foodSkipDays[dk])?'<span style="font-size:11px;color:#9a7070;margin-left:4px">🍽️ 外食</span>':'')+
         '<span class="food-history-totals">'+(totTxt||items.length+'項')+'</span>'+
         '<button class="food-hist-add-date-btn" data-hist-add="'+dk+'" title="補記飲食">＋補記</button>'+
       '</div>'+
@@ -5435,6 +5449,7 @@ function renderFood() {
   /* 碳水勾選 */
   var _curCarb = _foodDayCarbs[_foodViewDate]||'';
   document.querySelectorAll('#food-carb-row .food-carb-btn').forEach(function(b){ b.classList.toggle('sel', b.dataset.carb===_curCarb); });
+  updateFoodSkipUI();
   renderFoodDayType();
   /* food list */
   var list=$('food-log-list'); if(!list)return;
@@ -5779,6 +5794,35 @@ function saveFoodNote(){
   if(!_foodNoteTA)return;
   _foodDayNotes[_foodViewDate]=_foodNoteTA.value.trim();
   saveStorage('myapp_food_notes',_foodDayNotes);
+}
+function toggleFoodSkipDay(){
+  var skipBtn=$('food-skip-btn');
+  if(_foodSkipDays[_foodViewDate]){
+    delete _foodSkipDays[_foodViewDate];
+  } else {
+    _foodSkipDays[_foodViewDate]=true;
+  }
+  saveStorage('myapp_food_skip_days',_foodSkipDays);
+  updateFoodSkipUI();
+}
+function updateFoodSkipUI(){
+  var skipBtn=$('food-skip-btn');
+  var isSkip=!!(_foodSkipDays&&_foodSkipDays[_foodViewDate]);
+  if(skipBtn) skipBtn.classList.toggle('active',isSkip);
+  /* show/hide banner */
+  var banner=$('food-skip-banner');
+  if(isSkip){
+    if(!banner){
+      banner=document.createElement('div');
+      banner.id='food-skip-banner';
+      banner.className='food-skip-banner';
+      banner.innerHTML='🍽️ <span>此日已標記為<strong>外食/無法記錄</strong>，蛋白質圖表將排除此日數據</span>';
+      var lb=$('food-log-list');
+      if(lb&&lb.parentNode) lb.parentNode.insertBefore(banner,lb);
+    }
+  } else {
+    if(banner) banner.remove();
+  }
 }
 function saveFoodCarb(val){
   if(val) _foodDayCarbs[_foodViewDate]=val;
@@ -6420,6 +6464,7 @@ var _foodFavHidden = loadStorage('myapp_fav_foods_hidden', []);
 function saveFoodFavHidden(){ saveStorage('myapp_fav_foods_hidden', _foodFavHidden); }
 var _foodDayNotes = loadStorage('myapp_food_notes', {});
 var _foodDayCarbs  = loadStorage('myapp_food_carbs', {});
+var _foodSkipDays  = loadStorage('myapp_food_skip_days', {});
 var _bodyData     = loadStorage('myapp_body_data', {gender:'female',age:30,height:165,weight:55,activity:'light',goal:'cut'});
 var _foodDayType  = loadStorage('myapp_food_day_type', {});
 var _calcCatOpen = {};
@@ -8149,6 +8194,7 @@ function buildBackupData() {
     fastLogs:(typeof _fastLogs!=='undefined'?_fastLogs:[]),
     foodDayNotes:(typeof _foodDayNotes!=='undefined'?_foodDayNotes:{}),
     foodDayCarbs:(typeof _foodDayCarbs!=='undefined'?_foodDayCarbs:{}),
+    foodSkipDays:(typeof _foodSkipDays!=='undefined'?_foodSkipDays:{}),
     privateFoods:(typeof _privateFoods!=='undefined'?_privateFoods:[]),
     bodyData:(typeof _bodyData!=='undefined'?_bodyData:{}),
     foodDayType:(typeof _foodDayType!=='undefined'?_foodDayType:{}),
@@ -8508,6 +8554,7 @@ function importBackup_data(data, opts) {
   if (data.fastLogs)     { saveStorage('myapp_fast_logs', data.fastLogs); }
   if (data.foodDayNotes) { saveStorage('myapp_food_notes', data.foodDayNotes); }
   if (data.foodDayCarbs) { saveStorage('myapp_food_carbs', data.foodDayCarbs); }
+  if (data.foodSkipDays) { saveStorage('myapp_food_skip_days', data.foodSkipDays); }
   if (data.privateFoods) { saveStorage('myapp_private_foods', data.privateFoods); }
   if (data.bodyData) { saveStorage('myapp_body_data', data.bodyData); }
   if (data.foodDayType) { saveStorage('myapp_food_day_type', data.foodDayType); }
