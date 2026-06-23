@@ -1330,7 +1330,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .recipe-log-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; background: var(--ac); color: #fff; border: none; border-radius: var(--rr); font-size: 15px; font-weight: 700; font-family: var(--font); cursor: pointer; margin-top: 4px; margin-bottom: 8px; }
 .recipe-log-btn:active { background: var(--acd); }
 /* 食譜收藏按鈕 */
-.recipe-fav-btn { position:absolute; top:8px; right:8px; background:none; border:none; font-size:18px; cursor:pointer; opacity:0.5; transition:opacity .2s, transform .15s; padding:2px 4px; line-height:1; z-index:2; }
+.recipe-fav-btn { display:block; background:none; border:none; font-size:15px; cursor:pointer; opacity:0.35; transition:opacity .2s, transform .15s; padding:2px 0 0; line-height:1; text-align:center; width:100%; }
 .recipe-fav-btn:active { transform:scale(1.3); }
 .recipe-fav-btn.active { opacity:1; }
 /* 常用食譜空狀態 */
@@ -10536,9 +10536,11 @@ function recipeCardHtml(r, isDessert) {
   var fav = isRecipeFav(r.num, isDessert);
   var favBtn = '<button class="recipe-fav-btn'+(fav?' active':'')+     '" onclick="toggleRecipeFav(\''+r.num+'\','+isDessert+',event)" title="'+     (fav?'取消收藏':'加入常用')+'">'+(fav?'❤️':'🤍')+'</button>';
   return '<div class="recipe-card" onclick="openRecipeModal(\''+r.num+'\','+isDessert+')">' +
-    favBtn +
     '<div class="recipe-card-hdr">' +
-      '<div class="recipe-card-num" style="'+numColor+'">'+r.num+'</div>' +
+      '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">' +
+        '<div class="recipe-card-num" style="'+numColor+'">'+r.num+'</div>' +
+        favBtn +
+      '</div>' +
       '<div><div class="recipe-card-name">'+r.name+'</div>' +
       '<div class="recipe-card-src">'+(SRC_LBL[r.source]||r.source)+(r.note?' · '+r.note:'')+'</div></div>' +
     '</div>' +
