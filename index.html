@@ -1118,6 +1118,8 @@ input::placeholder { color: var(--tx3); }
 
 /* food log edit btn */
 .food-save-pf-btn { background: none; border: none; cursor: pointer; color: var(--tx3); font-size: 15px; padding: 2px 4px; flex-shrink: 0; }
+.food-recipe-back-btn { background: none; border: none; cursor: pointer; color: var(--tx3); font-size: 15px; padding: 2px 4px; flex-shrink: 0; }
+.food-recipe-back-btn:active { color: #00695C; }
 /* 儲存選擇浮動選單 */
 .food-save-popup { position: fixed; z-index: 500; background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r); box-shadow: 0 4px 16px rgba(0,0,0,0.18); padding: 6px 0; min-width: 180px; }
 .food-save-popup-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: 14px; color: var(--tx); cursor: pointer; }
@@ -5361,12 +5363,16 @@ function renderFoodHistory() {
         items.map(function(l){
           var nutChips=(l.calories?'<span class="food-nut-chip">'+r1(l.calories)+'kcal</span>':'')+
                        (l.protein?'<span class="food-nut-chip"> 蛋白'+r1(l.protein)+'g</span>':'');
+          var histRecipeBtn = l.recipeNum
+            ? '<button class="food-hist-action-btn food-recipe-back-btn" data-recipe-num="'+l.recipeNum+'" data-recipe-dessert="'+(l.recipeIsDessert?'1':'0')+'" title="查看食譜">📖</button>'
+            : '';
           return '<div class="food-log-item" data-id="'+l.id+'">'+
             '<div class="food-log-body">'+
               '<div class="food-log-text">'+esc(l.text||l.name||'')+'</div>'+
               '<div class="food-log-meta">'+(l.meal?'<span class="food-meal-chip">'+l.meal+'</span>':'')+nutChips+'</div>'+
             '</div>'+
             '<div class="food-hist-item-actions">'+
+              histRecipeBtn+
               '<button class="food-hist-action-btn" data-hist-copy="'+l.id+'" title="複製到今天">📋</button>'+
               '<button class="food-hist-action-btn" data-hist-edit="'+l.id+'" title="修改">✏️</button>'+
             '</div>'+
@@ -5380,6 +5386,13 @@ function renderFoodHistory() {
       var body=hdr.nextElementSibling;
       var open=body.style.display!=='none';
       body.style.display=open?'none':'';
+    });
+  });
+  box.querySelectorAll('.food-recipe-back-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      switchPage('recipes');
+      setTimeout(function(){ openRecipeModal(btn.dataset.recipeNum, btn.dataset.recipeDessert === '1'); }, 80);
     });
   });
   box.querySelectorAll('[data-hist-copy]').forEach(function(btn){
@@ -5438,6 +5451,9 @@ function renderFood() {
     var nutChips=(l.calories?'<span class="food-nut-chip">'+r1(l.calories)+'kcal</span>':'')+
                  (l.protein?'<span class="food-nut-chip"> 蛋白'+r1(l.protein)+'g</span>':'')+
                  (l.carbs?'<span class="food-nut-chip"> 碳水'+r1(l.carbs)+'g</span>':'');
+    var recipeBtn = l.recipeNum
+      ? '<button class="food-recipe-back-btn" data-recipe-num="'+l.recipeNum+'" data-recipe-dessert="'+(l.recipeIsDessert?'1':'0')+'" title="查看食譜">📖</button>'
+      : '';
     return '<div class="food-log-item" data-id="'+l.id+'">'+
       '<div class="food-log-body">'+
         '<div class="food-log-text">'+esc(l.text||l.name||'')+'</div>'+
@@ -5445,11 +5461,19 @@ function renderFood() {
         (l.note?'<div style="font-size:11px;color:var(--tx3);margin-top:3px;word-break:break-all">'+esc(l.note)+'</div>':'')+
       '</div>'+
       '<span class="food-log-time">'+l.time+'</span>'+
+      recipeBtn+
       '<button class="food-save-pf-btn" data-id="'+l.id+'" title="存到試算工具">📥</button>'+
       '<button class="food-edit-btn" data-id="'+l.id+'" title="修改">✏️</button>'+
       '<button class="food-del-btn" data-id="'+l.id+'">×</button>'+
     '</div>';
   }).join('');
+  list.querySelectorAll('.food-recipe-back-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      switchPage('recipes');
+      setTimeout(function(){ openRecipeModal(btn.dataset.recipeNum, btn.dataset.recipeDessert === '1'); }, 80);
+    });
+  });
   list.querySelectorAll('.food-del-btn').forEach(function(btn){
     btn.addEventListener('click',function(e){e.stopPropagation();
       state.foodLogs=state.foodLogs.filter(function(l){return l.id!==btn.dataset.id;});
@@ -9124,7 +9148,9 @@ function logRecipeToFood() {
     meal: meal,
     time: now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0'),
     calories: cal, protein: pro, carbs: carb, fat: fat,
-    note: ''
+    note: '',
+    recipeNum: _modalData.num,
+    recipeIsDessert: !!_modalDessert
   };
   state.foodLogs.push(entry);
   saveFood();
