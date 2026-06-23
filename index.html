@@ -773,7 +773,7 @@ input::placeholder { color: var(--tx3); }
 .food-day-note { width: 100%; box-sizing: border-box; font-size: 14px; font-family: var(--font); resize: none; border: 0.5px solid var(--bd); border-radius: var(--r); background: var(--bg); color: var(--tx); padding: 7px 10px; margin-top: 8px; }
 .food-day-note:focus { outline: none; border-color: var(--ac); }
 .food-carb-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-.food-skip-btn { border:1px solid var(--bd); background:var(--bg3); color:var(--tx2); border-radius:var(--r); padding:6px 8px; font-size:14px; font-family:var(--font); cursor:pointer; text-align:center; transition:background 0.15s; white-space:nowrap; }
+.food-skip-btn { flex:1; min-width:0; border:1px solid var(--bd); background:var(--bg3); color:var(--tx2); border-radius:var(--r); padding:6px 4px; font-size:13px; font-family:var(--font); cursor:pointer; text-align:center; transition:background 0.15s; }
 .food-skip-btn.active { background:#7a5c5c; border-color:#7a5c5c; color:#fff; }
 .food-skip-banner { background:rgba(120,80,80,0.12); border:1px solid rgba(120,80,80,0.3); border-radius:var(--r); padding:8px 12px; margin-bottom:6px; font-size:12px; color:var(--tx2); display:flex; align-items:center; gap:6px; }
 .food-carb-btn { flex: 1; min-width: 0; padding: 6px 4px; border-radius: var(--r); border: 1px solid var(--bd); background: var(--bg3); color: var(--tx2); font-size: 14px; font-family: var(--font); cursor: pointer; text-align: center; transition: background 0.15s; }
@@ -1644,12 +1644,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <button class="food-calc-btn" id="food-calc-open-btn">📊 試算工具（查詢食物營養 · 加入記錄）</button>
       <!-- 飲食日備註（置於今日記錄上方） -->
       <div id="food-dayblock" style="margin:0 12px 8px">
-        <div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap">
-          <div class="food-carb-row" id="food-carb-row" style="margin-top:0;flex:1">
-            <button class="food-carb-btn" data-carb="low">碳水 40g 以下</button>
-            <button class="food-carb-btn" data-carb="mid">碳水 50–90g</button>
-            <button class="food-carb-btn" data-carb="high">爆碳</button>
-          </div>
+        <div class="food-carb-row" id="food-carb-row">
+          <button class="food-carb-btn" data-carb="low">碳水 40g 以下</button>
+          <button class="food-carb-btn" data-carb="mid">碳水 50–90g</button>
+          <button class="food-carb-btn" data-carb="high">爆碳</button>
           <button class="food-skip-btn" id="food-skip-btn" title="標記這天外食或無法記錄，蛋白質圖表將排除此日" onclick="toggleFoodSkipDay()">🍽️ 外食/無記錄</button>
         </div>
         <textarea class="food-day-note" id="food-day-note" rows="4" placeholder="今日備註（聚餐、特殊飲食狀況…）"></textarea>
