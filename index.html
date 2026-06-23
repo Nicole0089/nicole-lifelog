@@ -697,6 +697,8 @@ input::placeholder { color: var(--tx3); }
 .food-today-title { font-size: 14px; color: var(--tx2); font-weight: 500; }
 .food-today-add-btn { background: none; border: none; font-size: 14px; color: var(--ac); cursor: pointer; font-family: var(--font); padding: 2px 6px; }
 .food-today-add-btn.fasting { color: var(--tx3); pointer-events: none; }
+.food-today-recipe-btn { background: none; border: 1px solid var(--bd); border-radius: var(--rr); font-size: 12px; color: var(--tx2); cursor: pointer; font-family: var(--font); padding: 3px 9px; white-space: nowrap; }
+.food-today-recipe-btn:active { background: var(--bg3); }
 .food-fast-warn { font-size: 12px; color: #B07878; text-align: center; padding: 4px 0 8px; letter-spacing: 0.3px; }
 .food-today-list { padding: 0 14px; min-height: 36px; }
 .food-log-item { display: flex; align-items: flex-start; gap: 8px; padding: 9px 0; border-bottom: 0.5px solid var(--bd); }
@@ -1259,14 +1261,14 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 #recipe-view-list, #recipe-view-ranking, #recipe-view-situation, #recipe-view-dessert, #recipe-view-calc { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .recipe-modal-overlay { position: fixed; inset: 0; background: rgba(61,40,40,0.55); z-index: 400; overflow-y: auto; padding: 16px 10px 32px; display: none; cursor: pointer; }
 .recipe-modal-overlay.open { display: block; }
-.recipe-modal { background: var(--bg); border-radius: 16px; max-width: 460px; margin: 0 auto; overflow: hidden; cursor: default; }
+.recipe-modal { background: var(--bg); border-radius: 16px; max-width: 460px; margin: 0 auto; overflow: hidden; cursor: default; display: flex; flex-direction: column; max-height: calc(100dvh - 48px); }
 .recipe-modal-top { background: var(--ac); color: #fff; padding: 14px 14px 10px; position: relative; }
 .recipe-modal-top.dessert { background: #9A6898; }
 .recipe-modal-num { font-size: 22px; font-weight: 900; opacity: .85; }
 .recipe-modal-name { font-size: 18px; font-weight: 800; margin-top: 2px; line-height: 1.3; }
 .recipe-modal-meta { font-size: 13px; opacity: .8; margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
 .recipe-modal-close { position: absolute; top: 6px; right: 6px; background: rgba(255,255,255,.2); border: none; color: #fff; border-radius: 50%; width: 40px; height: 40px; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; touch-action: manipulation; -webkit-tap-highlight-color: transparent; z-index: 2; }
-.recipe-modal-body { padding: 14px; }
+.recipe-modal-body { padding: 14px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
 .recipe-nutr-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 12px; }
 .recipe-nutr-box { background: var(--bg3); border-radius: var(--r); padding: 8px 4px; text-align: center; border: 0.5px solid var(--bd); }
 .recipe-nutr-val { font-size: 20px; font-weight: 800; display: block; }
@@ -1327,7 +1329,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .nutr-base { font-size: 11px; color: var(--tx3); margin-top: 1px; display: block; }
 .serving-note { font-size: 11px; color: var(--tx3); width: 100%; padding-top: 2px; }
 /* 食譜 → 飲食串聯按鈕 */
-.recipe-log-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; background: var(--ac); color: #fff; border: none; border-radius: var(--rr); font-size: 15px; font-weight: 700; font-family: var(--font); cursor: pointer; margin-top: 4px; margin-bottom: 8px; }
+.recipe-log-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; background: var(--ac); color: #fff; border: none; border-radius: var(--rr); font-size: 15px; font-weight: 700; font-family: var(--font); cursor: pointer; margin-top: 0; margin-bottom: 0; }
+.recipe-modal-footer { padding: 10px 14px 14px; border-top: 0.5px solid var(--bd); background: var(--bg); flex-shrink: 0; }
 .recipe-log-btn:active { background: var(--acd); }
 /* 食譜收藏按鈕 */
 .recipe-fav-btn { display:block; background:none; border:none; font-size:15px; cursor:pointer; opacity:0.35; transition:opacity .2s, transform .15s; padding:2px 0 0; line-height:1; text-align:center; width:100%; }
@@ -1633,7 +1636,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         <div class="food-target-bar" id="food-target-bar" style="display:none"></div>
       </div>
       <!-- Calculator button -->
-      <button class="food-calc-btn" id="food-calc-open-btn">📊 蛋白質 &amp; 碳水試算工具</button>
+      <button class="food-calc-btn" id="food-calc-open-btn">📊 試算工具（查詢食物營養 · 加入記錄）</button>
       <!-- 飲食日備註（置於今日記錄上方） -->
       <div id="food-dayblock" style="margin:0 12px 8px">
         <div class="food-carb-row" id="food-carb-row">
@@ -1647,7 +1650,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <div class="food-today-section" id="food-today-section">
         <div class="food-today-header">
           <span class="food-today-title">今日飲食記錄</span>
-          <button class="food-today-add-btn" id="food-today-add-btn">＋ 新增飲食記錄</button>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="food-today-recipe-btn" onclick="switchPage('recipes')" title="到食譜庫找靈感">🥗 食譜</button>
+            <button class="food-today-add-btn" id="food-today-add-btn">＋ 新增</button>
+          </div>
         </div>
         <div class="food-today-list" id="food-log-list"></div>
       </div>
@@ -2132,6 +2138,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 
       <!-- 🔢 試算頁籤（完全連結飲食頁試算工具，共用 renderCalcDB 邏輯） -->
       <div id="recipe-view-calc" style="display:none;">
+        <!-- 說明文字 -->
+        <div style="padding:8px 14px 6px; background:var(--bg2); border-bottom:0.5px solid var(--bd); font-size:11px; color:var(--tx3);">💡 查看今日還差多少，再決定做哪道食譜</div>
         <!-- 今日攝取進度條 -->
         <div id="rcalc-today-bar" style="padding:10px 14px 4px; background:var(--bg2); border-bottom:0.5px solid var(--bd);"></div>
         <!-- 今日飲食快捷複製 -->
@@ -9077,18 +9085,15 @@ function buildLogSection() {
     var icons = { '早餐':'🌅', '午餐':'☀️', '晚餐':'🌙', '點心':'🍎' };
     return '<button class="recipe-log-meal-btn'+(m===_logMeal?' sel':'')+'" onclick="selectLogMeal(this,\''+m+'\')">'+icons[m]+' '+m+'</button>';
   }).join('');
-  return '<div style="border-top:0.5px solid var(--bd);padding-top:12px;margin-top:4px">' +
-    '<div class="recipe-modal-sec" style="margin-bottom:8px">📝 記錄到飲食日誌</div>' +
-    '<div class="recipe-log-meal-row" id="log-meal-row">'+mealBtns+'</div>' +
-    '<button class="recipe-log-btn" onclick="logRecipeToFood()">➕ 加入' + (guessCurrentMeal()) + '記錄</button>' +
-  '</div>';
+  return '<div class="recipe-log-meal-row" id="log-meal-row">'+mealBtns+'</div>' +
+    '<button class="recipe-log-btn" onclick="logRecipeToFood()">✅ 記錄到今日' + (_logMeal || guessCurrentMeal()) + '</button>';
 }
 
 function selectLogMeal(el, meal) {
   _logMeal = meal;
   document.querySelectorAll('.recipe-log-meal-btn').forEach(function(b){ b.classList.toggle('sel', b === el); });
   var btn = document.querySelector('.recipe-log-btn');
-  if (btn) btn.textContent = '➕ 加入' + meal + '記錄';
+  if (btn) btn.textContent = '✅ 記錄到今日' + meal;
 }
 
 function logRecipeToFood() {
@@ -9097,7 +9102,7 @@ function logRecipeToFood() {
   function sc(v) { return Math.round(v * s * 10) / 10; }
   var hasCustom = Object.keys(_ingCustomGrams).length > 0;
   var name = _modalData.name + (s !== 1 ? '（×' + s + '）' : '') + (hasCustom ? '（自訂份量）' : '');
-  // 優先使用自訂計算後的數值
+  // 優先使用自訂計算後的 DOM 數值
   var nutrEl = {
     pro:  document.querySelector('#nutr-grid .recipe-nutr-val.np'),
     carb: document.querySelector('#nutr-grid .recipe-nutr-val.nc'),
@@ -9110,39 +9115,26 @@ function logRecipeToFood() {
   var fat  = nutrEl.fat  ? parseFloat(nutrEl.fat.textContent)  : sc(_modalData.fat);
   var meal = _logMeal;
 
+  // 直接建立記錄並存入（不開表單）
+  var now = new Date();
+  var entry = {
+    id: genId(),
+    date: todayKey(),
+    text: name, name: name,
+    meal: meal,
+    time: now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0'),
+    calories: cal, protein: pro, carbs: carb, fat: fat,
+    note: ''
+  };
+  state.foodLogs.push(entry);
+  saveFood();
+
   // 關閉 Modal
   closeRecipeModal();
 
-  // 切換到飲食頁
-  switchPage('food');
-  _foodViewDate = todayKey();
-  renderFood();
-
-  // 自動選 meal
-  _foodEditMeal = meal;
-
-  // 短暫 delay 確保 DOM 就緒後開啟表單
-  setTimeout(function() {
-    // 先打開空白表單
-    openFoodEdit();
-    // 帶入食譜資料
-    var nm = document.getElementById('food-edit-name');
-    if (nm) nm.value = name;
-    var fields = { cal: cal, pro: pro, carb: carb, fat: fat };
-    Object.keys(fields).forEach(function(k) {
-      var el = document.getElementById('food-edit-' + k);
-      if (el) el.value = fields[k] !== 0 ? fields[k] : '';
-    });
-    // 設定餐別
-    document.querySelectorAll('#food-meal-btns .food-meal-btn').forEach(function(b){
-      b.classList.toggle('sel', b.dataset.meal === meal);
-    });
-    // 更新 _foodEditMeal
-    _foodEditMeal = meal;
-    // 隱藏自動完成建議
-    var sg = document.getElementById('food-edit-suggest');
-    if (sg) { sg.classList.add('hidden'); sg.innerHTML = ''; }
-  }, 80);
+  // toast 確認
+  var mealLabel = { '早餐':'早餐', '午餐':'午餐', '晚餐':'晚餐', '點心':'點心' };
+  showToast('✅ 已記錄到' + (mealLabel[meal] || meal));
 }
 
 // ── 食材微調狀態：{ ingIndex: customGrams } ────────────────────
@@ -9589,6 +9581,8 @@ function openRecipeModal(num, isDessert) {
       buildIngList(1) +
       (stepsHtml ? '<div class="recipe-modal-sec">🍳 作法</div><div class="recipe-steps-list">'+stepsHtml+'</div>' : '') +
       (data.tip ? '<div class="recipe-tip-box"><div class="recipe-tip-lbl">💡 小提示</div>'+data.tip+'</div>' : '') +
+    '</div>' +
+    '<div class="recipe-modal-footer">' +
       buildLogSection() +
     '</div>';
 
