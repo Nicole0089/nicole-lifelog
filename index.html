@@ -1010,6 +1010,17 @@ input::placeholder { color: var(--tx3); }
 .bp-pp-low-icon { font-size: 10px; margin-left: 1px; }
 /* BP status badge */
 .bp-status-badge { font-size: 11px; padding: 1px 7px; border-radius: 8px; font-weight: 600; display: inline-block; white-space: nowrap; }
+
+/* 血壓健康摘要卡片 */
+.bp-summary-card { margin: 10px 12px 4px; border-radius: var(--r); padding: 12px 14px; font-size: 13px; }
+.bp-summary-card.stable  { background: #eef6ee; border: 1px solid #a8d5a8; }
+.bp-summary-card.watch   { background: #fff8e6; border: 1px solid #e6c96a; }
+.bp-summary-card.alert   { background: #fdf0ef; border: 1px solid #e8a09a; }
+.bp-summary-hdr  { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+.bp-summary-stat { color: var(--tx2); margin-bottom: 4px; line-height: 1.5; }
+.bp-summary-tips { margin-top: 8px; padding-top: 8px; border-top: 0.5px solid rgba(0,0,0,.08); }
+.bp-summary-tip-row { font-size: 12px; color: var(--tx2); line-height: 1.6; }
+.bp-summary-disclaimer { font-size: 10px; color: var(--tx3); margin-top: 6px; }
 .bp-status-badge.normal   { background: #D4ECD4; color: #2A7A2A; }
 .bp-status-badge.elevated { background: #FEF3CD; color: #8A6500; }
 .bp-status-badge.high     { background: #FDDBD8; color: #C0392B; }
@@ -1766,6 +1777,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         <button class="bp-tab" data-tab="trend" id="bp-tab-trend">趨勢</button>
       </div>
       <div id="bp-log-view">
+        <div id="bp-log-summary"></div>
         <div class="bp-list" id="bp-list"></div>
       </div>
       <div id="bp-stats-view" style="display:none">
@@ -7464,6 +7476,130 @@ function _bpChartWeekLabel(offset) {
   return fmt(r.start)+' – '+fmt(r.end)+(offset===0?' （本週）':offset===-1?' （上週）':'');
 }
 
+/* ── 血壓健康摘要分析（針對低血壓 + 窄脈壓差體質設計）──
+   以使用者自身 30 天平均為基準，而非教科書標準值；
+   分三層：stable / watch / alert
+   ─────────────────────────────────────────────── */
+function analyzeBP() {
+  var logs = state.bpLogs;
+  if (!logs || logs.length < 5) return null; /* 少於5筆不分析 */
+
+  var now = new Date();
+  var cutoff30 = localDateStr(new Date(now.getTime() - 29 * 86400000));
+  var cutoff7  = localDateStr(new Date(now.getTime() -  6 * 86400000));
+
+  /* 30天內的記錄 */
+  var logs30 = logs.filter(function(b){ return (b.datetime||'').slice(0,10) >= cutoff30; });
+  var logs7  = logs.filter(function(b){ return (b.datetime||'').slice(0,10) >= cutoff7; });
+  if (!logs30.length) return null;
+
+  /* 基本統計 */
+  var avgSys30 = r1(logs30.reduce(function(s,b){return s+b.sys;},0) / logs30.length);
+  var avgDia30 = r1(logs30.reduce(function(s,b){return s+b.dia;},0) / logs30.length);
+  var avgPP30  = r1(logs30.reduce(function(s,b){return s+(b.sys-b.dia);},0) / logs30.length);
+
+  /* 近 7 天統計 */
+  var avg7Sys = logs7.length ? r1(logs7.reduce(function(s,b){return s+b.sys;},0)/logs7.length) : null;
+  var ppList30 = logs30.filter(function(b){return b.sys>0&&b.dia>0;});
+  var ppBelow20_30 = ppList30.filter(function(b){return (b.sys-b.dia)<20;}).length;
+  var ppBelow25_30 = ppList30.filter(function(b){return (b.sys-b.dia)<25;}).length;
+
+  /* 近7天脈壓差連續偏低判斷（連續2次以上 PP<20） */
+  var sorted7 = logs7.slice().sort(function(a,b){return (a.datetime||'')>(b.datetime||'')?1:-1;});
+  var consecutiveLowPP = 0, maxConsecLowPP = 0, curConsec = 0;
+  sorted7.forEach(function(b){ if((b.sys-b.dia)<20){ curConsec++; maxConsecLowPP=Math.max(maxConsecLowPP,curConsec); } else { curConsec=0; } });
+
+  /* 近7天收縮壓突降：比30天基準低20以上 */
+  var acuteDrop7 = logs7.filter(function(b){return b.sys < avgSys30 - 20;}).length;
+
+  /* 脈搏偏高同時血壓偏低（代償性心跳加速）*/
+  var compPulse = logs7.filter(function(b){return b.pulse && b.pulse > 100 && b.sys < 100;}).length;
+
+  /* ── 判斷層級 ── */
+  var level = 'stable';
+  var alertReasons = [];
+  var watchReasons = [];
+
+  /* alert 條件 */
+  if (avgSys30 < 90 || avgDia30 < 60) {
+    alertReasons.push('近30天平均收縮壓 ' + avgSys30 + ' / 舒張壓 ' + avgDia30 + ' mmHg，已達低血壓標準（<90/60）');
+  }
+  if (maxConsecLowPP >= 2) {
+    alertReasons.push('近7天有連續 ' + maxConsecLowPP + ' 次脈壓差 < 20 mmHg');
+  }
+  if (acuteDrop7 >= 2) {
+    alertReasons.push('近7天有 ' + acuteDrop7 + ' 次收縮壓比近期基準低 20 mmHg 以上');
+  }
+  if (compPulse >= 2) {
+    alertReasons.push('近7天有 ' + compPulse + ' 次脈搏偏快（>100）同時血壓偏低，可能為代償反應');
+  }
+
+  /* watch 條件（僅在非 alert 時判斷）*/
+  if (!alertReasons.length) {
+    if (avgSys30 < 100) {
+      watchReasons.push('近30天平均收縮壓 ' + avgSys30 + ' mmHg，持續處於偏低邊緣（<100）');
+    }
+    if (ppBelow20_30 >= 2) {
+      watchReasons.push('近30天有 ' + ppBelow20_30 + ' 次脈壓差 < 20 mmHg');
+    } else if (ppBelow25_30 >= 3) {
+      watchReasons.push('近30天有 ' + ppBelow25_30 + ' 次脈壓差 < 25 mmHg，脈壓差偏窄');
+    }
+    if (avg7Sys !== null && avg7Sys < avgSys30 - 10) {
+      watchReasons.push('近7天平均收縮壓（' + avg7Sys + '）比近期基準低 ' + r1(avgSys30 - avg7Sys) + ' mmHg，有下降趨勢');
+    }
+  }
+
+  if (alertReasons.length) level = 'alert';
+  else if (watchReasons.length) level = 'watch';
+
+  return {
+    level: level,
+    avgSys30: avgSys30, avgDia30: avgDia30, avgPP30: avgPP30,
+    count30: logs30.length,
+    alertReasons: alertReasons,
+    watchReasons: watchReasons,
+    ppBelow20_30: ppBelow20_30
+  };
+}
+
+function renderBPSummaryCard(containerId) {
+  var el = $(containerId); if (!el) return;
+  var a = analyzeBP();
+  if (!a) { el.innerHTML = ''; return; }
+
+  var icon, title, bgCls, reasons, tips;
+  if (a.level === 'alert') {
+    icon = '🔴'; title = '近期血壓狀況需要留意，建議諮詢醫師'; bgCls = 'alert';
+    reasons = a.alertReasons;
+    tips = ['盡快告知醫師以上狀況，帶著記錄數據前往更有幫助', '避免突然站起、長時間站立或泡熱水', '若出現暈眩、胸悶、視線模糊，請盡快就醫'];
+  } else if (a.level === 'watch') {
+    icon = '💛'; title = '血壓偏低，建議持續觀察'; bgCls = 'watch';
+    reasons = a.watchReasons;
+    tips = ['起身時動作放慢，避免姿勢性低血壓造成頭暈', '適度增加水分與鹽分攝取（若醫師無特別限制）', '若症狀加重或出現新症狀，建議回診'];
+  } else {
+    icon = '✅'; title = '近期血壓相對穩定'; bgCls = 'stable';
+    reasons = [];
+    tips = ['繼續保持規律記錄，有助於及早發現變化'];
+  }
+
+  var html = '<div class="bp-summary-card ' + bgCls + '">';
+  html += '<div class="bp-summary-hdr">' + icon + ' ' + title + '</div>';
+  html += '<div class="bp-summary-stat">近30天平均 <strong>' + a.avgSys30 + ' / ' + a.avgDia30 + '</strong> mmHg　脈壓差平均 <strong' + (a.avgPP30 < 20 ? ' style="color:#C0392B"' : '') + '>' + a.avgPP30 + '</strong>　共記錄 <strong>' + a.count30 + '</strong> 天</div>';
+  if (reasons.length) {
+    html += '<div class="bp-summary-stat" style="margin-top:4px">';
+    reasons.forEach(function(r){ html += '・' + r + '<br>'; });
+    html += '</div>';
+  }
+  html += '<div class="bp-summary-tips"><div class="bp-summary-tip-row">';
+  tips.forEach(function(t){ html += '・' + t + '<br>'; });
+  html += '</div>';
+  if (a.level !== 'stable') {
+    html += '<div class="bp-summary-disclaimer">※ 以上為參考資訊，不能取代醫師診斷</div>';
+  }
+  html += '</div></div>';
+  el.innerHTML = html;
+}
+
 function bpStatus(sys, dia) {
   if (sys < 90 || dia < 60)           return { cls: 'low',      txt: '偏低' };
   if (sys < 120 && dia < 80)          return { cls: 'normal',   txt: '正常' };
@@ -7508,6 +7644,8 @@ function renderBP() {
       saveBP(); renderBP();
     });
   });
+  /* 渲染記錄 tab 頂端的健康摘要卡片 */
+  renderBPSummaryCard('bp-log-summary');
 }
 
 function syncBPHandBtns() {
@@ -7543,6 +7681,21 @@ function saveBPForm() {
     state.bpLogs = state.bpLogs.map(function(b){ return b.id === _bpEditId ? rec : b; });
   } else { state.bpLogs.push(rec); }
   saveBP(); closeBPForm(); renderBP();
+  /* 儲存後即時回饋 toast */
+  var pp = rec.sys - rec.dia;
+  var toastMsg = '';
+  if (rec.sys < 90 || rec.dia < 60) {
+    toastMsg = '🔴 血壓偏低（' + rec.sys + '/' + rec.dia + '），請注意起身動作';
+  } else if (pp < 20) {
+    toastMsg = '⚠️ 脈壓差 ' + pp + ' mmHg，偏窄，建議持續追蹤';
+  } else if (pp < 25) {
+    toastMsg = '💛 脈壓差 ' + pp + ' mmHg，略偏窄';
+  } else if (rec.sys < 100) {
+    toastMsg = '💛 收縮壓 ' + rec.sys + ' 偏低，注意補充水分';
+  } else {
+    toastMsg = '✅ 今日血壓 ' + rec.sys + '/' + rec.dia + '，脈壓差 ' + pp + ' mmHg';
+  }
+  showToast(toastMsg);
 }
 /* Hand buttons */
 ['left','right'].forEach(function(h) {
@@ -10906,6 +11059,8 @@ function renderBPTrend() {
   var avgDia = r1(validDia.reduce(function(s,d){return s+d.y;},0)/validDia.length);
 
   var html = '';
+  /* 趨勢頁頂端健康摘要卡片（與記錄 tab 共用同一函式，但渲染到不同容器） */
+  html += '<div id="bp-trend-summary"></div>';
   html += '<div class="trend-section">';
   html += '<div class="trend-title">過去 30 天血壓趨勢</div>';
   html += '<div class="trend-meta">平均收縮壓 <strong>' + avgSys + '</strong>　平均舒張壓 <strong>' + avgDia + '</strong>　共記錄 <strong>' + validSys.length + '</strong> 天</div>';
@@ -10915,6 +11070,8 @@ function renderBPTrend() {
   html += '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#A07878;margin-right:3px;vertical-align:middle"></span>收縮壓</div>';
   html += '</div>';
   sec.innerHTML = html;
+  /* 渲染趨勢頁頂端摘要卡片 */
+  renderBPSummaryCard('bp-trend-summary');
 
   /* 統一兩條線的 Y 軸範圍，確保疊圖時刻度一致 */
   var allV = validSys.map(function(d){return d.y;}).concat(validDia.map(function(d){return d.y;})).concat([140]);
