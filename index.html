@@ -7836,16 +7836,16 @@ function renderBPChart() {
     var ppSvgId = 'bp-chart-pp-svg-' + hand;
     section.innerHTML='<div class="bp-chart-title">'+handLabels[hand]+'（最近 '+n+' 筆）</div>'+
       '<div class="bp-chart-svg-box">'+legend+svg.join('')+'</div>'+
-      '<div class="bp-chart-title" style="margin-top:14px">'+handLabels[hand]+' 脈壓差曲線</div>'+
+      '<div class="bp-chart-title" style="margin-top:14px">'+handLabels[hand]+' 脈壓差（mmHg）</div>'+
       '<div class="bp-chart-svg-box" style="padding:10px 6px 6px"><svg class="trend-svg" id="'+ppSvgId+'" viewBox="0 0 320 110"></svg></div>'+
-      '<div class="bp-chart-legend"><div class="bp-chart-legend-item"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#C0392B;margin-right:3px"></span>脈壓差 ＜ 20（過低）</div>'+
-      '<div class="bp-chart-legend-item"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D68A30;margin-right:3px"></span>脈壓差 ≥ 20</div></div>';
+      '<div class="bp-chart-legend"><div class="bp-chart-legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#C0392B;margin-right:3px"></span>脈壓差 ＜ 20（過低）</div>'+
+      '<div class="bp-chart-legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#D68A30;opacity:.8;margin-right:3px"></span>脈壓差 ≥ 20</div></div>';
     container.appendChild(section);
 
     var ppData = logs.map(function(b){
       return { x: (b.datetime||'').slice(5,10).replace('-','/'), y: b.sys - b.dia, hasData: true };
     });
-    drawLineChart(ppSvgId, ppData, {
+    drawPPBarChart(ppSvgId, ppData, {
       width: 320, height: 110,
       color: '#D68A30',
       lowThreshold: 20,
@@ -11031,6 +11031,73 @@ function drawHabitMiniChart(svgId, data, color) {
   svg.innerHTML = parts.join('');
 }
 
+/* ── 脈壓差柱狀圖引擎 ── */
+function drawPPBarChart(svgId, data, opts) {
+  var svg = $(svgId);
+  if (!svg) return;
+  opts = opts || {};
+  var W = opts.width || 320, H = opts.height || 110;
+  var PL = 28, PR = 8, PT = 10, PB = 22;
+  var cW = W - PL - PR, cH = H - PT - PB;
+  var n = data.length;
+  if (!n) return;
+  var lowThr = opts.lowThreshold !== undefined ? opts.lowThreshold : 20;
+  var colNorm = opts.color || '#D68A30';
+  var colLow  = opts.lowColor || '#C0392B';
+
+  /* Y range */
+  var allY = data.filter(function(d){ return d.hasData; }).map(function(d){ return d.y; });
+  var yMin = 0;
+  var yMax = allY.length ? Math.ceil((Math.max.apply(null, allY) + 5) / 5) * 5 : 60;
+  if (yMax < 40) yMax = 40; /* at least show 0–40 so 20 line is visible */
+  var rng = yMax - yMin;
+
+  function vy(v) { return PT + cH * (1 - (v - yMin) / rng); }
+  var bw = Math.max(2, Math.floor(cW / n * 0.68));
+  var slot = cW / n;
+
+  var parts = [];
+
+  /* Y grid lines (3 levels) */
+  [0, 1, 2, 3].forEach(function(gi) {
+    var gv = yMin + rng * gi / 3;
+    var gy = vy(gv).toFixed(1);
+    parts.push('<line x1="' + PL + '" y1="' + gy + '" x2="' + (PL + cW) + '" y2="' + gy + '" stroke="var(--bd)" stroke-width="0.5"/>');
+    parts.push('<text x="' + (PL - 3) + '" y="' + (parseFloat(gy) + 3).toFixed(1) + '" font-size="7" fill="var(--tx3)" text-anchor="end">' + Math.round(gv) + '</text>');
+  });
+
+  /* Low-threshold warning line */
+  if (lowThr >= yMin && lowThr <= yMax) {
+    var lty = vy(lowThr).toFixed(1);
+    parts.push('<line x1="' + PL + '" y1="' + lty + '" x2="' + (PL + cW) + '" y2="' + lty + '" stroke="' + colLow + '" stroke-width="1.2" stroke-dasharray="3,3" opacity="0.7"/>');
+  }
+
+  /* Bars */
+  data.forEach(function(d, i) {
+    var cx = PL + i * slot + slot / 2;
+    var bx = (cx - bw / 2).toFixed(1);
+    if (d.hasData) {
+      var isLow = d.y < lowThr;
+      var barColor = isLow ? colLow : colNorm;
+      var barTop = vy(d.y);
+      var barH = Math.max(1, vy(yMin) - barTop);
+      parts.push('<rect x="' + bx + '" y="' + barTop.toFixed(1) + '" width="' + bw + '" height="' + barH.toFixed(1) + '" fill="' + barColor + '" rx="2" opacity="' + (isLow ? '0.9' : '0.75') + '"/>');
+      /* Value label on top of bar (only if bar is tall enough) */
+      if (barH > 12) {
+        parts.push('<text x="' + cx.toFixed(1) + '" y="' + (barTop - 2).toFixed(1) + '" font-size="7" fill="' + barColor + '" text-anchor="middle" font-weight="600">' + d.y + '</text>');
+      }
+    }
+    /* X-axis date label */
+    var xLabelStep = Math.max(1, Math.ceil(n / 6));
+    if (i % xLabelStep === 0 || i === n - 1) {
+      parts.push('<text x="' + cx.toFixed(1) + '" y="' + (H - PB + 11) + '" font-size="7" fill="var(--tx3)" text-anchor="middle">' + d.x + '</text>');
+    }
+  });
+
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.innerHTML = parts.join('');
+}
+
 /* ── 血壓趨勢（30天） ── */
 function renderBPTrend() {
   var sec = $('bp-trend-view');
@@ -11126,15 +11193,15 @@ function renderBPTrend() {
     html2 += '<div class="trend-meta">平均脈壓差 <strong'+(avgPPAll<20?' style="color:#C0392B"':'')+'>' + avgPPAll + '</strong>　共記錄 <strong>' + validPP.length + '</strong> 天' +
       (lowPPCount ? '　<strong style="color:#C0392B">⚠️ 過低 ' + lowPPCount + ' 天</strong>' : '') + '</div>';
     html2 += '<svg class="trend-svg" id="bp-pp-trend-svg" viewBox="0 0 320 130"></svg>';
-    html2 += '<div class="trend-ref-legend"><span style="display:inline-block;width:18px;height:1px;border-top:1.5px dashed #C0392B;margin-right:2px"></span>過低警戒線（20）　';
-    html2 += '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#C0392B;margin-right:3px;vertical-align:middle"></span>脈壓差 ＜ 20</div>';
+    html2 += '<div class="trend-ref-legend"><span style="display:inline-block;width:18px;height:4px;border-radius:2px;background:#C0392B;opacity:.6;border-top:2px dashed #C0392B;margin-right:2px;vertical-align:middle"></span>過低警戒線（20）　';
+    html2 += '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#C0392B;margin-right:3px;vertical-align:middle"></span>脈壓差 ＜ 20　';
+    html2 += '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#D68A30;opacity:.8;margin-right:3px;vertical-align:middle"></span>脈壓差 ≥ 20</div>';
     html2 += '</div>';
     sec.insertAdjacentHTML('beforeend', html2);
 
-    drawLineChart('bp-pp-trend-svg', ppData, {
+    drawPPBarChart('bp-pp-trend-svg', ppData, {
       width: 320, height: 130,
       color: '#D68A30',
-      fillColor: 'rgba(214,138,48,0.10)',
       lowThreshold: 20,
       lowColor: '#C0392B'
     });
