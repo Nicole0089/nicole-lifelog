@@ -457,6 +457,7 @@ input::placeholder { color: var(--tx3); }
 .habit-name-wrap { min-width: 0; flex: 1; }
 .habit-name-text { font-size: 14px; color: var(--tx); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .habit-streak-text { font-size: 11px; color: var(--tx3); margin-top: 1px; }
+.habit-month-rate { font-size: 10px; color: var(--ac); margin-top: 1px; font-weight: 500; }
 
 /* 日格滑動容器 */
 .habit-days-scroll { flex: 1; min-width: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -2004,6 +2005,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
             <button class="btn-ghost" id="settings-export-btn">📤 匯出 JSON</button>
             <button class="btn-ghost" id="settings-import-btn">📥 匯入 JSON</button>
           </div>
+          <div id="settings-export-last-lbl" style="font-size:10px;color:var(--tx3);margin-top:5px;text-align:right"></div>
         </div>
         <input type="file" id="import-file-input" accept=".json" style="display:none">
       </div>
@@ -4143,6 +4145,19 @@ function renderHabits() {
             '<div class="habit-name-wrap">' +
               '<div class="habit-name-text">' + esc(h.name) + '</div>' +
               (streak > 0 ? '<div class="habit-streak-text">連續 ' + streak + ' 天 ' + (isGood?'🔥':'⚠️') + '</div>' : '') +
+              (function(){
+                var now = new Date();
+                var ym = todayStr.slice(0,7);
+                var daysElapsed = Math.min(now.getDate(), new Date(now.getFullYear(), now.getMonth()+1, 0).getDate());
+                var hLogsM = h.logs || {};
+                var doneDays = 0;
+                for (var di = 1; di <= daysElapsed; di++) {
+                  var dk = ym + '-' + String(di).padStart(2,'0');
+                  var v = hLogsM[dk];
+                  if (type==='count' ? (typeof v==='number' && v>0) : !!v) doneDays++;
+                }
+                return '<div class="habit-month-rate">本月 '+doneDays+'/'+daysElapsed+' 天</div>';
+              })() +
               '<div class="chore-last-txt' + (todayDoneH?' done':'') + '">上次：' + lastTxt + '</div>' +
             '</div>' +
           '</div>' +
@@ -8334,7 +8349,7 @@ var _gdriveConflict = loadStorage('myapp_gdrive_conflict', false);
    目的是避免所有備份（主檔案＋每日快照）都只活在同一個 Google 帳號裡，
    完全沒有不依賴該帳號的獨立副本（2026-06 加入） */
 var _localExportLast = loadStorage('myapp_local_export_last', '');
-var _LOCAL_EXPORT_REMINDER_DAYS = 35;
+var _LOCAL_EXPORT_REMINDER_DAYS = 15;
 
 function buildBackupData() {
   return { version:1, exportDate:new Date().toISOString(),
@@ -8628,6 +8643,12 @@ function renderGDriveSettings() {
   var setup  = $('gdrive-setup-section');
   var conn   = $('gdrive-connected-section');
   if (!setup || !conn) return;
+  var exportLbl = $('settings-export-last-lbl');
+  if (exportLbl) {
+    exportLbl.textContent = _localExportLast
+      ? '上次匯出：' + localDateStr(new Date(+_localExportLast))
+      : '尚未匯出過本機備份';
+  }
   if (_gdriveClientId && !_gdriveDisconnected) {
     setup.style.display = 'none'; conn.style.display = '';
     var lbl = $('gdrive-last-backup-lbl');
@@ -8675,6 +8696,8 @@ function exportBackup() {
   _localExportLast = Date.now();
   saveStorage('myapp_local_export_last', _localExportLast);
   if (typeof renderLocalExportReminder === 'function') renderLocalExportReminder();
+  var lbl = $('settings-export-last-lbl');
+  if (lbl) lbl.textContent = '上次匯出：' + localDateStr(new Date(+_localExportLast));
 }
 
 function importBackup_data(data, opts) {
@@ -11657,6 +11680,22 @@ function renderWeekly() {
 
   var html = '';
 
+  /* 上週同期 7 天 */
+  var prevDays = [];
+  for (var pi = 0; pi < 7; pi++) {
+    var pd = new Date(range.mon); pd.setDate(range.mon.getDate() + pi - 7);
+    prevDays.push(localDateStr(pd));
+  }
+  function vsTag(curr, prev, unit, lowerIsBetter) {
+    if (prev === null || prev === undefined || isNaN(prev) || prev === 0) return '';
+    var diff = Math.round((curr - prev) * 10) / 10;
+    if (diff === 0) return '<span style="font-size:10px;color:var(--tx3);margin-left:4px">持平</span>';
+    var better = lowerIsBetter ? diff < 0 : diff > 0;
+    var arrow = diff > 0 ? '▲' : '▼';
+    var color = better ? '#4caf50' : '#e57373';
+    return '<span style="font-size:10px;color:'+color+';margin-left:4px">'+arrow+' '+Math.abs(diff)+unit+' vs上週</span>';
+  }
+
   /* ── 睡眠 ── */
   var sleepData = days.map(function(dk) {
     var log = state.sleepLogs.find(function(s){ return s.date===dk; });
@@ -11665,9 +11704,11 @@ function renderWeekly() {
   var sleepFilled = sleepData.filter(function(x){ return x!==null; });
   var sleepAvg = sleepFilled.length ? (sleepFilled.reduce(function(a,b){return a+b;},0)/sleepFilled.length).toFixed(1) : '─';
   var sleepMax = sleepFilled.length ? Math.max.apply(null,sleepFilled) : 8;
+  var prevSleepFilled = prevDays.map(function(dk){ var l=state.sleepLogs.find(function(s){return s.date===dk;}); return l?(parseFloat(l.sleepHours)||0):null; }).filter(function(x){return x!==null;});
+  var prevSleepAvg = prevSleepFilled.length ? prevSleepFilled.reduce(function(a,b){return a+b;},0)/prevSleepFilled.length : null;
   html += '<div class="weekly-section">';
   html += '<div class="weekly-section-title">🌙 睡眠</div>';
-  html += '<div class="weekly-row"><span>平均睡眠時數</span><span class="weekly-row-val">'+sleepAvg+(sleepAvg!=='─'?' h':'')+'</span></div>';
+  html += '<div class="weekly-row"><span>平均睡眠時數</span><span class="weekly-row-val">'+sleepAvg+(sleepAvg!=='─'?' h':'')+(sleepAvg!=='─'&&prevSleepAvg!==null?vsTag(parseFloat(sleepAvg),prevSleepAvg,'h',false):'')+'</span></div>';
   html += '<div class="weekly-sparkline">' + days.map(function(dk,i){
     var h = sleepData[i]; var maxH = sleepMax||8;
     var pct = h!==null ? Math.max(5,Math.round(h/maxH*100)) : 5;
@@ -11685,10 +11726,14 @@ function renderWeekly() {
   var waterFilled = waterData.filter(function(x){ return x>0; });
   var waterAvg = waterFilled.length ? r1(waterFilled.reduce(function(a,b){return a+b;},0)/waterFilled.length) : 0;
   var waterGoalDays = waterData.filter(function(x){ return x>=WGOAL; }).length;
+  var prevWaterData = prevDays.map(function(dk){ return state.waterLogs.filter(function(l){return l.date===dk;}).reduce(function(s,l){return s+l.ml;},0); });
+  var prevWaterFilled = prevWaterData.filter(function(x){return x>0;});
+  var prevWaterAvg = prevWaterFilled.length ? r1(prevWaterFilled.reduce(function(a,b){return a+b;},0)/prevWaterFilled.length) : null;
+  var prevWaterGoal = prevWaterData.filter(function(x){return x>=WGOAL;}).length;
   html += '<div class="weekly-section">';
   html += '<div class="weekly-section-title">💧 飲水</div>';
-  html += '<div class="weekly-row"><span>平均飲水量</span><span class="weekly-row-val">'+waterAvg+' ml</span></div>';
-  html += '<div class="weekly-row"><span>達標天數</span><span class="weekly-row-val">'+waterGoalDays+' / 7 天</span></div>';
+  html += '<div class="weekly-row"><span>平均飲水量</span><span class="weekly-row-val">'+waterAvg+' ml'+(prevWaterAvg!==null?vsTag(waterAvg,prevWaterAvg,'ml',false):'')+'</span></div>';
+  html += '<div class="weekly-row"><span>達標天數</span><span class="weekly-row-val">'+waterGoalDays+' / 7 天'+(prevWaterFilled.length?vsTag(waterGoalDays,prevWaterGoal,'天',false):'')+'</span></div>';
   html += '<div class="weekly-sparkline">' + days.map(function(dk,i){
     var ml = waterData[i]; var maxMl = Math.max(WGOAL, Math.max.apply(null,waterData.concat([1])));
     var pct = Math.max(5,Math.round(ml/maxMl*100));
@@ -11710,11 +11755,15 @@ function renderWeekly() {
   var foodFilled = foodDayData.filter(function(x){return x!==null;});
   html += '<div class="weekly-section">';
   html += '<div class="weekly-section-title">🍽 飲食</div>';
+  var prevFoodDayData = prevDays.map(function(dk){ var logs=state.foodLogs.filter(function(f){return f.date===dk;}); if(!logs.length) return null; return { pro:Math.round(logs.reduce(function(s,f){return s+(parseFloat(f.protein)||0);},0)*10)/10, carb:Math.round(logs.reduce(function(s,f){return s+(parseFloat(f.carbs)||0);},0)*10)/10 }; });
+  var prevFoodFilled = prevFoodDayData.filter(function(x){return x!==null;});
   if (foodFilled.length) {
     var avgPro  = Math.round(foodFilled.reduce(function(s,d){return s+d.pro;},0)/foodFilled.length*10)/10;
     var avgCarb = Math.round(foodFilled.reduce(function(s,d){return s+d.carb;},0)/foodFilled.length*10)/10;
-    html += '<div class="weekly-row"><span>日均蛋白質</span><span class="weekly-row-val">'+avgPro+' g</span></div>';
-    html += '<div class="weekly-row"><span>日均碳水</span><span class="weekly-row-val">'+avgCarb+' g</span></div>';
+    var prevAvgPro  = prevFoodFilled.length ? Math.round(prevFoodFilled.reduce(function(s,d){return s+d.pro;},0)/prevFoodFilled.length*10)/10 : null;
+    var prevAvgCarb = prevFoodFilled.length ? Math.round(prevFoodFilled.reduce(function(s,d){return s+d.carb;},0)/prevFoodFilled.length*10)/10 : null;
+    html += '<div class="weekly-row"><span>日均蛋白質</span><span class="weekly-row-val">'+avgPro+' g'+(prevAvgPro!==null?vsTag(avgPro,prevAvgPro,'g',false):'')+'</span></div>';
+    html += '<div class="weekly-row"><span>日均碳水</span><span class="weekly-row-val">'+avgCarb+' g'+(prevAvgCarb!==null?vsTag(avgCarb,prevAvgCarb,'g',true):'')+'</span></div>';
     html += '<div class="weekly-sparkline">' + days.map(function(dk,i){
       var d = foodDayData[i];
       var maxP = Math.max.apply(null, foodFilled.map(function(x){return x.pro;}).concat([1]));
@@ -11798,9 +11847,11 @@ function renderWeekly() {
       return state.habits.length > 0 ? r1(done/state.habits.length*100) : 0;
     });
     var avgRate = r1(habitRates.reduce(function(a,b){return a+b;},0)/7);
+    var prevHabitRates = prevDays.map(function(dk){ var done=0; state.habits.forEach(function(h){ var logs=h.logs||{}; if(logs[dk]&&logs[dk]>0) done++; }); return state.habits.length>0?r1(done/state.habits.length*100):0; });
+    var prevAvgRate = r1(prevHabitRates.reduce(function(a,b){return a+b;},0)/7);
     html += '<div class="weekly-section">';
     html += '<div class="weekly-section-title">🔄 習慣</div>';
-    html += '<div class="weekly-row"><span>平均完成率</span><span class="weekly-row-val">'+avgRate+'%</span></div>';
+    html += '<div class="weekly-row"><span>平均完成率</span><span class="weekly-row-val">'+avgRate+'%'+vsTag(avgRate,prevAvgRate,'%',false)+'</span></div>';
     html += '<div class="weekly-sparkline">' + days.map(function(dk,i){
       var pct = Math.max(5,habitRates[i]);
       var isToday = dk===todayKey();
