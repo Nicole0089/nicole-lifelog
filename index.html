@@ -8371,7 +8371,9 @@ function gdriveBackup(silent) {
       if (existing) {
         /* 多裝置衝突偵測：雲端目前的 modifiedTime 如果跟「這台裝置上次同步時」記錄的不一樣，
            代表雲端在這之間被其他裝置更新過，這台裝置手上的資料可能已經過期 */
-        if (_gdriveLastSyncedModifiedTime && existing.modifiedTime !== _gdriveLastSyncedModifiedTime) {
+        var _mtimeDiff = _gdriveLastSyncedModifiedTime && existing.modifiedTime
+          ? Math.abs(new Date(existing.modifiedTime) - new Date(_gdriveLastSyncedModifiedTime)) : 0;
+        if (_gdriveLastSyncedModifiedTime && existing.modifiedTime !== _gdriveLastSyncedModifiedTime && _mtimeDiff > 30000) {
           if (silent) {
             if (lbl) lbl.textContent = '⚠️ 已暫停自動同步（偵測到其他裝置的更新）';
             _gdriveConflict = true; saveStorage('myapp_gdrive_conflict', true);
@@ -11288,14 +11290,46 @@ function renderGDriveSyncBanner() {
   var el = $('gdrive-sync-banner'); if (!el) return;
   var enabled = !!(_gdriveClientId && !_gdriveDisconnected && _gdriveAutoBackup);
   if (!enabled || (!_gdriveSyncFailing && !_gdriveConflict)) { el.style.display = 'none'; el.innerHTML = ''; return; }
-  el.style.cssText = 'display:flex;align-items:center;gap:8px;background:#fdf3ee;border:1px solid #c87;border-radius:10px;padding:10px 12px;margin:0 0 10px;font-size:12.5px;color:#a05a3a;cursor:pointer';
-  var msg = _gdriveConflict
-    ? '偵測到另一台裝置已更新雲端資料，自動同步已暫停以避免互相覆蓋。點此查看處理方式'
-    : 'Google Drive 自動同步目前未授權，最新資料還沒同步到雲端。點此重新授權';
-  el.innerHTML = '<span style="font-size:16px;flex-shrink:0">⚠️</span>'+
-    '<span style="flex:1;line-height:1.4">'+msg+'</span>'+
-    '<span style="font-size:14px;flex-shrink:0">›</span>';
-  el.onclick = function(){ gdriveBackup(false); };
+  if (_gdriveConflict) {
+    /* 衝突狀態：顯示三個操作按鈕，避免使用者只能靠備份流程解決 */
+    el.style.cssText = 'display:block;background:#fdf3ee;border:1px solid #c87;border-radius:10px;padding:10px 12px;margin:0 0 10px;font-size:12.5px;color:#a05a3a';
+    el.innerHTML =
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+        '<span style="font-size:16px;flex-shrink:0">⚠️</span>'+
+        '<span style="flex:1;line-height:1.4">雲端資料時間戳記與本機記錄不符，自動同步已暫停。</span>'+
+      '</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+        '<button id="gdrive-conflict-force" style="flex:1;min-width:90px;padding:6px 4px;background:#A07878;color:#fff;border:none;border-radius:7px;font-size:11.5px;cursor:pointer">📤 以本機覆蓋雲端</button>'+
+        '<button id="gdrive-conflict-restore" style="flex:1;min-width:90px;padding:6px 4px;background:#7878A0;color:#fff;border:none;border-radius:7px;font-size:11.5px;cursor:pointer">📥 從雲端還原</button>'+
+        '<button id="gdrive-conflict-dismiss" style="flex:1;min-width:90px;padding:6px 4px;background:#ccc;color:#555;border:none;border-radius:7px;font-size:11.5px;cursor:pointer">✕ 我沒有其他裝置</button>'+
+      '</div>';
+    el.onclick = null;
+    var forceBtn = $('gdrive-conflict-force');
+    var restoreBtn = $('gdrive-conflict-restore');
+    var dismissBtn = $('gdrive-conflict-dismiss');
+    if (forceBtn) forceBtn.onclick = function(e){ e.stopPropagation(); gdriveBackup(false); };
+    if (restoreBtn) restoreBtn.onclick = function(e){ e.stopPropagation(); gdriveRestore && gdriveRestore(); };
+    if (dismissBtn) dismissBtn.onclick = function(e){
+      e.stopPropagation();
+      /* 清除衝突狀態，並以雲端目前的 mtime 作為新基準，避免下次再誤報 */
+      requireGToken(async function(){
+        var existing = await gdriveFindFile(_gdriveToken, 'nicole_journal_backup.json');
+        if (existing && existing.modifiedTime) {
+          _gdriveLastSyncedModifiedTime = existing.modifiedTime;
+          saveStorage('myapp_gdrive_last_synced_mtime', existing.modifiedTime);
+        }
+        _gdriveConflict = false; saveStorage('myapp_gdrive_conflict', false);
+        renderGDriveSyncBanner();
+        showToast('已清除衝突警示，自動同步恢復正常');
+      });
+    };
+  } else {
+    el.style.cssText = 'display:flex;align-items:center;gap:8px;background:#fdf3ee;border:1px solid #c87;border-radius:10px;padding:10px 12px;margin:0 0 10px;font-size:12.5px;color:#a05a3a;cursor:pointer';
+    el.innerHTML = '<span style="font-size:16px;flex-shrink:0">⚠️</span>'+
+      '<span style="flex:1;line-height:1.4">Google Drive 自動同步目前未授權，最新資料還沒同步到雲端。點此重新授權</span>'+
+      '<span style="font-size:14px;flex-shrink:0">›</span>';
+    el.onclick = function(){ gdriveBackup(false); };
+  }
 }
 
 function renderTempMemo() {
