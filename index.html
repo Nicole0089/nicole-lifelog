@@ -11053,7 +11053,7 @@ function drawPPBarChart(svgId, data, opts) {
   var rng = yMax - yMin;
 
   function vy(v) { return PT + cH * (1 - (v - yMin) / rng); }
-  var bw = Math.max(2, Math.floor(cW / n * 0.68));
+  var bw = Math.max(4, Math.min(32, Math.floor(cW / n * 0.68)));
   var slot = cW / n;
 
   var parts = [];
