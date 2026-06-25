@@ -11428,7 +11428,7 @@ function renderDashboard() {
    表達「這是溫和提醒」而不是「目前出問題了」 */
 function renderLocalExportReminder() {
   var el = $('local-export-reminder'); if (!el) return;
-  var hasData = _backupRecordCount(buildBackupData()) >= 5;
+  var hasData = _backupRecordCount(buildBackupData()) >= 1;
   var stale = !_localExportLast || (Date.now() - (+_localExportLast)) > _LOCAL_EXPORT_REMINDER_DAYS*86400000;
   if (!hasData || !stale) { el.style.display = 'none'; el.innerHTML = ''; return; }
   var subMsg = _localExportLast
