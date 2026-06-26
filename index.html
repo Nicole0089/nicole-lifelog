@@ -1460,7 +1460,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.21.3/umd/index.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js"></script>
 </head>
 <body>
 
@@ -9934,7 +9934,11 @@ function _startBarcodeCamera() {
 
 function _stopBarcodeCamera() {
   if (_barcodeReader) {
-    try { _barcodeReader.reset(); } catch(e) {}
+    if (_barcodeReader._running !== undefined) {
+      _barcodeReader._running = false; // 停止原生 BarcodeDetector 掃描迴圈
+    } else {
+      try { _barcodeReader.reset(); } catch(e) {}
+    }
     _barcodeReader = null;
   }
   if (_barcodeStream) {
@@ -9946,18 +9950,38 @@ function _stopBarcodeCamera() {
 }
 
 function _startZxingDecode(video) {
-  if (typeof ZXing === 'undefined') {
-    showToast('條碼辨識庫尚未載入，請重新整理頁面後再試', true);
+  // 優先使用瀏覽器原生 BarcodeDetector（Android Chrome 支援，速度最快）
+  if (typeof BarcodeDetector !== 'undefined') {
+    var detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code'] });
+    _barcodeReader = { _nativeDetector: detector, _running: true };
+    function scanFrame() {
+      if (!_barcodeReader || !_barcodeReader._running) return;
+      detector.detect(video).then(function(codes) {
+        if (codes && codes.length > 0) {
+          _barcodeReader._running = false;
+          _lookupBarcode(codes[0].rawValue);
+        } else {
+          requestAnimationFrame(scanFrame);
+        }
+      }).catch(function() { requestAnimationFrame(scanFrame); });
+    }
+    video.addEventListener('loadeddata', function() { requestAnimationFrame(scanFrame); }, { once: true });
+    if (video.readyState >= 2) requestAnimationFrame(scanFrame);
+    return;
+  }
+  // Fallback：ZXingBrowser（jsdelivr CDN）
+  var ZXB = window.ZXingBrowser || window.ZXing;
+  if (!ZXB || !ZXB.BrowserMultiFormatReader) {
+    showToast('條碼辨識庫載入失敗，請確認網路連線後重新整理', true);
     closeBarcodeScanner();
     return;
   }
-  var hints = new Map();
-  hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-  _barcodeReader = new ZXing.BrowserMultiFormatReader(hints);
-  _barcodeReader.decodeFromVideoElement(video, function(result, err) {
+  var reader = new ZXB.BrowserMultiFormatReader();
+  _barcodeReader = reader;
+  reader.decodeFromVideoElement(video, function(result, err) {
     if (result) {
       var code = result.getText();
-      _barcodeReader.reset();
+      try { reader.reset(); } catch(e) {}
       _lookupBarcode(code);
     }
   });
