@@ -745,6 +745,22 @@ input::placeholder { color: var(--tx3); }
 .food-edit-suggest-item:active, .food-edit-suggest-item:hover { background: var(--acl); }
 .food-edit-suggest-item .fes-sub { color: var(--tx3); font-size: 11px; white-space: nowrap; flex-shrink: 0; }
 .food-edit-qty-row select#food-edit-qty-unit-sel { font-size: 12px; color: var(--tx2); border: 1px solid var(--bd); border-radius: 6px; background: var(--bg3); padding: 6px; }
+/* ── 條碼掃描 Modal ── */
+.barcode-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center; }
+.barcode-modal-overlay.hidden { display:none; }
+.barcode-video-wrap { position:relative;width:100%;max-width:360px;border-radius:16px;overflow:hidden;background:#000; }
+#barcode-video { width:100%;display:block;max-height:300px;object-fit:cover; }
+.barcode-aim { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none; }
+.barcode-aim-box { width:200px;height:100px;border:2px solid var(--ac);border-radius:8px;box-shadow:0 0 0 2000px rgba(0,0,0,0.4); }
+.barcode-hint { color:#fff;font-size:13px;margin-top:12px;opacity:0.85;text-align:center;padding:0 16px; }
+.barcode-close-btn { margin-top:16px;padding:10px 32px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.1);color:#fff;font-size:14px;font-family:var(--font);cursor:pointer; }
+.barcode-result-card { background:var(--bg2);border-radius:16px;padding:16px;width:calc(100% - 32px);max-width:360px;margin-top:16px; }
+.barcode-result-name { font-size:15px;font-weight:600;color:var(--tx);margin-bottom:8px; }
+.barcode-result-macros { display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px; }
+.barcode-result-chip { padding:4px 10px;border-radius:12px;font-size:12px;background:var(--bg3);color:var(--tx2); }
+.barcode-result-btns { display:flex;gap:8px; }
+.barcode-loading { color:#fff;font-size:14px;margin-top:16px;text-align:center; }
+
 .food-multi-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .food-multi-row { display: flex; gap: 6px; align-items: center; }
 .food-multi-row input[type="text"] { width: 100%; font-size: 13px; padding: 7px 8px; }
@@ -1444,6 +1460,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/zxing-js/0.21.3/umd/index.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -2010,6 +2027,21 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         <input type="file" id="import-file-input" accept=".json" style="display:none">
       </div>
       <div class="settings-section" style="margin-top:8px">
+        <div class="settings-section-title">🥫 條碼掃描（包裝食品營養）</div>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:10px;line-height:1.6">
+          掃描食品包裝條碼，自動查詢 Open Food Facts 全球食品資料庫（免費，無需 API Key）。<br>
+          台灣大品牌及進口食品覆蓋率較高；查無資料時可手動輸入。
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg3);border-radius:var(--r)">
+          <span style="font-size:20px">📷</span>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--tx)">掃描條碼</div>
+            <div style="font-size:11px;color:var(--tx3)">在「飲食記錄」新增頁面點擊「掃描條碼」使用</div>
+          </div>
+          <span style="font-size:18px;color:var(--tx3)">✓</span>
+        </div>
+      </div>
+      <div class="settings-section" style="margin-top:8px">
         <div class="settings-section-title">匯出 Excel 報表</div>
         <div class="settings-item" id="csv-all-btn" style="background:var(--acl)">
           <span class="settings-item-icon">📊</span>
@@ -2490,6 +2522,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
     </div>
     <div class="sf-row" style="position:relative">
       <div class="food-edit-mode-label" id="food-edit-mode-lbl">新增飲食記錄</div>
+    <button type="button" id="food-barcode-btn" onclick="openBarcodeScanner()" style="width:100%;margin-bottom:8px;padding:9px;border-radius:var(--rr);border:1.5px dashed var(--ac);background:var(--acl);color:var(--acd);font-size:13px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">📷 掃描條碼（包裝食品）</button>
     <input type="text" id="food-edit-name" placeholder="食物名稱（可搜尋食物資料庫）" maxlength="60" autocomplete="off" style="width:100%;font-size:16px">
     <div class="food-edit-suggest hidden" id="food-edit-suggest"></div>
     </div>
@@ -2556,6 +2589,25 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <textarea id="food-edit-note" rows="2" style="width:100%;resize:none;font-size:13px;padding:6px 8px" placeholder="備註（選填）…" maxlength="200"></textarea>
     </div>
   </div>
+</div>
+
+<!-- 📷 條碼掃描 Modal -->
+<div class="barcode-modal-overlay hidden" id="barcode-modal-overlay">
+  <div class="barcode-video-wrap" id="barcode-video-wrap">
+    <video id="barcode-video" autoplay muted playsinline></video>
+    <div class="barcode-aim"><div class="barcode-aim-box"></div></div>
+  </div>
+  <div class="barcode-hint" id="barcode-hint">將條碼對準框內，自動辨識</div>
+  <div class="barcode-loading hidden" id="barcode-loading">🔍 查詢食品資料庫中…</div>
+  <div class="barcode-result-card hidden" id="barcode-result-card">
+    <div class="barcode-result-name" id="barcode-result-name"></div>
+    <div class="barcode-result-macros" id="barcode-result-macros"></div>
+    <div class="barcode-result-btns">
+      <button class="btn-primary" style="flex:1;font-size:13px;padding:9px" onclick="barcodeApplyResult()">✅ 套用到記錄</button>
+      <button class="btn-ghost" style="flex:1;font-size:13px;padding:9px" onclick="barcodeScanAgain()">重新掃描</button>
+    </div>
+  </div>
+  <button class="barcode-close-btn" onclick="closeBarcodeScanner()">✕ 關閉</button>
 </div>
 
 <!-- 🍽 蛋白質碳水試算工具 -->
@@ -9840,6 +9892,147 @@ function openRecipeModal(num, isDessert) {
 }
 
 /* ── 飲食記錄儲存選擇彈窗 ── */
+/* ══════════════════════════════════════════════
+   條碼掃描功能 (Open Food Facts API + ZXing)
+   ══════════════════════════════════════════════ */
+var _barcodeReader = null;
+var _barcodeStream = null;
+var _barcodeResult = null;
+
+function openBarcodeScanner() {
+  var overlay = $('barcode-modal-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('hidden');
+  $('barcode-result-card').classList.add('hidden');
+  $('barcode-hint').classList.remove('hidden');
+  $('barcode-loading').classList.add('hidden');
+  _barcodeResult = null;
+  _startBarcodeCamera();
+}
+
+function closeBarcodeScanner() {
+  _stopBarcodeCamera();
+  var overlay = $('barcode-modal-overlay');
+  if (overlay) overlay.classList.add('hidden');
+}
+
+function _startBarcodeCamera() {
+  var video = $('barcode-video');
+  if (!video) return;
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+    .then(function(stream) {
+      _barcodeStream = stream;
+      video.srcObject = stream;
+      video.play();
+      _startZxingDecode(video);
+    })
+    .catch(function(err) {
+      showToast('無法開啟相機：' + (err.message || err), true);
+      closeBarcodeScanner();
+    });
+}
+
+function _stopBarcodeCamera() {
+  if (_barcodeReader) {
+    try { _barcodeReader.reset(); } catch(e) {}
+    _barcodeReader = null;
+  }
+  if (_barcodeStream) {
+    _barcodeStream.getTracks().forEach(function(t){ t.stop(); });
+    _barcodeStream = null;
+  }
+  var video = $('barcode-video');
+  if (video) { video.srcObject = null; }
+}
+
+function _startZxingDecode(video) {
+  if (typeof ZXing === 'undefined') {
+    showToast('條碼辨識庫尚未載入，請重新整理頁面後再試', true);
+    closeBarcodeScanner();
+    return;
+  }
+  var hints = new Map();
+  hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+  _barcodeReader = new ZXing.BrowserMultiFormatReader(hints);
+  _barcodeReader.decodeFromVideoElement(video, function(result, err) {
+    if (result) {
+      var code = result.getText();
+      _barcodeReader.reset();
+      _lookupBarcode(code);
+    }
+  });
+}
+
+function _lookupBarcode(barcode) {
+  _stopBarcodeCamera();
+  $('barcode-hint').classList.add('hidden');
+  $('barcode-loading').classList.remove('hidden');
+  $('barcode-result-card').classList.add('hidden');
+  var url = 'https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(barcode) + '.json?fields=product_name,product_name_zh,nutriments';
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      $('barcode-loading').classList.add('hidden');
+      if (!data || data.status === 0 || !data.product) {
+        showToast('查無此條碼（' + barcode + '），請手動輸入', true);
+        barcodeScanAgain();
+        return;
+      }
+      var p = data.product;
+      var n = p.nutriments || {};
+      var name = (p.product_name_zh && p.product_name_zh.trim()) || (p.product_name && p.product_name.trim()) || '未知食品';
+      var energyKcal = n['energy-kcal_100g'];
+      if (!energyKcal && n['energy_100g']) energyKcal = Math.round(n['energy_100g'] / 4.184);
+      var cal  = Math.round(energyKcal || 0);
+      var pro  = parseFloat((n['proteins_100g'] || 0).toFixed(1));
+      var carb = parseFloat((n['carbohydrates_100g'] || 0).toFixed(1));
+      var fat  = parseFloat((n['fat_100g'] || 0).toFixed(1));
+      _barcodeResult = { name: name, cal: cal, pro: pro, carb: carb, fat: fat };
+      $('barcode-result-name').textContent = name;
+      $('barcode-result-macros').innerHTML =
+        '<span class="barcode-result-chip">🔥 ' + cal + ' kcal</span>' +
+        '<span class="barcode-result-chip">🥩 蛋白 ' + pro + 'g</span>' +
+        '<span class="barcode-result-chip">🌾 碳水 ' + carb + 'g</span>' +
+        '<span class="barcode-result-chip">🧈 脂肪 ' + fat + 'g</span>' +
+        '<span style="font-size:10px;color:var(--tx3);width:100%;margin-top:4px;display:block">以上為每 100g 數值，套用後請依實際食用量調整份量</span>';
+      $('barcode-result-card').classList.remove('hidden');
+    })
+    .catch(function() {
+      $('barcode-loading').classList.add('hidden');
+      showToast('網路錯誤，請確認連線後再試', true);
+      barcodeScanAgain();
+    });
+}
+
+function barcodeApplyResult() {
+  if (!_barcodeResult) return;
+  var r = _barcodeResult;
+  closeBarcodeScanner();
+  var nameInp = $('food-edit-name');
+  if (nameInp) {
+    nameInp.value = r.name;
+    var suggest = $('food-edit-suggest');
+    if (suggest) suggest.classList.add('hidden');
+  }
+  if ($('food-edit-cal'))  $('food-edit-cal').value  = r.cal;
+  if ($('food-edit-pro'))  $('food-edit-pro').value  = r.pro;
+  if ($('food-edit-carb')) $('food-edit-carb').value = r.carb;
+  if ($('food-edit-fat'))  $('food-edit-fat').value  = r.fat;
+  var qtyRow = $('food-edit-qty-row');
+  if (qtyRow) qtyRow.classList.remove('hidden');
+  if ($('food-edit-qty'))      $('food-edit-qty').value = 100;
+  if ($('food-edit-qty-unit')) $('food-edit-qty-unit').value = 'g';
+  showToast('✅ 已帶入「' + r.name + '」數值（每100g），請調整實際份量');
+}
+
+function barcodeScanAgain() {
+  $('barcode-result-card').classList.add('hidden');
+  $('barcode-loading').classList.add('hidden');
+  $('barcode-hint').classList.remove('hidden');
+  _barcodeResult = null;
+  _startBarcodeCamera();
+}
+
 var _foodSavePopup = null;
 
 function closeFoodSavePopup() {
