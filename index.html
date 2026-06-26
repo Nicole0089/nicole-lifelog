@@ -2524,7 +2524,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <div class="food-edit-mode-label" id="food-edit-mode-lbl">新增飲食記錄</div>
     <div style="display:flex;gap:6px;margin-bottom:8px">
       <button type="button" id="food-barcode-btn" style="flex:1;padding:9px;border-radius:var(--rr);border:1.5px dashed var(--ac);background:var(--acl);color:var(--acd);font-size:12px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">📷 掃描條碼</button>
-      <a id="food-tfda-btn" href="https://gemini.google.com/app" target="_blank" rel="noopener" style="flex:1;padding:9px;border-radius:var(--rr);border:1.5px dashed #5A9888;background:#f0f7f5;color:#3d7a6a;font-size:12px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;text-decoration:none">✨ 問 Gemini</a>
+      <button type="button" id="food-tfda-btn" style="flex:1;padding:9px;border-radius:var(--rr);border:1.5px dashed #5A9888;background:#f0f7f5;color:#3d7a6a;font-size:12px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">✨ 問 Gemini</button>
     </div>
     <input type="text" id="food-edit-name" placeholder="食物名稱（可搜尋食物資料庫）" maxlength="60" autocomplete="off" style="width:100%;font-size:16px">
     <div class="food-edit-suggest hidden" id="food-edit-suggest"></div>
@@ -6323,20 +6323,26 @@ $('food-edit-cancel-btn').addEventListener('click',closeFoodEdit);
     openBarcodeScanner();
   });
 })();
-// Gemini 連結：食物名稱輸入時動態更新 href
+// Gemini 按鈕：touchend 直接跳轉，stopPropagation 防 overlay 攔截
 (function(){
-  var nameInp = $('food-edit-name');
-  var glink = $('food-tfda-btn');
-  function updateGeminiHref() {
-    if (!glink) return;
-    var name = nameInp ? nameInp.value.trim() : '';
+  var gbtn = $('food-tfda-btn');
+  if (!gbtn) return;
+  var _fired = false;
+  function doGemini(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    if (_fired) return;
+    _fired = true;
+    setTimeout(function(){ _fired = false; }, 800);
+    var name = ($('food-edit-name') && $('food-edit-name').value.trim()) || '';
     var prompt = name
       ? '請幫我估算「' + name + '」的營養成分，列出：熱量(kcal)、蛋白質(g)、碳水化合物(g)、脂肪(g)，以一般常見份量為基準，並說明是幾克或幾份。'
       : '請幫我估算一種食物的熱量(kcal)、蛋白質(g)、碳水化合物(g)、脂肪(g)。';
-    glink.href = 'https://gemini.google.com/app?q=' + encodeURIComponent(prompt);
+    var url = 'https://gemini.google.com/app?q=' + encodeURIComponent(prompt);
+    location.href = url;
   }
-  if (nameInp) nameInp.addEventListener('input', updateGeminiHref);
-  updateGeminiHref();
+  gbtn.addEventListener('touchend', doGemini, { passive: false });
+  gbtn.addEventListener('click', doGemini);
 })();
 $('food-edit-overlay').addEventListener('click',function(e){if(_barcodeOpen)return;if(e.target===$('food-edit-overlay'))closeFoodEdit();});
 document.querySelectorAll('#food-meal-btns .food-meal-btn').forEach(function(btn){
