@@ -2524,7 +2524,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <div class="food-edit-mode-label" id="food-edit-mode-lbl">新增飲食記錄</div>
     <div style="display:flex;gap:6px;margin-bottom:8px">
       <button type="button" id="food-barcode-btn" style="flex:1;padding:9px;border-radius:var(--rr);border:1.5px dashed var(--ac);background:var(--acl);color:var(--acd);font-size:12px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">📷 掃描條碼</button>
-      <button type="button" id="food-tfda-btn" onclick="openTFDA()" style="flex:1;padding:9px;border-radius:var(--rr);border:1.5px dashed #5A9888;background:#f0f7f5;color:#3d7a6a;font-size:12px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">🔍 查 TFDA 營養</button>
+      <button type="button" id="food-tfda-btn" onclick="openGemini()" style="flex:1;padding:9px;border-radius:var(--rr);border:1.5px dashed #5A9888;background:#f0f7f5;color:#3d7a6a;font-size:12px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">✨ 問 Gemini</button>
     </div>
     <input type="text" id="food-edit-name" placeholder="食物名稱（可搜尋食物資料庫）" maxlength="60" autocomplete="off" style="width:100%;font-size:16px">
     <div class="food-edit-suggest hidden" id="food-edit-suggest"></div>
@@ -10055,9 +10055,9 @@ function _lookupBarcode(barcode) {
         var card = $('barcode-result-card');
         $('barcode-result-name').textContent = '查無條碼「' + barcode + '」的資料';
         $('barcode-result-macros').innerHTML =
-          '<span style="font-size:12px;color:var(--tx3);line-height:1.6">Open Food Facts 資料庫找不到此商品，可點下方按鈕前往 TFDA 台灣食品營養成分資料庫查詢，再手動填入。</span>';
+          '<span style="font-size:12px;color:var(--tx3);line-height:1.6">Open Food Facts 資料庫找不到此商品，可點下方按鈕用 Gemini AI 查詢營養成分，再手動填入。</span>';
         $('barcode-result-btns').innerHTML =
-          '<button class="btn-primary" style="flex:1;font-size:13px;padding:9px" onclick="openTFDA()">🔍 查 TFDA 營養</button>' +
+          '<button class="btn-primary" style="flex:1;font-size:13px;padding:9px" onclick="openGemini()">✨ 問 Gemini</button>' +
           '<button class="btn-ghost" style="flex:1;font-size:13px;padding:9px" onclick="barcodeScanAgain()">重新掃描</button>';
         card.classList.remove('hidden');
         return;
@@ -10121,14 +10121,15 @@ function barcodeScanAgain() {
   _startBarcodeCamera();
 }
 
-function openTFDA() {
-  // 若食物名稱欄已有輸入，帶入搜尋關鍵字
+function openGemini() {
   var name = ($('food-edit-name') && $('food-edit-name').value.trim()) || '';
-  var url = 'https://consumer.fda.gov.tw/Food/TFND.aspx?nodeID=178';
+  var prompt;
   if (name) {
-    url = 'https://consumer.fda.gov.tw/Food/TFND.aspx?nodeID=178&keyword=' + encodeURIComponent(name);
+    prompt = '請幫我估算「' + name + '」的營養成分，列出：熱量(kcal)、蛋白質(g)、碳水化合物(g)、脂肪(g)，以一般常見份量為基準，並說明是幾克或幾份。';
+  } else {
+    prompt = '請幫我估算一種食物的熱量(kcal)、蛋白質(g)、碳水化合物(g)、脂肪(g)，請告訴我食物名稱。';
   }
-  window.open(url, '_blank');
+  window.open('https://gemini.google.com/app?q=' + encodeURIComponent(prompt), '_blank');
 }
 
 var _foodSavePopup = null;
