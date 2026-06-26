@@ -2524,7 +2524,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <div class="food-edit-mode-label" id="food-edit-mode-lbl">新增飲食記錄</div>
     <div style="display:flex;gap:6px;margin-bottom:8px">
       <button type="button" id="food-barcode-btn" style="flex:1;padding:9px;border-radius:var(--rr);border:1.5px dashed var(--ac);background:var(--acl);color:var(--acd);font-size:12px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">📷 掃描條碼</button>
-      <button type="button" id="food-tfda-btn" onclick="openGemini()" style="flex:1;padding:9px;border-radius:var(--rr);border:1.5px dashed #5A9888;background:#f0f7f5;color:#3d7a6a;font-size:12px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">✨ 問 Gemini</button>
+      <button type="button" id="food-tfda-btn" style="flex:1;padding:9px;border-radius:var(--rr);border:1.5px dashed #5A9888;background:#f0f7f5;color:#3d7a6a;font-size:12px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">✨ 問 Gemini</button>
     </div>
     <input type="text" id="food-edit-name" placeholder="食物名稱（可搜尋食物資料庫）" maxlength="60" autocomplete="off" style="width:100%;font-size:16px">
     <div class="food-edit-suggest hidden" id="food-edit-suggest"></div>
@@ -6321,6 +6321,26 @@ $('food-edit-cancel-btn').addEventListener('click',closeFoodEdit);
     _barcodeBtnFired = true;
     setTimeout(function(){ _barcodeBtnFired = false; }, 600);
     openBarcodeScanner();
+  });
+})();
+// Gemini 按鈕：防彈出視窗封鎖，直接綁定 touchend+click
+(function(){
+  var _geminiFired = false;
+  var gbtn = $('food-tfda-btn');
+  if (!gbtn) return;
+  gbtn.addEventListener('touchend', function(e){
+    e.preventDefault(); e.stopPropagation();
+    if (_geminiFired) return;
+    _geminiFired = true;
+    setTimeout(function(){ _geminiFired = false; }, 600);
+    openGemini();
+  });
+  gbtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    if (_geminiFired) return;
+    _geminiFired = true;
+    setTimeout(function(){ _geminiFired = false; }, 600);
+    openGemini();
   });
 })();
 $('food-edit-overlay').addEventListener('click',function(e){if(_barcodeOpen)return;if(e.target===$('food-edit-overlay'))closeFoodEdit();});
