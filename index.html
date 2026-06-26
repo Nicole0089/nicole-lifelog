@@ -9934,8 +9934,10 @@ function _startBarcodeCamera() {
 
 function _stopBarcodeCamera() {
   if (_barcodeReader) {
-    if (_barcodeReader._running !== undefined) {
-      _barcodeReader._running = false; // 停止原生 BarcodeDetector 掃描迴圈
+    if (_barcodeReader._state) {
+      // 原生 BarcodeDetector 模式：停止迴圈 + 清除 timer
+      _barcodeReader._state.running = false;
+      if (_barcodeReader._state.timer) clearTimeout(_barcodeReader._state.timer);
     } else {
       try { _barcodeReader.reset(); } catch(e) {}
     }
@@ -9950,23 +9952,44 @@ function _stopBarcodeCamera() {
 }
 
 function _startZxingDecode(video) {
-  // 優先使用瀏覽器原生 BarcodeDetector（Android Chrome 支援，速度最快）
+  // 優先使用瀏覽器原生 BarcodeDetector（Android Chrome 支援）
   if (typeof BarcodeDetector !== 'undefined') {
-    var detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code'] });
-    _barcodeReader = { _nativeDetector: detector, _running: true };
-    function scanFrame() {
-      if (!_barcodeReader || !_barcodeReader._running) return;
-      detector.detect(video).then(function(codes) {
-        if (codes && codes.length > 0) {
-          _barcodeReader._running = false;
-          _lookupBarcode(codes[0].rawValue);
-        } else {
-          requestAnimationFrame(scanFrame);
-        }
-      }).catch(function() { requestAnimationFrame(scanFrame); });
+    var detector = new BarcodeDetector({
+      formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code']
+    });
+    var state = { running: true, scanning: false, timer: null };
+    _barcodeReader = { _state: state };
+
+    function doScan() {
+      if (!state.running || state.scanning) return;
+      // video 必須有實際畫面才掃
+      if (video.readyState < 2 || video.videoWidth === 0) {
+        state.timer = setTimeout(doScan, 300);
+        return;
+      }
+      state.scanning = true;
+      detector.detect(video)
+        .then(function(codes) {
+          if (!state.running) return;
+          if (codes && codes.length > 0) {
+            state.running = false;
+            _lookupBarcode(codes[0].rawValue);
+          } else {
+            state.scanning = false;
+            state.timer = setTimeout(doScan, 500); // 每500ms掃一次，不閃爍
+          }
+        })
+        .catch(function() {
+          if (!state.running) return;
+          state.scanning = false;
+          state.timer = setTimeout(doScan, 500);
+        });
     }
-    video.addEventListener('loadeddata', function() { requestAnimationFrame(scanFrame); }, { once: true });
-    if (video.readyState >= 2) requestAnimationFrame(scanFrame);
+
+    // 等 video 播放後開始
+    video.addEventListener('playing', function() { doScan(); }, { once: true });
+    // 若已經在播放中
+    if (!video.paused && video.readyState >= 2) doScan();
     return;
   }
   // Fallback：ZXingBrowser（jsdelivr CDN）
