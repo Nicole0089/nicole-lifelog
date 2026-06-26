@@ -2522,7 +2522,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
     </div>
     <div class="sf-row" style="position:relative">
       <div class="food-edit-mode-label" id="food-edit-mode-lbl">新增飲食記錄</div>
-    <button type="button" id="food-barcode-btn" onclick="openBarcodeScanner()" style="width:100%;margin-bottom:8px;padding:9px;border-radius:var(--rr);border:1.5px dashed var(--ac);background:var(--acl);color:var(--acd);font-size:13px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">📷 掃描條碼（包裝食品）</button>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button type="button" id="food-barcode-btn" style="flex:1;padding:9px;border-radius:var(--rr);border:1.5px dashed var(--ac);background:var(--acl);color:var(--acd);font-size:12px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">📷 掃描條碼</button>
+      <button type="button" id="food-tfda-btn" onclick="openTFDA()" style="flex:1;padding:9px;border-radius:var(--rr);border:1.5px dashed #5A9888;background:#f0f7f5;color:#3d7a6a;font-size:12px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">🔍 查 TFDA 營養</button>
+    </div>
     <input type="text" id="food-edit-name" placeholder="食物名稱（可搜尋食物資料庫）" maxlength="60" autocomplete="off" style="width:100%;font-size:16px">
     <div class="food-edit-suggest hidden" id="food-edit-suggest"></div>
     </div>
@@ -6300,7 +6303,27 @@ var _foodHistSearchEl = $('food-history-search-input');
 if(_foodHistSearchEl){ _foodHistSearchEl.addEventListener('input',function(){ _foodHistSearch=this.value; renderFoodHistory(); }); }
 $('food-edit-save-btn').addEventListener('click',saveFoodEdit);
 $('food-edit-cancel-btn').addEventListener('click',closeFoodEdit);
-$('food-edit-overlay').addEventListener('click',function(e){if(e.target===$('food-edit-overlay'))closeFoodEdit();});
+// 條碼按鈕：防 touchend+click 雙觸發
+(function(){
+  var _barcodeBtnFired = false;
+  var btn = $('food-barcode-btn');
+  if (!btn) return;
+  btn.addEventListener('touchend', function(e){
+    e.preventDefault(); e.stopPropagation();
+    if (_barcodeBtnFired) return;
+    _barcodeBtnFired = true;
+    setTimeout(function(){ _barcodeBtnFired = false; }, 600);
+    openBarcodeScanner();
+  });
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    if (_barcodeBtnFired) return;
+    _barcodeBtnFired = true;
+    setTimeout(function(){ _barcodeBtnFired = false; }, 600);
+    openBarcodeScanner();
+  });
+})();
+$('food-edit-overlay').addEventListener('click',function(e){if(_barcodeOpen)return;if(e.target===$('food-edit-overlay'))closeFoodEdit();});
 document.querySelectorAll('#food-meal-btns .food-meal-btn').forEach(function(btn){
   btn.addEventListener('click',function(){
     _foodEditMeal=btn.dataset.meal;
@@ -9898,10 +9921,12 @@ function openRecipeModal(num, isDessert) {
 var _barcodeReader = null;
 var _barcodeStream = null;
 var _barcodeResult = null;
+var _barcodeOpen = false; // 條碼 Modal 開啟中，防止底層事件穿透
 
 function openBarcodeScanner() {
   var overlay = $('barcode-modal-overlay');
   if (!overlay) return;
+  _barcodeOpen = true;
   overlay.classList.remove('hidden');
   $('barcode-result-card').classList.add('hidden');
   $('barcode-hint').classList.remove('hidden');
@@ -9914,6 +9939,8 @@ function closeBarcodeScanner() {
   _stopBarcodeCamera();
   var overlay = $('barcode-modal-overlay');
   if (overlay) overlay.classList.add('hidden');
+  // 延遲解除，確保 touchend 事件不會穿透到底層 overlay
+  setTimeout(function(){ _barcodeOpen = false; }, 400);
 }
 
 function _startBarcodeCamera() {
@@ -10021,8 +10048,18 @@ function _lookupBarcode(barcode) {
     .then(function(data) {
       $('barcode-loading').classList.add('hidden');
       if (!data || data.status === 0 || !data.product) {
-        showToast('查無此條碼（' + barcode + '），請手動輸入', true);
-        barcodeScanAgain();
+        _stopBarcodeCamera();
+        $('barcode-loading').classList.add('hidden');
+        $('barcode-hint').classList.add('hidden');
+        // 顯示查無結果提示卡片
+        var card = $('barcode-result-card');
+        $('barcode-result-name').textContent = '查無條碼「' + barcode + '」的資料';
+        $('barcode-result-macros').innerHTML =
+          '<span style="font-size:12px;color:var(--tx3);line-height:1.6">Open Food Facts 資料庫找不到此商品，可點下方按鈕前往 TFDA 台灣食品營養成分資料庫查詢，再手動填入。</span>';
+        $('barcode-result-btns').innerHTML =
+          '<button class="btn-primary" style="flex:1;font-size:13px;padding:9px" onclick="openTFDA()">🔍 查 TFDA 營養</button>' +
+          '<button class="btn-ghost" style="flex:1;font-size:13px;padding:9px" onclick="barcodeScanAgain()">重新掃描</button>';
+        card.classList.remove('hidden');
         return;
       }
       var p = data.product;
@@ -10073,11 +10110,25 @@ function barcodeApplyResult() {
 }
 
 function barcodeScanAgain() {
+  // 還原結果按鈕（可能被查無結果改寫過）
+  $('barcode-result-btns').innerHTML =
+    '<button class="btn-primary" style="flex:1;font-size:13px;padding:9px" onclick="barcodeApplyResult()">✅ 套用到記錄</button>' +
+    '<button class="btn-ghost" style="flex:1;font-size:13px;padding:9px" onclick="barcodeScanAgain()">重新掃描</button>';
   $('barcode-result-card').classList.add('hidden');
   $('barcode-loading').classList.add('hidden');
   $('barcode-hint').classList.remove('hidden');
   _barcodeResult = null;
   _startBarcodeCamera();
+}
+
+function openTFDA() {
+  // 若食物名稱欄已有輸入，帶入搜尋關鍵字
+  var name = ($('food-edit-name') && $('food-edit-name').value.trim()) || '';
+  var url = 'https://consumer.fda.gov.tw/Food/TFND.aspx?nodeID=178';
+  if (name) {
+    url = 'https://consumer.fda.gov.tw/Food/TFND.aspx?nodeID=178&keyword=' + encodeURIComponent(name);
+  }
+  window.open(url, '_blank');
 }
 
 var _foodSavePopup = null;
