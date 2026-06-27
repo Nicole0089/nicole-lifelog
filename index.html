@@ -9970,9 +9970,9 @@ function openBarcodeScanner() {
   if (!overlay) return;
   _barcodeOpen = true;
   overlay.classList.remove('hidden');
-  $('barcode-result-card').classList.add('hidden');
-  $('barcode-hint').classList.remove('hidden');
-  $('barcode-loading').classList.add('hidden');
+  if ($('barcode-result-card')) $('barcode-result-card').classList.add('hidden');
+  if ($('barcode-hint')) $('barcode-hint').classList.remove('hidden');
+  if ($('barcode-loading')) $('barcode-loading').classList.add('hidden');
   _barcodeResult = null;
   _startBarcodeCamera();
 }
@@ -10153,14 +10153,15 @@ function barcodeApplyResult() {
 
 function barcodeScanAgain() {
   // 還原結果按鈕（可能被查無結果改寫過）
-  $('barcode-result-btns').innerHTML =
+  var btns = $('barcode-result-btns');
+  if (btns) btns.innerHTML =
     '<button class="btn-primary" style="flex:1;font-size:13px;padding:9px" onclick="barcodeApplyResult()">✅ 套用到記錄</button>' +
     '<button class="btn-ghost" style="flex:1;font-size:13px;padding:9px" onclick="barcodeScanAgain()">重新掃描</button>';
-  $('barcode-result-card').classList.add('hidden');
-  $('barcode-loading').classList.add('hidden');
-  $('barcode-hint').classList.remove('hidden');
+  if ($('barcode-result-card')) $('barcode-result-card').classList.add('hidden');
+  if ($('barcode-loading')) $('barcode-loading').classList.add('hidden');
+  if ($('barcode-hint')) $('barcode-hint').classList.remove('hidden');
   _barcodeResult = null;
-  _startBarcodeCamera();
+  if (_barcodeOpen) _startBarcodeCamera();
 }
 
 function copyGeminiPrompt() {
