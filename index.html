@@ -10055,10 +10055,14 @@ function _startZxingDecode(video) {
         });
     }
 
-    // 等 video 播放後開始
-    video.addEventListener('playing', function() { doScan(); }, { once: true });
-    // 若已經在播放中
-    if (!video.paused && video.readyState >= 2) doScan();
+    // 等相機畫面真正出現後才開始掃（polling，相容各款 Android）
+    var _waitTimer = setInterval(function() {
+      if (!state.running) { clearInterval(_waitTimer); return; }
+      if (video.videoWidth > 0 && video.readyState >= 2) {
+        clearInterval(_waitTimer);
+        doScan();
+      }
+    }, 200);
     return;
   }
   // Fallback：ZXingBrowser（jsdelivr CDN）
@@ -10081,12 +10085,14 @@ function _startZxingDecode(video) {
 
 function _lookupBarcode(barcode) {
   _stopBarcodeCamera();
-  $('barcode-hint').classList.add('hidden');
-  $('barcode-loading').classList.remove('hidden');
-  $('barcode-result-card').classList.add('hidden');
-  var url = 'https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(barcode) + '.json?fields=product_name,product_name_zh,nutriments';
-  fetch(url)
-    .then(function(r){ return r.json(); })
+  if ($('barcode-hint')) $('barcode-hint').classList.add('hidden');
+  if ($('barcode-loading')) $('barcode-loading').classList.remove('hidden');
+  if ($('barcode-result-card')) $('barcode-result-card').classList.add('hidden');
+  var url = 'https://world.openfoodfacts.net/api/v2/product/' + encodeURIComponent(barcode) + '.json?fields=product_name,product_name_zh,nutriments';
+  var controller = new AbortController();
+  var timer = setTimeout(function(){ controller.abort(); }, 8000);
+  fetch(url, { signal: controller.signal })
+    .then(function(r){ clearTimeout(timer); return r.json(); })
     .then(function(data) {
       $('barcode-loading').classList.add('hidden');
       if (!data || data.status === 0 || !data.product) {
@@ -10124,9 +10130,19 @@ function _lookupBarcode(barcode) {
       $('barcode-result-card').classList.remove('hidden');
     })
     .catch(function() {
-      $('barcode-loading').classList.add('hidden');
-      showToast('網路錯誤，請確認連線後再試', true);
-      barcodeScanAgain();
+      clearTimeout(timer);
+      if ($('barcode-loading')) $('barcode-loading').classList.add('hidden');
+      // 顯示查無結果卡片（查詢失敗也適用）
+      var card = $('barcode-result-card');
+      if (!card) return;
+      $('barcode-result-name').textContent = '查詢失敗（台灣商品資料庫收錄較少）';
+      $('barcode-result-macros').innerHTML =
+        '<span style="font-size:12px;color:var(--tx3);line-height:1.6">Open Food Facts 對台灣商品覆蓋率較低，建議用 Gemini 查詢後手動填入。</span>';
+      var btns = $('barcode-result-btns');
+      if (btns) btns.innerHTML =
+        '<button class="btn-primary" style="flex:1;font-size:13px;padding:9px" onclick="copyGeminiPrompt()">📋 複製問題→Gemini</button>' +
+        '<button class="btn-ghost" style="flex:1;font-size:13px;padding:9px" onclick="barcodeScanAgain()">重新掃描</button>';
+      card.classList.remove('hidden');
     });
 }
 
