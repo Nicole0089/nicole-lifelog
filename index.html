@@ -9138,12 +9138,12 @@ function exportAllXLSX() {
     }), [3]);
 
   /* ── 習慣追蹤 ── */
-  var hRows=[]; state.habits.forEach(function(h){ var logs=h.logs||{}; Object.keys(logs).sort().forEach(function(date){ hRows.push([h.name,(h.category||'good')==='good'?'好習慣':'壞習慣',h.type||'yesno',date,logs[date]]); }); });
-  add('習慣追蹤',['習慣名稱','類型','記錄方式','日期','記錄值'], hRows, [4]);
+  var hRows=[]; state.habits.forEach(function(h){ var logs=h.logs||{}; var notes=h.notes||{}; Object.keys(logs).sort().forEach(function(date){ hRows.push([h.name,(h.category||'good')==='good'?'好習慣':'壞習慣',h.type||'yesno',date,logs[date],notes[date]||'']); }); });
+  add('習慣追蹤',['習慣名稱','類型','記錄方式','日期','記錄值','附註'], hRows, [4]);
 
   /* ── 家務記錄 ── */
-  var cRows=[]; state.chores.forEach(function(h){ var logs=h.logs||{}; Object.keys(logs).sort().forEach(function(date){ cRows.push([h.name,date,logs[date]]); }); });
-  add('家務記錄',['家務名稱','日期','記錄值'], cRows, [2]);
+  var cRows=[]; state.chores.forEach(function(h){ var logs=h.logs||{}; var notes=h.notes||{}; Object.keys(logs).sort().forEach(function(date){ cRows.push([h.name,date,logs[date],notes[date]||'']); }); });
+  add('家務記錄',['家務名稱','日期','記錄值','附註'], cRows, [2]);
 
   /* ── 備忘錄 ── */
   add('筆記本',['標題','內容','截止日期','已置頂','更新時間'],
