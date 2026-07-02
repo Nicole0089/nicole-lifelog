@@ -9121,13 +9121,20 @@ function exportAllXLSX() {
     foodByDate[l.date].carb += +l.carbs||0;
     foodByDate[l.date].fat  += +l.fat||0;
   });
+  /* 每日層級標記：碳水分類 / 外食無記錄 / 今日備註（與飲食頁上方的日備註區塊對應）*/
+  var _xlsxFdNotes = typeof _foodDayNotes !== 'undefined' ? _foodDayNotes : {};
+  var _xlsxFdCarbs = typeof _foodDayCarbs !== 'undefined' ? _foodDayCarbs : {};
+  var _xlsxFdSkip  = typeof _foodSkipDays !== 'undefined' ? _foodSkipDays : {};
+  var _xlsxCarbLabel = { low:'碳水40g以下', mid:'碳水50-90g', high:'爆碳' };
   add('飲食記錄',
     ['日期','餐別','食物名稱','份量(g)','熱量(kcal)','蛋白質(g)','碳水(g)','脂肪(g)','備註',
-     '當日熱量合計(kcal)','當日蛋白質合計(g)','當日碳水合計(g)','當日脂肪合計(g)'],
+     '當日熱量合計(kcal)','當日蛋白質合計(g)','當日碳水合計(g)','當日脂肪合計(g)',
+     '碳水分類','外食/無記錄','今日備註'],
     state.foodLogs.slice().sort(function(a,b){return a.date<b.date?-1:1;}).map(function(l){
       var d = foodByDate[l.date]||{};
       return [l.date,l.meal||'',l.name||'',l.grams||'',l.calories||'',l.protein||'',l.carbs||'',l.fat||'',l.note||'',
-              Math.round(d.cal*10)/10, Math.round(d.pro*10)/10, Math.round(d.carb*10)/10, Math.round(d.fat*10)/10];
+              Math.round(d.cal*10)/10, Math.round(d.pro*10)/10, Math.round(d.carb*10)/10, Math.round(d.fat*10)/10,
+              _xlsxCarbLabel[_xlsxFdCarbs[l.date]]||'', _xlsxFdSkip[l.date]?'是':'', _xlsxFdNotes[l.date]||''];
     }), [3,4,5,6,7,9,10,11,12]);
 
   /* ── 斷食記錄 ── */
@@ -9161,11 +9168,12 @@ function exportAllXLSX() {
   var fdNotes = typeof _foodDayNotes !== 'undefined' ? _foodDayNotes : {};
   var fdCarbs = typeof _foodDayCarbs !== 'undefined' ? _foodDayCarbs : {};
   var fdDayType = typeof _foodDayType !== 'undefined' ? _foodDayType : {};
+  var fdSkip = typeof _foodSkipDays !== 'undefined' ? _foodSkipDays : {};
   var carbLabel = { low:'碳水40g以下', mid:'碳水50-90g', high:'爆碳' };
   var dtypeLabel = { high:'🔴 高碳日', low:'🟡 低碳日', rest:'⚫ 休息日' };
-  var fdAllDates = Array.from(new Set(Object.keys(fdNotes).concat(Object.keys(fdCarbs)).concat(Object.keys(fdDayType)))).sort();
-  var fdRows = fdAllDates.filter(function(d){ return (fdNotes[d]&&fdNotes[d].trim()) || fdCarbs[d] || fdDayType[d]; }).map(function(d){ return [d, dtypeLabel[fdDayType[d]]||'', carbLabel[fdCarbs[d]]||'', fdNotes[d]||'']; });
-  add('飲食日備註', ['日期','今日日型','碳水標記','備註'], fdRows);
+  var fdAllDates = Array.from(new Set(Object.keys(fdNotes).concat(Object.keys(fdCarbs)).concat(Object.keys(fdDayType)).concat(Object.keys(fdSkip)))).sort();
+  var fdRows = fdAllDates.filter(function(d){ return (fdNotes[d]&&fdNotes[d].trim()) || fdCarbs[d] || fdDayType[d] || fdSkip[d]; }).map(function(d){ return [d, dtypeLabel[fdDayType[d]]||'', carbLabel[fdCarbs[d]]||'', fdSkip[d]?'是':'', fdNotes[d]||'']; });
+  add('飲食日備註', ['日期','今日日型','碳水標記','外食/無記錄','備註'], fdRows);
 
   /* ── 身體數據 & TDEE ── */
   var bd = typeof _bodyData !== 'undefined' ? _bodyData : {};
