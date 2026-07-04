@@ -80,10 +80,10 @@ body { background: #F0E8E6; background: var(--bg); color: #3D2828; color: var(--
 .checkin-water-fill { height: 100%; background: #60A4C4; border-radius: 4px; transition: width 0.3s; }
 .checkin-quick-btn { background: var(--ac); color: #fff; border: none; border-radius: 20px; padding: 6px 14px; font-size: 13px; cursor: pointer; font-family: var(--font); flex-shrink: 0; }
 .checkin-all-done { text-align: center; padding: 18px 14px; color: var(--tx3); font-size: 14px; background: var(--bg3); border: 0.5px solid var(--bd); border-radius: 12px; }
-.dash-slogan-row { display: flex; align-items: flex-start; gap: 6px; margin: 6px 0 4px; min-height: 28px; }
-.dash-slogan-text { flex: 1; min-width: 0; font-size: 14px; color: var(--tx2); font-style: italic; cursor: pointer; line-height: 1.4; white-space: normal; word-break: break-word; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.dash-slogan-row { display: flex; align-items: center; gap: 6px; margin: 6px 0 4px; min-height: 28px; }
+.dash-slogan-text { flex: 1; font-size: 14px; color: var(--tx2); font-style: italic; cursor: pointer; }
 .dash-slogan-text.empty { color: var(--tx3); font-style: normal; }
-.dash-slogan-edit-btn { background: none; border: none; font-size: 16px; color: var(--tx3); cursor: pointer; padding: 2px; flex-shrink: 0; margin-top: 2px; }
+.dash-slogan-edit-btn { background: none; border: none; font-size: 16px; color: var(--tx3); cursor: pointer; padding: 2px; }
 .dash-slogan-input { flex: 1; font-size: 14px; padding: 5px 8px; border: 1px solid var(--ac); border-radius: var(--r); background: var(--bg3); color: var(--tx); font-family: var(--font); }
 .dash-slogan-save-btn { background: var(--ac); color: #fff; border: none; border-radius: var(--r); padding: 5px 12px; font-size: 14px; cursor: pointer; font-family: var(--font); }
 /* temp memo card */
@@ -514,12 +514,6 @@ input::placeholder { color: var(--tx3); }
 .chore-log-diff { font-size: 12px; color: var(--tx3); white-space: nowrap; }
 .chore-log-del { background: none; border: none; color: var(--tx3); font-size: 14px; cursor: pointer; padding: 0 2px; flex-shrink: 0; }
 .chore-tl-more { text-align: center; padding: 6px 0 8px; }
-.chore-log-entry { border-bottom: 0.5px solid var(--bd); }
-.chore-log-entry:last-child { border-bottom: none; }
-.chore-log-entry .chore-log-row { border-bottom: none; padding-bottom: 2px; }
-.chore-log-note-btn { background: none; border: none; color: var(--tx3); font-size: 13px; cursor: pointer; padding: 0 2px; flex-shrink: 0; opacity: 0.5; }
-.chore-log-note-btn.has-note { opacity: 1; }
-.chore-log-note-text { font-size: 12px; line-height: 1.4; color: var(--tx2); background: var(--bg2); border-radius: 6px; padding: 4px 8px; margin: 0 0 7px 15px; word-break: break-word; }
 .chore-tl-show-all { background: none; border: 0.5px solid var(--bd); border-radius: 20px; padding: 3px 14px; font-size: 12px; color: var(--tx2); cursor: pointer; font-family: var(--font); }
 .chore-tl-show-all:active { background: var(--acl); color: var(--acd); }
 .chore-last-txt { font-size: 11px; color: var(--tx3); margin-top: 1px; }
@@ -564,20 +558,6 @@ input::placeholder { color: var(--tx3); }
 .count-box-title { font-size: 14px; color: var(--tx2); margin-bottom: 16px; }
 .count-input-row { display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 20px; }
 .count-input-row input { width: 90px; text-align: center; font-size: 24px; font-weight: 600; padding: 8px 10px; }
-
-/* ════════════════════════════════
-   📝 打卡附註 Overlay
-   ════════════════════════════════ */
-.note-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.note-overlay.hidden { display: none; }
-.note-box { background: var(--bg); border-radius: var(--r); padding: 20px 20px 16px; width: 100%; max-width: 320px; box-sizing: border-box; }
-.note-box-title { font-size: 14px; color: var(--tx2); margin-bottom: 10px; font-weight: 500; }
-.note-textarea { width: 100%; min-height: 80px; font-size: 14px; padding: 10px; border: 1px solid var(--bd); border-radius: var(--r); background: var(--bg3); color: var(--tx); font-family: var(--font); resize: vertical; box-sizing: border-box; }
-.note-btns { display: flex; gap: 8px; margin-top: 14px; }
-.note-btns button { flex: 1; padding: 10px; font-size: 13px; font-family: var(--font); border-radius: var(--r); cursor: pointer; border: none; }
-.note-delete-btn { background: transparent; border: 0.5px solid var(--bd); color: var(--tx3); }
-.note-cancel-btn { background: transparent; border: 0.5px solid var(--bd); color: var(--tx2); }
-.note-save-btn { background: var(--ac); color: #fff; }
 .count-unit-lbl { font-size: 16px; color: var(--tx2); }
 .count-btns { display: flex; gap: 8px; }
 .count-btns button { flex: 1; padding: 11px; font-size: 14px; font-family: var(--font); border-radius: var(--r); cursor: pointer; }
@@ -765,22 +745,6 @@ input::placeholder { color: var(--tx3); }
 .food-edit-suggest-item:active, .food-edit-suggest-item:hover { background: var(--acl); }
 .food-edit-suggest-item .fes-sub { color: var(--tx3); font-size: 11px; white-space: nowrap; flex-shrink: 0; }
 .food-edit-qty-row select#food-edit-qty-unit-sel { font-size: 12px; color: var(--tx2); border: 1px solid var(--bd); border-radius: 6px; background: var(--bg3); padding: 6px; }
-/* ── 條碼掃描 Modal ── */
-.barcode-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center; }
-.barcode-modal-overlay.hidden { display:none; }
-.barcode-video-wrap { position:relative;width:100%;max-width:360px;border-radius:16px;overflow:hidden;background:#000; }
-#barcode-video { width:100%;display:block;max-height:300px;object-fit:cover; }
-.barcode-aim { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none; }
-.barcode-aim-box { width:200px;height:100px;border:2px solid var(--ac);border-radius:8px;box-shadow:0 0 0 2000px rgba(0,0,0,0.4); }
-.barcode-hint { color:#fff;font-size:13px;margin-top:12px;opacity:0.85;text-align:center;padding:0 16px; }
-.barcode-close-btn { margin-top:16px;padding:10px 32px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.4);background:rgba(255,255,255,0.1);color:#fff;font-size:14px;font-family:var(--font);cursor:pointer; }
-.barcode-result-card { background:var(--bg2);border-radius:16px;padding:16px;width:calc(100% - 32px);max-width:360px;margin-top:16px; }
-.barcode-result-name { font-size:15px;font-weight:600;color:var(--tx);margin-bottom:8px; }
-.barcode-result-macros { display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px; }
-.barcode-result-chip { padding:4px 10px;border-radius:12px;font-size:12px;background:var(--bg3);color:var(--tx2); }
-.barcode-result-btns { display:flex;gap:8px; }
-.barcode-loading { color:#fff;font-size:14px;margin-top:16px;text-align:center; }
-
 .food-multi-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .food-multi-row { display: flex; gap: 6px; align-items: center; }
 .food-multi-row input[type="text"] { width: 100%; font-size: 13px; padding: 7px 8px; }
@@ -1480,7 +1444,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
-  <script src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js"></script>
 </head>
 <body>
 
@@ -1815,7 +1778,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         <button class="bp-tab" data-tab="trend" id="bp-tab-trend">趨勢</button>
       </div>
       <div id="bp-log-view">
-        <div id="bp-log-summary"></div>
         <div class="bp-list" id="bp-list"></div>
       </div>
       <div id="bp-stats-view" style="display:none">
@@ -2045,21 +2007,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
           <div id="settings-export-last-lbl" style="font-size:10px;color:var(--tx3);margin-top:5px;text-align:right"></div>
         </div>
         <input type="file" id="import-file-input" accept=".json" style="display:none">
-      </div>
-      <div class="settings-section" style="margin-top:8px">
-        <div class="settings-section-title">🥫 條碼掃描（包裝食品營養）</div>
-        <div style="font-size:12px;color:var(--tx3);margin-bottom:10px;line-height:1.6">
-          掃描食品包裝條碼，自動查詢 Open Food Facts 全球食品資料庫（免費，無需 API Key）。<br>
-          台灣大品牌及進口食品覆蓋率較高；查無資料時可手動輸入。
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg3);border-radius:var(--r)">
-          <span style="font-size:20px">📷</span>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:600;color:var(--tx)">掃描條碼</div>
-            <div style="font-size:11px;color:var(--tx3)">在「飲食記錄」新增頁面點擊「掃描條碼」使用</div>
-          </div>
-          <span style="font-size:18px;color:var(--tx3)">✓</span>
-        </div>
       </div>
       <div class="settings-section" style="margin-top:8px">
         <div class="settings-section-title">匯出 Excel 報表</div>
@@ -2343,19 +2290,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
   </div>
 </div>
 
-<!-- 📝 打卡附註 Overlay -->
-<div class="note-overlay hidden" id="note-overlay">
-  <div class="note-box">
-    <div class="note-box-title" id="note-box-title">附註</div>
-    <textarea class="note-textarea" id="note-textarea" maxlength="200" placeholder="輸入這天的附註..."></textarea>
-    <div class="note-btns">
-      <button class="note-delete-btn" id="note-delete-btn">刪除附註</button>
-      <button class="note-cancel-btn" id="note-cancel-btn">取消</button>
-      <button class="note-save-btn" id="note-save-btn">儲存</button>
-    </div>
-  </div>
-</div>
-
 <!-- 💧 飲水目標設定 -->
 <div class="water-goal-overlay hidden" id="water-goal-overlay">
   <div class="water-goal-box">
@@ -2555,10 +2489,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
     </div>
     <div class="sf-row" style="position:relative">
       <div class="food-edit-mode-label" id="food-edit-mode-lbl">新增飲食記錄</div>
-    <div style="display:flex;gap:6px;margin-bottom:8px">
-      <button type="button" id="food-barcode-btn" style="flex:1;padding:9px;border-radius:var(--rr);border:1.5px dashed var(--ac);background:var(--acl);color:var(--acd);font-size:12px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">📷 掃描條碼</button>
-      <button type="button" id="food-tfda-btn" style="flex:1;padding:9px;border-radius:var(--rr);border:1.5px dashed #5A9888;background:#f0f7f5;color:#3d7a6a;font-size:12px;font-family:var(--font);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px">📋 複製問題→Gemini</button>
-    </div>
     <input type="text" id="food-edit-name" placeholder="食物名稱（可搜尋食物資料庫）" maxlength="60" autocomplete="off" style="width:100%;font-size:16px">
     <div class="food-edit-suggest hidden" id="food-edit-suggest"></div>
     </div>
@@ -2625,25 +2555,6 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <textarea id="food-edit-note" rows="2" style="width:100%;resize:none;font-size:13px;padding:6px 8px" placeholder="備註（選填）…" maxlength="200"></textarea>
     </div>
   </div>
-</div>
-
-<!-- 📷 條碼掃描 Modal -->
-<div class="barcode-modal-overlay hidden" id="barcode-modal-overlay">
-  <div class="barcode-video-wrap" id="barcode-video-wrap">
-    <video id="barcode-video" autoplay muted playsinline></video>
-    <div class="barcode-aim"><div class="barcode-aim-box"></div></div>
-  </div>
-  <div class="barcode-hint" id="barcode-hint">將條碼對準框內，自動辨識</div>
-  <div class="barcode-loading hidden" id="barcode-loading">🔍 查詢食品資料庫中…</div>
-  <div class="barcode-result-card hidden" id="barcode-result-card">
-    <div class="barcode-result-name" id="barcode-result-name"></div>
-    <div class="barcode-result-macros" id="barcode-result-macros"></div>
-    <div class="barcode-result-btns">
-      <button class="btn-primary" style="flex:1;font-size:13px;padding:9px" onclick="barcodeApplyResult()">✅ 套用到記錄</button>
-      <button class="btn-ghost" style="flex:1;font-size:13px;padding:9px" onclick="barcodeScanAgain()">重新掃描</button>
-    </div>
-  </div>
-  <button class="barcode-close-btn" onclick="closeBarcodeScanner()">✕ 關閉</button>
 </div>
 
 <!-- 🍽 蛋白質碳水試算工具 -->
@@ -4312,13 +4223,6 @@ function renderHabits() {
       saveHabits(); renderHabits();
     });
   });
-  /* 時間軸：附註 */
-  container.querySelectorAll('.habit-log-note-btn').forEach(function(btn) {
-    btn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      openNoteOverlay(btn.dataset.hid, btn.dataset.date, 'habit');
-    });
-  });
   /* 時間軸：顯示全部 */
   container.querySelectorAll('.habit-show-all').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
@@ -4335,8 +4239,12 @@ function renderHabits() {
         var diffTxt = diff === 0 ? '今天' : diff + ' 天前';
         var val = logs[d];
         var valTxt = (type === 'count' && typeof val === 'number') ? ' ×' + val + (h.unit||'') : '';
-        var note = (h.notes || {})[d] || '';
-        return buildLogEntryHTML('habit', hid, d, 'background:' + (h.color||'var(--ac)'), d + valTxt, diffTxt, note);
+        return '<div class="chore-log-row" data-hid="' + hid + '" data-date="' + d + '">' +
+          '<span class="chore-log-dot" style="background:' + (h.color||'var(--ac)') + '"></span>' +
+          '<span class="chore-log-date">' + d + valTxt + '</span>' +
+          '<span class="chore-log-diff">' + diffTxt + '</span>' +
+          '<button class="habit-log-del" data-hid="' + hid + '" data-date="' + d + '">✕</button>' +
+        '</div>';
       }).join('');
       var timeline = btn.closest('.chore-timeline');
       var listDiv = timeline.querySelector('.chore-log-list');
@@ -4354,13 +4262,6 @@ function renderHabits() {
             return Object.assign({}, cx, { logs: l });
           });
           saveHabits(); renderHabits();
-        });
-      });
-      /* 重新 bind 附註按鈕 */
-      timeline.querySelectorAll('.habit-log-note-btn').forEach(function(noteBtn) {
-        noteBtn.addEventListener('click', function(ev) {
-          ev.stopPropagation();
-          openNoteOverlay(noteBtn.dataset.hid, noteBtn.dataset.date, 'habit');
         });
       });
     });
@@ -4475,24 +4376,6 @@ function deleteHabit(id) {
 }
 
 /* ═══════════════════════════════════════════════════
-   📝 打卡時間軸單筆記錄 HTML（習慣／家務共用）
-   kind: 'habit' | 'chore' → 決定刪除/附註按鈕的 class 名稱
-   ═══════════════════════════════════════════════════ */
-function buildLogEntryHTML(kind, id, date, dotStyle, dateLabel, diffTxt, note) {
-  var hasNote = !!note;
-  return '<div class="chore-log-entry">' +
-    '<div class="chore-log-row" data-hid="' + id + '" data-date="' + date + '">' +
-      '<span class="chore-log-dot" style="' + (dotStyle||'') + '"></span>' +
-      '<span class="chore-log-date">' + dateLabel + '</span>' +
-      '<span class="chore-log-diff">' + diffTxt + '</span>' +
-      '<button class="' + kind + '-log-note-btn' + (hasNote?' has-note':'') + '" data-hid="' + id + '" data-date="' + date + '" title="附註">' + (hasNote?'📝':'🗒️') + '</button>' +
-      '<button class="' + kind + '-log-del" data-hid="' + id + '" data-date="' + date + '">✕</button>' +
-    '</div>' +
-    (hasNote ? '<div class="chore-log-note-text">' + esc(note) + '</div>' : '') +
-  '</div>';
-}
-
-/* ═══════════════════════════════════════════════════
    📅 月曆 HTML
    ═══════════════════════════════════════════════════ */
 function buildCalendarHTML(habit) {
@@ -4521,8 +4404,12 @@ function buildCalendarHTML(habit) {
     var diffTxt = diff === 0 ? '今天' : diff + ' 天前';
     var val = logs[d];
     var valTxt = (type === 'count' && typeof val === 'number') ? ' ×' + val + (habit.unit||'') : '';
-    var note = (habit.notes || {})[d] || '';
-    return buildLogEntryHTML('habit', habit.id, d, 'background:' + (habit.color||'var(--ac)'), d + valTxt, diffTxt, note);
+    return '<div class="chore-log-row" data-hid="' + habit.id + '" data-date="' + d + '">' +
+      '<span class="chore-log-dot" style="background:' + (habit.color||'var(--ac)') + '"></span>' +
+      '<span class="chore-log-date">' + d + valTxt + '</span>' +
+      '<span class="chore-log-diff">' + diffTxt + '</span>' +
+      '<button class="habit-log-del" data-hid="' + habit.id + '" data-date="' + d + '">✕</button>' +
+    '</div>';
   }).join('');
   var emptyTxt = allDates.length ? '' : '<div style="color:var(--tx3);font-size:12px;text-align:center;padding:8px 0">尚無打卡記錄</div>';
   var addBtn = isGood
@@ -4592,7 +4479,7 @@ function saveNewHabit() {
   var name = $('new-habit-name').value.trim();
   if (!name) { $('new-habit-name').focus(); return; }
   var unit = (_selType === 'count') ? ($('new-habit-unit').value.trim() || '次') : '';
-  state.habits.push({ id: genId(), name: name, color: _selColor, type: _selType, unit: unit, category: _selCat, logs: {}, notes: {} });
+  state.habits.push({ id: genId(), name: name, color: _selColor, type: _selType, unit: unit, category: _selCat, logs: {} });
   saveHabits();
   closeAddHabitModal();
   renderWeekHeader();
@@ -4637,55 +4524,6 @@ $('count-overlay').addEventListener('click', function(e){ if (e.target === $('co
 $('count-input-field').addEventListener('keydown', function(e){ if (e.key === 'Enter') confirmCount(); });
 
 /* ═══════════════════════════════════════════════════
-   📝 打卡附註 Overlay（習慣／家務共用，kind: 'habit'|'chore'）
-   ═══════════════════════════════════════════════════ */
-var _noteCtx = { hid: '', date: '', kind: 'habit' };
-
-function openNoteOverlay(hid, date, kind) {
-  _noteCtx = { hid: hid, date: date, kind: kind };
-  var arr  = (kind === 'chore') ? state.chores : state.habits;
-  var item = arr.find(function(x){ return x.id === hid; });
-  var cur  = (item && item.notes && item.notes[date]) || '';
-  $('note-box-title').textContent = (item ? item.name : '') + '　' + (date === todayKey() ? '今日附註' : date);
-  $('note-textarea').value = cur;
-  $('note-overlay').classList.remove('hidden');
-  setTimeout(function(){ $('note-textarea').focus(); }, 100);
-}
-function closeNoteOverlay() { $('note-overlay').classList.add('hidden'); }
-function _applyNoteChange(val) {
-  var kind = _noteCtx.kind, hid = _noteCtx.hid, date = _noteCtx.date;
-  if (kind === 'chore') {
-    state.chores = state.chores.map(function(h) {
-      if (h.id !== hid) return h;
-      var n = Object.assign({}, h.notes || {});
-      if (val) n[date] = val; else delete n[date];
-      return Object.assign({}, h, { notes: n });
-    });
-    saveChores(); renderChores();
-  } else {
-    state.habits = state.habits.map(function(h) {
-      if (h.id !== hid) return h;
-      var n = Object.assign({}, h.notes || {});
-      if (val) n[date] = val; else delete n[date];
-      return Object.assign({}, h, { notes: n });
-    });
-    saveHabits(); renderHabits();
-  }
-}
-function saveNoteOverlay() {
-  _applyNoteChange(($('note-textarea').value || '').trim());
-  closeNoteOverlay();
-}
-function deleteNoteOverlay() {
-  _applyNoteChange('');
-  closeNoteOverlay();
-}
-$('note-cancel-btn').addEventListener('click', closeNoteOverlay);
-$('note-save-btn').addEventListener('click', saveNoteOverlay);
-$('note-delete-btn').addEventListener('click', deleteNoteOverlay);
-$('note-overlay').addEventListener('click', function(e){ if (e.target === $('note-overlay')) closeNoteOverlay(); });
-
-/* ═══════════════════════════════════════════════════
    🔄 家務追蹤（與習慣共用結構）
    ═══════════════════════════════════════════════════ */
 var DEFAULT_CHORES = [
@@ -4704,7 +4542,7 @@ var DEFAULT_CHORES = [
 ];
 if (!loadStorage('myapp_chores_init', false) && state.chores.length === 0) {
   state.chores = DEFAULT_CHORES.map(function(c) {
-    return { id: genId(), name: c.name, color: c.color, type: 'yesno', unit: '', category: 'good', logs: {}, notes: {} };
+    return { id: genId(), name: c.name, color: c.color, type: 'yesno', unit: '', category: 'good', logs: {} };
   });
   saveChores();
   saveStorage('myapp_chores_init', true);
@@ -4832,13 +4670,6 @@ function renderChores() {
       saveChores(); renderChores();
     });
   });
-  /* 時間軸：附註 */
-  container.querySelectorAll('.chore-log-note-btn').forEach(function(btn) {
-    btn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      openNoteOverlay(btn.dataset.hid, btn.dataset.date, 'chore');
-    });
-  });
   /* 時間軸：顯示全部 */
   container.querySelectorAll('.chore-tl-show-all').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
@@ -4852,8 +4683,12 @@ function renderChores() {
       var rows = allDates.map(function(d) {
         var diff = Math.floor((new Date(today) - new Date(d)) / 86400000);
         var diffTxt = diff === 0 ? '今天' : diff + ' 天前';
-        var note = (h.notes || {})[d] || '';
-        return buildLogEntryHTML('chore', hid, d, '', d, diffTxt, note);
+        return '<div class="chore-log-row" data-hid="' + hid + '" data-date="' + d + '">' +
+          '<span class="chore-log-dot"></span>' +
+          '<span class="chore-log-date">' + d + '</span>' +
+          '<span class="chore-log-diff">' + diffTxt + '</span>' +
+          '<button class="chore-log-del" data-hid="' + hid + '" data-date="' + d + '">✕</button>' +
+        '</div>';
       }).join('');
       /* 取得當前 chore-timeline，展開全部 */
       var timeline = btn.closest('.chore-timeline');
@@ -4873,13 +4708,6 @@ function renderChores() {
             return Object.assign({}, cx, { logs: l });
           });
           saveChores(); renderChores();
-        });
-      });
-      /* 重新 bind 附註按鈕 */
-      timeline.querySelectorAll('.chore-log-note-btn').forEach(function(noteBtn) {
-        noteBtn.addEventListener('click', function(ev) {
-          ev.stopPropagation();
-          openNoteOverlay(noteBtn.dataset.hid, noteBtn.dataset.date, 'chore');
         });
       });
     });
@@ -4920,8 +4748,12 @@ function buildChoreCalHTML(chore) {
     var isToday = d === today;
     var diffD = Math.floor((new Date(today) - new Date(d)) / 86400000);
     var diffTxt = isToday ? '今天' : diffD + ' 天前';
-    var note = (chore.notes || {})[d] || '';
-    return buildLogEntryHTML('chore', chore.id, d, '', d, diffTxt, note);
+    return '<div class="chore-log-row" data-hid="' + chore.id + '" data-date="' + d + '">' +
+      '<span class="chore-log-dot"></span>' +
+      '<span class="chore-log-date">' + d + '</span>' +
+      '<span class="chore-log-diff">' + diffTxt + '</span>' +
+      '<button class="chore-log-del" data-hid="' + chore.id + '" data-date="' + d + '">✕</button>' +
+    '</div>';
   }).join('');
   var emptyTxt = allDates.length ? '' : '<div style="color:var(--tx3);font-size:12px;text-align:center;padding:8px 0">尚無打卡記錄</div>';
   return '<div class="chore-timeline">' +
@@ -4965,7 +4797,7 @@ function closeAddChoreModal() { $('add-chore-modal').classList.add('hidden'); }
 function saveNewChore() {
   var name = $('new-chore-name').value.trim();
   if (!name) { $('new-chore-name').focus(); return; }
-  state.chores.push({ id: genId(), name: name, color: _choreSelColor, type: 'yesno', unit: '', category: 'good', logs: {}, notes: {} });
+  state.chores.push({ id: genId(), name: name, color: _choreSelColor, type: 'yesno', unit: '', category: 'good', logs: {} });
   saveChores(); closeAddChoreModal(); renderChoreWeekHeader(); renderChores();
 }
 $('chore-add-btn').addEventListener('click', openAddChoreModal);
@@ -6415,69 +6247,7 @@ var _foodHistSearchEl = $('food-history-search-input');
 if(_foodHistSearchEl){ _foodHistSearchEl.addEventListener('input',function(){ _foodHistSearch=this.value; renderFoodHistory(); }); }
 $('food-edit-save-btn').addEventListener('click',saveFoodEdit);
 $('food-edit-cancel-btn').addEventListener('click',closeFoodEdit);
-// 條碼按鈕：防 touchend+click 雙觸發
-(function(){
-  var _barcodeBtnFired = false;
-  var btn = $('food-barcode-btn');
-  if (!btn) return;
-  btn.addEventListener('touchend', function(e){
-    e.preventDefault(); e.stopPropagation();
-    if (_barcodeBtnFired) return;
-    _barcodeBtnFired = true;
-    setTimeout(function(){ _barcodeBtnFired = false; }, 600);
-    openBarcodeScanner();
-  });
-  btn.addEventListener('click', function(e){
-    e.stopPropagation();
-    if (_barcodeBtnFired) return;
-    _barcodeBtnFired = true;
-    setTimeout(function(){ _barcodeBtnFired = false; }, 600);
-    openBarcodeScanner();
-  });
-})();
-// Gemini 按鈕：複製 prompt 到剪貼簿
-(function(){
-  var gbtn = $('food-tfda-btn');
-  if (!gbtn) return;
-  var _fired = false;
-  function doCopy(e) {
-    e.stopPropagation();
-    e.preventDefault();
-    if (_fired) return;
-    _fired = true;
-    setTimeout(function(){ _fired = false; }, 800);
-    var name = ($('food-edit-name') && $('food-edit-name').value.trim()) || '';
-    var prompt = name
-      ? '請幫我估算「' + name + '」的營養成分，列出：熱量(kcal)、蛋白質(g)、碳水化合物(g)、脂肪(g)，以一般常見份量為基準，並說明是幾克或幾份。'
-      : '請幫我估算一種食物的熱量(kcal)、蛋白質(g)、碳水化合物(g)、脂肪(g)，請告訴我食物名稱。';
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(prompt).then(function() {
-        showToast('✅ 已複製！請開啟 Gemini 貼上查詢');
-      }).catch(function() {
-        _fallbackCopy(prompt);
-      });
-    } else {
-      _fallbackCopy(prompt);
-    }
-  }
-  function _fallbackCopy(text) {
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
-    document.body.appendChild(ta);
-    ta.focus(); ta.select();
-    try {
-      document.execCommand('copy');
-      showToast('✅ 已複製！請開啟 Gemini 貼上查詢');
-    } catch(e) {
-      showToast('複製失敗，請手動複製：' + text, true);
-    }
-    document.body.removeChild(ta);
-  }
-  gbtn.addEventListener('touchend', doCopy, { passive: false });
-  gbtn.addEventListener('click', doCopy);
-})();
-$('food-edit-overlay').addEventListener('click',function(e){if(_barcodeOpen)return;if(e.target===$('food-edit-overlay'))closeFoodEdit();});
+$('food-edit-overlay').addEventListener('click',function(e){if(e.target===$('food-edit-overlay'))closeFoodEdit();});
 document.querySelectorAll('#food-meal-btns .food-meal-btn').forEach(function(btn){
   btn.addEventListener('click',function(){
     _foodEditMeal=btn.dataset.meal;
@@ -7888,8 +7658,6 @@ function renderBP() {
       saveBP(); renderBP();
     });
   });
-  /* 渲染記錄 tab 頂端的健康摘要卡片 */
-  renderBPSummaryCard('bp-log-summary');
 }
 
 function syncBPHandBtns() {
@@ -8065,16 +7833,16 @@ function renderBPChart() {
     var ppSvgId = 'bp-chart-pp-svg-' + hand;
     section.innerHTML='<div class="bp-chart-title">'+handLabels[hand]+'（最近 '+n+' 筆）</div>'+
       '<div class="bp-chart-svg-box">'+legend+svg.join('')+'</div>'+
-      '<div class="bp-chart-title" style="margin-top:14px">'+handLabels[hand]+' 脈壓差（mmHg）</div>'+
+      '<div class="bp-chart-title" style="margin-top:14px">'+handLabels[hand]+' 脈壓差曲線</div>'+
       '<div class="bp-chart-svg-box" style="padding:10px 6px 6px"><svg class="trend-svg" id="'+ppSvgId+'" viewBox="0 0 320 110"></svg></div>'+
-      '<div class="bp-chart-legend"><div class="bp-chart-legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#C0392B;margin-right:3px"></span>脈壓差 ＜ 20（過低）</div>'+
-      '<div class="bp-chart-legend-item"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#D68A30;opacity:.8;margin-right:3px"></span>脈壓差 ≥ 20</div></div>';
+      '<div class="bp-chart-legend"><div class="bp-chart-legend-item"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#C0392B;margin-right:3px"></span>脈壓差 ＜ 20（過低）</div>'+
+      '<div class="bp-chart-legend-item"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D68A30;margin-right:3px"></span>脈壓差 ≥ 20</div></div>';
     container.appendChild(section);
 
     var ppData = logs.map(function(b){
       return { x: (b.datetime||'').slice(5,10).replace('-','/'), y: b.sys - b.dia, hasData: true };
     });
-    drawPPBarChart(ppSvgId, ppData, {
+    drawLineChart(ppSvgId, ppData, {
       width: 320, height: 110,
       color: '#D68A30',
       lowThreshold: 20,
@@ -9121,20 +8889,13 @@ function exportAllXLSX() {
     foodByDate[l.date].carb += +l.carbs||0;
     foodByDate[l.date].fat  += +l.fat||0;
   });
-  /* 每日層級標記：碳水分類 / 外食無記錄 / 今日備註（與飲食頁上方的日備註區塊對應）*/
-  var _xlsxFdNotes = typeof _foodDayNotes !== 'undefined' ? _foodDayNotes : {};
-  var _xlsxFdCarbs = typeof _foodDayCarbs !== 'undefined' ? _foodDayCarbs : {};
-  var _xlsxFdSkip  = typeof _foodSkipDays !== 'undefined' ? _foodSkipDays : {};
-  var _xlsxCarbLabel = { low:'碳水40g以下', mid:'碳水50-90g', high:'爆碳' };
   add('飲食記錄',
     ['日期','餐別','食物名稱','份量(g)','熱量(kcal)','蛋白質(g)','碳水(g)','脂肪(g)','備註',
-     '當日熱量合計(kcal)','當日蛋白質合計(g)','當日碳水合計(g)','當日脂肪合計(g)',
-     '碳水分類','外食/無記錄','今日備註'],
+     '當日熱量合計(kcal)','當日蛋白質合計(g)','當日碳水合計(g)','當日脂肪合計(g)'],
     state.foodLogs.slice().sort(function(a,b){return a.date<b.date?-1:1;}).map(function(l){
       var d = foodByDate[l.date]||{};
       return [l.date,l.meal||'',l.name||'',l.grams||'',l.calories||'',l.protein||'',l.carbs||'',l.fat||'',l.note||'',
-              Math.round(d.cal*10)/10, Math.round(d.pro*10)/10, Math.round(d.carb*10)/10, Math.round(d.fat*10)/10,
-              _xlsxCarbLabel[_xlsxFdCarbs[l.date]]||'', _xlsxFdSkip[l.date]?'是':'', _xlsxFdNotes[l.date]||''];
+              Math.round(d.cal*10)/10, Math.round(d.pro*10)/10, Math.round(d.carb*10)/10, Math.round(d.fat*10)/10];
     }), [3,4,5,6,7,9,10,11,12]);
 
   /* ── 斷食記錄 ── */
@@ -9145,12 +8906,12 @@ function exportAllXLSX() {
     }), [3]);
 
   /* ── 習慣追蹤 ── */
-  var hRows=[]; state.habits.forEach(function(h){ var logs=h.logs||{}; var notes=h.notes||{}; Object.keys(logs).sort().forEach(function(date){ hRows.push([h.name,(h.category||'good')==='good'?'好習慣':'壞習慣',h.type||'yesno',date,logs[date],notes[date]||'']); }); });
-  add('習慣追蹤',['習慣名稱','類型','記錄方式','日期','記錄值','附註'], hRows, [4]);
+  var hRows=[]; state.habits.forEach(function(h){ var logs=h.logs||{}; Object.keys(logs).sort().forEach(function(date){ hRows.push([h.name,(h.category||'good')==='good'?'好習慣':'壞習慣',h.type||'yesno',date,logs[date]]); }); });
+  add('習慣追蹤',['習慣名稱','類型','記錄方式','日期','記錄值'], hRows, [4]);
 
   /* ── 家務記錄 ── */
-  var cRows=[]; state.chores.forEach(function(h){ var logs=h.logs||{}; var notes=h.notes||{}; Object.keys(logs).sort().forEach(function(date){ cRows.push([h.name,date,logs[date],notes[date]||'']); }); });
-  add('家務記錄',['家務名稱','日期','記錄值','附註'], cRows, [2]);
+  var cRows=[]; state.chores.forEach(function(h){ var logs=h.logs||{}; Object.keys(logs).sort().forEach(function(date){ cRows.push([h.name,date,logs[date]]); }); });
+  add('家務記錄',['家務名稱','日期','記錄值'], cRows, [2]);
 
   /* ── 備忘錄 ── */
   add('筆記本',['標題','內容','截止日期','已置頂','更新時間'],
@@ -9168,12 +8929,11 @@ function exportAllXLSX() {
   var fdNotes = typeof _foodDayNotes !== 'undefined' ? _foodDayNotes : {};
   var fdCarbs = typeof _foodDayCarbs !== 'undefined' ? _foodDayCarbs : {};
   var fdDayType = typeof _foodDayType !== 'undefined' ? _foodDayType : {};
-  var fdSkip = typeof _foodSkipDays !== 'undefined' ? _foodSkipDays : {};
   var carbLabel = { low:'碳水40g以下', mid:'碳水50-90g', high:'爆碳' };
   var dtypeLabel = { high:'🔴 高碳日', low:'🟡 低碳日', rest:'⚫ 休息日' };
-  var fdAllDates = Array.from(new Set(Object.keys(fdNotes).concat(Object.keys(fdCarbs)).concat(Object.keys(fdDayType)).concat(Object.keys(fdSkip)))).sort();
-  var fdRows = fdAllDates.filter(function(d){ return (fdNotes[d]&&fdNotes[d].trim()) || fdCarbs[d] || fdDayType[d] || fdSkip[d]; }).map(function(d){ return [d, dtypeLabel[fdDayType[d]]||'', carbLabel[fdCarbs[d]]||'', fdSkip[d]?'是':'', fdNotes[d]||'']; });
-  add('飲食日備註', ['日期','今日日型','碳水標記','外食/無記錄','備註'], fdRows);
+  var fdAllDates = Array.from(new Set(Object.keys(fdNotes).concat(Object.keys(fdCarbs)).concat(Object.keys(fdDayType)))).sort();
+  var fdRows = fdAllDates.filter(function(d){ return (fdNotes[d]&&fdNotes[d].trim()) || fdCarbs[d] || fdDayType[d]; }).map(function(d){ return [d, dtypeLabel[fdDayType[d]]||'', carbLabel[fdCarbs[d]]||'', fdNotes[d]||'']; });
+  add('飲食日備註', ['日期','今日日型','碳水標記','備註'], fdRows);
 
   /* ── 身體數據 & TDEE ── */
   var bd = typeof _bodyData !== 'undefined' ? _bodyData : {};
@@ -10077,257 +9837,6 @@ function openRecipeModal(num, isDessert) {
 }
 
 /* ── 飲食記錄儲存選擇彈窗 ── */
-/* ══════════════════════════════════════════════
-   條碼掃描功能 (Open Food Facts API + ZXing)
-   ══════════════════════════════════════════════ */
-var _barcodeReader = null;
-var _barcodeStream = null;
-var _barcodeResult = null;
-var _barcodeOpen = false; // 條碼 Modal 開啟中，防止底層事件穿透
-
-function openBarcodeScanner() {
-  var overlay = $('barcode-modal-overlay');
-  if (!overlay) return;
-  _barcodeOpen = true;
-  overlay.classList.remove('hidden');
-  if ($('barcode-result-card')) $('barcode-result-card').classList.add('hidden');
-  if ($('barcode-hint')) $('barcode-hint').classList.remove('hidden');
-  if ($('barcode-loading')) $('barcode-loading').classList.add('hidden');
-  _barcodeResult = null;
-  _startBarcodeCamera();
-}
-
-function closeBarcodeScanner() {
-  _stopBarcodeCamera();
-  var overlay = $('barcode-modal-overlay');
-  if (overlay) overlay.classList.add('hidden');
-  // 延遲解除，確保 touchend 事件不會穿透到底層 overlay
-  setTimeout(function(){ _barcodeOpen = false; }, 400);
-}
-
-function _startBarcodeCamera() {
-  var video = $('barcode-video');
-  if (!video) return;
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
-    .then(function(stream) {
-      _barcodeStream = stream;
-      video.srcObject = stream;
-      video.play();
-      _startZxingDecode(video);
-    })
-    .catch(function(err) {
-      showToast('無法開啟相機：' + (err.message || err), true);
-      closeBarcodeScanner();
-    });
-}
-
-function _stopBarcodeCamera() {
-  if (_barcodeReader) {
-    if (_barcodeReader._state) {
-      // 原生 BarcodeDetector 模式：停止迴圈 + 清除 timer
-      _barcodeReader._state.running = false;
-      if (_barcodeReader._state.timer) clearTimeout(_barcodeReader._state.timer);
-    } else {
-      try { _barcodeReader.reset(); } catch(e) {}
-    }
-    _barcodeReader = null;
-  }
-  if (_barcodeStream) {
-    _barcodeStream.getTracks().forEach(function(t){ t.stop(); });
-    _barcodeStream = null;
-  }
-  var video = $('barcode-video');
-  if (video) { video.srcObject = null; }
-}
-
-function _startZxingDecode(video) {
-  // 優先使用瀏覽器原生 BarcodeDetector（Android Chrome 支援）
-  if (typeof BarcodeDetector !== 'undefined') {
-    var detector = new BarcodeDetector({
-      formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code']
-    });
-    var state = { running: true, scanning: false, timer: null };
-    _barcodeReader = { _state: state };
-
-    function doScan() {
-      if (!state.running || state.scanning) return;
-      // video 必須有實際畫面才掃
-      if (video.readyState < 2 || video.videoWidth === 0) {
-        state.timer = setTimeout(doScan, 300);
-        return;
-      }
-      state.scanning = true;
-      detector.detect(video)
-        .then(function(codes) {
-          if (!state.running) return;
-          if (codes && codes.length > 0) {
-            state.running = false;
-            _lookupBarcode(codes[0].rawValue);
-          } else {
-            state.scanning = false;
-            state.timer = setTimeout(doScan, 500); // 每500ms掃一次，不閃爍
-          }
-        })
-        .catch(function() {
-          if (!state.running) return;
-          state.scanning = false;
-          state.timer = setTimeout(doScan, 500);
-        });
-    }
-
-    // 等相機畫面真正出現後才開始掃（polling，相容各款 Android）
-    var _waitTimer = setInterval(function() {
-      if (!state.running) { clearInterval(_waitTimer); return; }
-      if (video.videoWidth > 0 && video.readyState >= 2) {
-        clearInterval(_waitTimer);
-        doScan();
-      }
-    }, 200);
-    return;
-  }
-  // Fallback：ZXingBrowser（jsdelivr CDN）
-  var ZXB = window.ZXingBrowser || window.ZXing;
-  if (!ZXB || !ZXB.BrowserMultiFormatReader) {
-    showToast('條碼辨識庫載入失敗，請確認網路連線後重新整理', true);
-    closeBarcodeScanner();
-    return;
-  }
-  var reader = new ZXB.BrowserMultiFormatReader();
-  _barcodeReader = reader;
-  reader.decodeFromVideoElement(video, function(result, err) {
-    if (result) {
-      var code = result.getText();
-      try { reader.reset(); } catch(e) {}
-      _lookupBarcode(code);
-    }
-  });
-}
-
-function _lookupBarcode(barcode) {
-  _stopBarcodeCamera();
-  if ($('barcode-hint')) $('barcode-hint').classList.add('hidden');
-  if ($('barcode-loading')) $('barcode-loading').classList.remove('hidden');
-  if ($('barcode-result-card')) $('barcode-result-card').classList.add('hidden');
-  var url = 'https://world.openfoodfacts.net/api/v2/product/' + encodeURIComponent(barcode) + '.json?fields=product_name,product_name_zh,nutriments';
-  var controller = new AbortController();
-  var timer = setTimeout(function(){ controller.abort(); }, 8000);
-  fetch(url, { signal: controller.signal })
-    .then(function(r){ clearTimeout(timer); return r.json(); })
-    .then(function(data) {
-      $('barcode-loading').classList.add('hidden');
-      if (!data || data.status === 0 || !data.product) {
-        _stopBarcodeCamera();
-        $('barcode-loading').classList.add('hidden');
-        $('barcode-hint').classList.add('hidden');
-        // 顯示查無結果提示卡片
-        var card = $('barcode-result-card');
-        $('barcode-result-name').textContent = '查無條碼「' + barcode + '」的資料';
-        $('barcode-result-macros').innerHTML =
-          '<span style="font-size:12px;color:var(--tx3);line-height:1.6">Open Food Facts 資料庫找不到此商品，可點下方按鈕用 Gemini AI 查詢營養成分，再手動填入。</span>';
-        $('barcode-result-btns').innerHTML =
-          '<button class="btn-primary" style="flex:1;font-size:13px;padding:9px" onclick="copyGeminiPrompt()">📋 複製問題→Gemini</button>' +
-          '<button class="btn-ghost" style="flex:1;font-size:13px;padding:9px" onclick="barcodeScanAgain()">重新掃描</button>';
-        card.classList.remove('hidden');
-        return;
-      }
-      var p = data.product;
-      var n = p.nutriments || {};
-      var name = (p.product_name_zh && p.product_name_zh.trim()) || (p.product_name && p.product_name.trim()) || '未知食品';
-      var energyKcal = n['energy-kcal_100g'];
-      if (!energyKcal && n['energy_100g']) energyKcal = Math.round(n['energy_100g'] / 4.184);
-      var cal  = Math.round(energyKcal || 0);
-      var pro  = parseFloat((n['proteins_100g'] || 0).toFixed(1));
-      var carb = parseFloat((n['carbohydrates_100g'] || 0).toFixed(1));
-      var fat  = parseFloat((n['fat_100g'] || 0).toFixed(1));
-      _barcodeResult = { name: name, cal: cal, pro: pro, carb: carb, fat: fat };
-      $('barcode-result-name').textContent = name;
-      $('barcode-result-macros').innerHTML =
-        '<span class="barcode-result-chip">🔥 ' + cal + ' kcal</span>' +
-        '<span class="barcode-result-chip">🥩 蛋白 ' + pro + 'g</span>' +
-        '<span class="barcode-result-chip">🌾 碳水 ' + carb + 'g</span>' +
-        '<span class="barcode-result-chip">🧈 脂肪 ' + fat + 'g</span>' +
-        '<span style="font-size:10px;color:var(--tx3);width:100%;margin-top:4px;display:block">以上為每 100g 數值，套用後請依實際食用量調整份量</span>';
-      $('barcode-result-card').classList.remove('hidden');
-    })
-    .catch(function() {
-      clearTimeout(timer);
-      if ($('barcode-loading')) $('barcode-loading').classList.add('hidden');
-      // 顯示查無結果卡片（查詢失敗也適用）
-      var card = $('barcode-result-card');
-      if (!card) return;
-      $('barcode-result-name').textContent = '查詢失敗（台灣商品資料庫收錄較少）';
-      $('barcode-result-macros').innerHTML =
-        '<span style="font-size:12px;color:var(--tx3);line-height:1.6">Open Food Facts 對台灣商品覆蓋率較低，建議用 Gemini 查詢後手動填入。</span>';
-      var btns = $('barcode-result-btns');
-      if (btns) btns.innerHTML =
-        '<button class="btn-primary" style="flex:1;font-size:13px;padding:9px" onclick="copyGeminiPrompt()">📋 複製問題→Gemini</button>' +
-        '<button class="btn-ghost" style="flex:1;font-size:13px;padding:9px" onclick="barcodeScanAgain()">重新掃描</button>';
-      card.classList.remove('hidden');
-    });
-}
-
-function barcodeApplyResult() {
-  if (!_barcodeResult) return;
-  var r = _barcodeResult;
-  closeBarcodeScanner();
-  var nameInp = $('food-edit-name');
-  if (nameInp) {
-    nameInp.value = r.name;
-    var suggest = $('food-edit-suggest');
-    if (suggest) suggest.classList.add('hidden');
-  }
-  if ($('food-edit-cal'))  $('food-edit-cal').value  = r.cal;
-  if ($('food-edit-pro'))  $('food-edit-pro').value  = r.pro;
-  if ($('food-edit-carb')) $('food-edit-carb').value = r.carb;
-  if ($('food-edit-fat'))  $('food-edit-fat').value  = r.fat;
-  var qtyRow = $('food-edit-qty-row');
-  if (qtyRow) qtyRow.classList.remove('hidden');
-  if ($('food-edit-qty'))      $('food-edit-qty').value = 100;
-  if ($('food-edit-qty-unit')) $('food-edit-qty-unit').value = 'g';
-  showToast('✅ 已帶入「' + r.name + '」數值（每100g），請調整實際份量');
-}
-
-function barcodeScanAgain() {
-  // 還原結果按鈕（可能被查無結果改寫過）
-  var btns = $('barcode-result-btns');
-  if (btns) btns.innerHTML =
-    '<button class="btn-primary" style="flex:1;font-size:13px;padding:9px" onclick="barcodeApplyResult()">✅ 套用到記錄</button>' +
-    '<button class="btn-ghost" style="flex:1;font-size:13px;padding:9px" onclick="barcodeScanAgain()">重新掃描</button>';
-  if ($('barcode-result-card')) $('barcode-result-card').classList.add('hidden');
-  if ($('barcode-loading')) $('barcode-loading').classList.add('hidden');
-  if ($('barcode-hint')) $('barcode-hint').classList.remove('hidden');
-  _barcodeResult = null;
-  if (_barcodeOpen) _startBarcodeCamera();
-}
-
-function copyGeminiPrompt() {
-  var name = ($('food-edit-name') && $('food-edit-name').value.trim()) || '';
-  var prompt = name
-    ? '請幫我估算「' + name + '」的營養成分，列出：熱量(kcal)、蛋白質(g)、碳水化合物(g)、脂肪(g)，以一般常見份量為基準，並說明是幾克或幾份。'
-    : '請幫我估算一種食物的熱量(kcal)、蛋白質(g)、碳水化合物(g)、脂肪(g)，請告訴我食物名稱。';
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(prompt).then(function() {
-      showToast('✅ 已複製！請開啟 Gemini 貼上查詢');
-    }).catch(function() { _geminiCopyFallback(prompt); });
-  } else {
-    _geminiCopyFallback(prompt);
-  }
-}
-function _geminiCopyFallback(text) {
-  var ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
-  document.body.appendChild(ta);
-  ta.focus(); ta.select();
-  try {
-    document.execCommand('copy');
-    showToast('✅ 已複製！請開啟 Gemini 貼上查詢');
-  } catch(e) {
-    showToast('複製失敗', true);
-  }
-  document.body.removeChild(ta);
-}
-
 var _foodSavePopup = null;
 
 function closeFoodSavePopup() {
@@ -11519,73 +11028,6 @@ function drawHabitMiniChart(svgId, data, color) {
   svg.innerHTML = parts.join('');
 }
 
-/* ── 脈壓差柱狀圖引擎 ── */
-function drawPPBarChart(svgId, data, opts) {
-  var svg = $(svgId);
-  if (!svg) return;
-  opts = opts || {};
-  var W = opts.width || 320, H = opts.height || 110;
-  var PL = 28, PR = 8, PT = 10, PB = 22;
-  var cW = W - PL - PR, cH = H - PT - PB;
-  var n = data.length;
-  if (!n) return;
-  var lowThr = opts.lowThreshold !== undefined ? opts.lowThreshold : 20;
-  var colNorm = opts.color || '#D68A30';
-  var colLow  = opts.lowColor || '#C0392B';
-
-  /* Y range */
-  var allY = data.filter(function(d){ return d.hasData; }).map(function(d){ return d.y; });
-  var yMin = 0;
-  var yMax = allY.length ? Math.ceil((Math.max.apply(null, allY) + 5) / 5) * 5 : 60;
-  if (yMax < 40) yMax = 40; /* at least show 0–40 so 20 line is visible */
-  var rng = yMax - yMin;
-
-  function vy(v) { return PT + cH * (1 - (v - yMin) / rng); }
-  var bw = Math.max(4, Math.min(32, Math.floor(cW / n * 0.68)));
-  var slot = cW / n;
-
-  var parts = [];
-
-  /* Y grid lines (3 levels) */
-  [0, 1, 2, 3].forEach(function(gi) {
-    var gv = yMin + rng * gi / 3;
-    var gy = vy(gv).toFixed(1);
-    parts.push('<line x1="' + PL + '" y1="' + gy + '" x2="' + (PL + cW) + '" y2="' + gy + '" stroke="var(--bd)" stroke-width="0.5"/>');
-    parts.push('<text x="' + (PL - 3) + '" y="' + (parseFloat(gy) + 3).toFixed(1) + '" font-size="7" fill="var(--tx3)" text-anchor="end">' + Math.round(gv) + '</text>');
-  });
-
-  /* Low-threshold warning line */
-  if (lowThr >= yMin && lowThr <= yMax) {
-    var lty = vy(lowThr).toFixed(1);
-    parts.push('<line x1="' + PL + '" y1="' + lty + '" x2="' + (PL + cW) + '" y2="' + lty + '" stroke="' + colLow + '" stroke-width="1.2" stroke-dasharray="3,3" opacity="0.7"/>');
-  }
-
-  /* Bars */
-  data.forEach(function(d, i) {
-    var cx = PL + i * slot + slot / 2;
-    var bx = (cx - bw / 2).toFixed(1);
-    if (d.hasData) {
-      var isLow = d.y < lowThr;
-      var barColor = isLow ? colLow : colNorm;
-      var barTop = vy(d.y);
-      var barH = Math.max(1, vy(yMin) - barTop);
-      parts.push('<rect x="' + bx + '" y="' + barTop.toFixed(1) + '" width="' + bw + '" height="' + barH.toFixed(1) + '" fill="' + barColor + '" rx="2" opacity="' + (isLow ? '0.9' : '0.75') + '"/>');
-      /* Value label on top of bar (only if bar is tall enough) */
-      if (barH > 12) {
-        parts.push('<text x="' + cx.toFixed(1) + '" y="' + (barTop - 2).toFixed(1) + '" font-size="7" fill="' + barColor + '" text-anchor="middle" font-weight="600">' + d.y + '</text>');
-      }
-    }
-    /* X-axis date label */
-    var xLabelStep = Math.max(1, Math.ceil(n / 6));
-    if (i % xLabelStep === 0 || i === n - 1) {
-      parts.push('<text x="' + cx.toFixed(1) + '" y="' + (H - PB + 11) + '" font-size="7" fill="var(--tx3)" text-anchor="middle">' + d.x + '</text>');
-    }
-  });
-
-  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-  svg.innerHTML = parts.join('');
-}
-
 /* ── 血壓趨勢（30天） ── */
 function renderBPTrend() {
   var sec = $('bp-trend-view');
@@ -11681,15 +11123,15 @@ function renderBPTrend() {
     html2 += '<div class="trend-meta">平均脈壓差 <strong'+(avgPPAll<20?' style="color:#C0392B"':'')+'>' + avgPPAll + '</strong>　共記錄 <strong>' + validPP.length + '</strong> 天' +
       (lowPPCount ? '　<strong style="color:#C0392B">⚠️ 過低 ' + lowPPCount + ' 天</strong>' : '') + '</div>';
     html2 += '<svg class="trend-svg" id="bp-pp-trend-svg" viewBox="0 0 320 130"></svg>';
-    html2 += '<div class="trend-ref-legend"><span style="display:inline-block;width:18px;height:4px;border-radius:2px;background:#C0392B;opacity:.6;border-top:2px dashed #C0392B;margin-right:2px;vertical-align:middle"></span>過低警戒線（20）　';
-    html2 += '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#C0392B;margin-right:3px;vertical-align:middle"></span>脈壓差 ＜ 20　';
-    html2 += '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#D68A30;opacity:.8;margin-right:3px;vertical-align:middle"></span>脈壓差 ≥ 20</div>';
+    html2 += '<div class="trend-ref-legend"><span style="display:inline-block;width:18px;height:1px;border-top:1.5px dashed #C0392B;margin-right:2px"></span>過低警戒線（20）　';
+    html2 += '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#C0392B;margin-right:3px;vertical-align:middle"></span>脈壓差 ＜ 20</div>';
     html2 += '</div>';
     sec.insertAdjacentHTML('beforeend', html2);
 
-    drawPPBarChart('bp-pp-trend-svg', ppData, {
+    drawLineChart('bp-pp-trend-svg', ppData, {
       width: 320, height: 130,
       color: '#D68A30',
+      fillColor: 'rgba(214,138,48,0.10)',
       lowThreshold: 20,
       lowColor: '#C0392B'
     });
