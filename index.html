@@ -507,8 +507,12 @@ input::placeholder { color: var(--tx3); }
 .chore-tl-add { background: var(--ac); color: #fff; border: none; border-radius: var(--rr); padding: 4px 12px; font-size: 12px; cursor: pointer; font-family: var(--font); white-space: nowrap; flex-shrink: 0; }
 .chore-tl-add:disabled { background: var(--acl); color: var(--acd); cursor: default; }
 .chore-log-list { padding: 4px 12px; }
-.chore-log-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 0.5px solid var(--bd); }
-.chore-log-row:last-child { border-bottom: none; }
+.chore-log-entry { padding: 7px 0; border-bottom: 0.5px solid var(--bd); }
+.chore-log-entry:last-child { border-bottom: none; }
+.chore-log-row { display: flex; align-items: center; gap: 8px; }
+.chore-log-note-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 4px; opacity: 0.75; line-height: 1; }
+.chore-log-note-btn:hover { opacity: 1; }
+.chore-log-note-text { font-size: 12px; color: var(--tx3); padding-left: 20px; margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
 .chore-log-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ac); flex-shrink: 0; }
 .chore-log-date { font-size: 13px; color: var(--tx); flex: 1; }
 .chore-log-diff { font-size: 12px; color: var(--tx3); white-space: nowrap; }
@@ -563,6 +567,16 @@ input::placeholder { color: var(--tx3); }
 .count-btns button { flex: 1; padding: 11px; font-size: 14px; font-family: var(--font); border-radius: var(--r); cursor: pointer; }
 .count-cancel-btn { background: transparent; border: 0.5px solid var(--bd); color: var(--tx2); }
 .count-confirm-btn { background: var(--ac); border: none; color: #fff; }
+.note-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.note-overlay.hidden { display: none; }
+.note-box { background: var(--bg); border-radius: var(--r); padding: 24px 24px 20px; width: 100%; max-width: 320px; }
+.note-box-title { font-size: 14px; color: var(--tx2); margin-bottom: 12px; text-align: center; }
+.note-textarea { width: 100%; min-height: 100px; padding: 10px; font-size: 14px; font-family: var(--font); border: 0.5px solid var(--bd); border-radius: var(--r); resize: vertical; box-sizing: border-box; margin-bottom: 16px; background: var(--bg); color: var(--tx1); }
+.note-btns { display: flex; gap: 8px; }
+.note-btns button { flex: 1; padding: 11px; font-size: 14px; font-family: var(--font); border-radius: var(--r); cursor: pointer; }
+.note-delete-btn { background: transparent; border: 0.5px solid #C0392B; color: #C0392B; }
+.note-cancel-btn { background: transparent; border: 0.5px solid var(--bd); color: var(--tx2); }
+.note-save-btn { background: var(--ac); border: none; color: #fff; }
 
 /* ════════════════════════════════
    💧 飲水頁面
@@ -2286,6 +2300,19 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
     <div class="count-btns">
       <button class="count-cancel-btn" id="count-cancel-btn">取消</button>
       <button class="count-confirm-btn" id="count-confirm-btn">確定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 📝 打卡附註 Overlay -->
+<div class="note-overlay hidden" id="note-overlay">
+  <div class="note-box">
+    <div class="note-box-title" id="note-overlay-title">附註</div>
+    <textarea class="note-textarea" id="note-textarea" maxlength="200" placeholder="輸入附註...（最多200字）"></textarea>
+    <div class="note-btns">
+      <button class="note-delete-btn" id="note-delete-btn">刪除</button>
+      <button class="note-cancel-btn" id="note-cancel-btn">取消</button>
+      <button class="note-save-btn" id="note-save-btn">儲存</button>
     </div>
   </div>
 </div>
@@ -4223,6 +4250,13 @@ function renderHabits() {
       saveHabits(); renderHabits();
     });
   });
+  /* 時間軸：附註按鈕 */
+  container.querySelectorAll('.habit-note-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openNoteOverlay(btn.dataset.hid, btn.dataset.date, 'habit');
+    });
+  });
   /* 時間軸：顯示全部 */
   container.querySelectorAll('.habit-show-all').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
@@ -4239,18 +4273,13 @@ function renderHabits() {
         var diffTxt = diff === 0 ? '今天' : diff + ' 天前';
         var val = logs[d];
         var valTxt = (type === 'count' && typeof val === 'number') ? ' ×' + val + (h.unit||'') : '';
-        return '<div class="chore-log-row" data-hid="' + hid + '" data-date="' + d + '">' +
-          '<span class="chore-log-dot" style="background:' + (h.color||'var(--ac)') + '"></span>' +
-          '<span class="chore-log-date">' + d + valTxt + '</span>' +
-          '<span class="chore-log-diff">' + diffTxt + '</span>' +
-          '<button class="habit-log-del" data-hid="' + hid + '" data-date="' + d + '">✕</button>' +
-        '</div>';
+        return buildLogEntryHTML('habit', hid, d, h.color||'var(--ac)', d + valTxt, diffTxt, (h.notes||{})[d]);
       }).join('');
       var timeline = btn.closest('.chore-timeline');
       var listDiv = timeline.querySelector('.chore-log-list');
       if (listDiv) listDiv.innerHTML = rows;
       btn.closest('.chore-tl-more').remove();
-      /* 重新 bind 刪除 */
+      /* 重新 bind 刪除 / 附註 */
       timeline.querySelectorAll('.habit-log-del').forEach(function(delBtn) {
         delBtn.addEventListener('click', function(ev) {
           ev.stopPropagation();
@@ -4262,6 +4291,12 @@ function renderHabits() {
             return Object.assign({}, cx, { logs: l });
           });
           saveHabits(); renderHabits();
+        });
+      });
+      timeline.querySelectorAll('.habit-note-btn').forEach(function(noteBtn) {
+        noteBtn.addEventListener('click', function(ev) {
+          ev.stopPropagation();
+          openNoteOverlay(noteBtn.dataset.hid, noteBtn.dataset.date, 'habit');
         });
       });
     });
@@ -4376,6 +4411,29 @@ function deleteHabit(id) {
 }
 
 /* ═══════════════════════════════════════════════════
+   📝 打卡附註（習慣／家務共用）
+   ═══════════════════════════════════════════════════ */
+function buildLogEntryHTML(kind, id, date, dotStyle, dateLabel, diffTxt, note) {
+  var delCls  = kind === 'habit' ? 'habit-log-del' : 'chore-log-del';
+  var noteCls = kind === 'habit' ? 'habit-note-btn' : 'chore-note-btn';
+  var hasNote = !!(note && ('' + note).trim());
+  var dotHtml = dotStyle ? '<span class="chore-log-dot" style="background:' + dotStyle + '"></span>' : '<span class="chore-log-dot"></span>';
+  var noteBtn = '<button class="chore-log-note-btn ' + noteCls + '" data-hid="' + id + '" data-date="' + date + '" data-kind="' + kind + '" title="' + (hasNote?'編輯附註':'新增附註') + '">' + (hasNote?'📝':'🗒️') + '</button>';
+  var delBtn  = '<button class="' + delCls + '" data-hid="' + id + '" data-date="' + date + '">✕</button>';
+  var noteText = hasNote ? '<div class="chore-log-note-text">' + esc(note) + '</div>' : '';
+  return '<div class="chore-log-entry">' +
+    '<div class="chore-log-row" data-hid="' + id + '" data-date="' + date + '">' +
+      dotHtml +
+      '<span class="chore-log-date">' + dateLabel + '</span>' +
+      '<span class="chore-log-diff">' + diffTxt + '</span>' +
+      noteBtn +
+      delBtn +
+    '</div>' +
+    noteText +
+  '</div>';
+}
+
+/* ═══════════════════════════════════════════════════
    📅 月曆 HTML
    ═══════════════════════════════════════════════════ */
 function buildCalendarHTML(habit) {
@@ -4404,12 +4462,7 @@ function buildCalendarHTML(habit) {
     var diffTxt = diff === 0 ? '今天' : diff + ' 天前';
     var val = logs[d];
     var valTxt = (type === 'count' && typeof val === 'number') ? ' ×' + val + (habit.unit||'') : '';
-    return '<div class="chore-log-row" data-hid="' + habit.id + '" data-date="' + d + '">' +
-      '<span class="chore-log-dot" style="background:' + (habit.color||'var(--ac)') + '"></span>' +
-      '<span class="chore-log-date">' + d + valTxt + '</span>' +
-      '<span class="chore-log-diff">' + diffTxt + '</span>' +
-      '<button class="habit-log-del" data-hid="' + habit.id + '" data-date="' + d + '">✕</button>' +
-    '</div>';
+    return buildLogEntryHTML('habit', habit.id, d, habit.color||'var(--ac)', d + valTxt, diffTxt, (habit.notes||{})[d]);
   }).join('');
   var emptyTxt = allDates.length ? '' : '<div style="color:var(--tx3);font-size:12px;text-align:center;padding:8px 0">尚無打卡記錄</div>';
   var addBtn = isGood
@@ -4479,7 +4532,7 @@ function saveNewHabit() {
   var name = $('new-habit-name').value.trim();
   if (!name) { $('new-habit-name').focus(); return; }
   var unit = (_selType === 'count') ? ($('new-habit-unit').value.trim() || '次') : '';
-  state.habits.push({ id: genId(), name: name, color: _selColor, type: _selType, unit: unit, category: _selCat, logs: {} });
+  state.habits.push({ id: genId(), name: name, color: _selColor, type: _selType, unit: unit, category: _selCat, logs: {}, notes: {} });
   saveHabits();
   closeAddHabitModal();
   renderWeekHeader();
@@ -4524,6 +4577,62 @@ $('count-overlay').addEventListener('click', function(e){ if (e.target === $('co
 $('count-input-field').addEventListener('keydown', function(e){ if (e.key === 'Enter') confirmCount(); });
 
 /* ═══════════════════════════════════════════════════
+   📝 打卡附註 Overlay（習慣／家務共用）
+   ═══════════════════════════════════════════════════ */
+var _noteCtx = null;
+
+function openNoteOverlay(hid, date, kind) {
+  _noteCtx = { hid: hid, date: date, kind: kind };
+  var list = kind === 'habit' ? state.habits : state.chores;
+  var item = list.find(function(x){ return x.id === hid; });
+  var note = (item && item.notes && item.notes[date]) || '';
+  $('note-overlay-title').textContent = (item ? item.name : '') + '　' + date;
+  $('note-textarea').value = note;
+  $('note-delete-btn').style.display = note ? '' : 'none';
+  $('note-overlay').classList.remove('hidden');
+  setTimeout(function(){ $('note-textarea').focus(); }, 100);
+}
+function closeNoteOverlay() {
+  $('note-overlay').classList.add('hidden');
+  _noteCtx = null;
+}
+function _applyNoteChange(val) {
+  if (!_noteCtx) return;
+  var kind = _noteCtx.kind, hid = _noteCtx.hid, date = _noteCtx.date;
+  var trimmed = (val || '').trim();
+  if (kind === 'habit') {
+    state.habits = state.habits.map(function(h) {
+      if (h.id !== hid) return h;
+      var n = Object.assign({}, h.notes || {});
+      if (trimmed) n[date] = trimmed; else delete n[date];
+      return Object.assign({}, h, { notes: n });
+    });
+    saveHabits(); renderHabits();
+  } else {
+    state.chores = state.chores.map(function(h) {
+      if (h.id !== hid) return h;
+      var n = Object.assign({}, h.notes || {});
+      if (trimmed) n[date] = trimmed; else delete n[date];
+      return Object.assign({}, h, { notes: n });
+    });
+    saveChores(); renderChores();
+  }
+}
+function saveNoteOverlay() {
+  _applyNoteChange($('note-textarea').value);
+  closeNoteOverlay();
+}
+function deleteNoteOverlay() {
+  _applyNoteChange('');
+  closeNoteOverlay();
+}
+
+$('note-cancel-btn').addEventListener('click', closeNoteOverlay);
+$('note-save-btn').addEventListener('click', saveNoteOverlay);
+$('note-delete-btn').addEventListener('click', deleteNoteOverlay);
+$('note-overlay').addEventListener('click', function(e){ if (e.target === $('note-overlay')) closeNoteOverlay(); });
+
+/* ═══════════════════════════════════════════════════
    🔄 家務追蹤（與習慣共用結構）
    ═══════════════════════════════════════════════════ */
 var DEFAULT_CHORES = [
@@ -4542,7 +4651,7 @@ var DEFAULT_CHORES = [
 ];
 if (!loadStorage('myapp_chores_init', false) && state.chores.length === 0) {
   state.chores = DEFAULT_CHORES.map(function(c) {
-    return { id: genId(), name: c.name, color: c.color, type: 'yesno', unit: '', category: 'good', logs: {} };
+    return { id: genId(), name: c.name, color: c.color, type: 'yesno', unit: '', category: 'good', logs: {}, notes: {} };
   });
   saveChores();
   saveStorage('myapp_chores_init', true);
@@ -4670,6 +4779,13 @@ function renderChores() {
       saveChores(); renderChores();
     });
   });
+  /* 時間軸：附註按鈕 */
+  container.querySelectorAll('.chore-note-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openNoteOverlay(btn.dataset.hid, btn.dataset.date, 'chore');
+    });
+  });
   /* 時間軸：顯示全部 */
   container.querySelectorAll('.chore-tl-show-all').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
@@ -4683,19 +4799,14 @@ function renderChores() {
       var rows = allDates.map(function(d) {
         var diff = Math.floor((new Date(today) - new Date(d)) / 86400000);
         var diffTxt = diff === 0 ? '今天' : diff + ' 天前';
-        return '<div class="chore-log-row" data-hid="' + hid + '" data-date="' + d + '">' +
-          '<span class="chore-log-dot"></span>' +
-          '<span class="chore-log-date">' + d + '</span>' +
-          '<span class="chore-log-diff">' + diffTxt + '</span>' +
-          '<button class="chore-log-del" data-hid="' + hid + '" data-date="' + d + '">✕</button>' +
-        '</div>';
+        return buildLogEntryHTML('chore', hid, d, null, d, diffTxt, (h.notes||{})[d]);
       }).join('');
       /* 取得當前 chore-timeline，展開全部 */
       var timeline = btn.closest('.chore-timeline');
       var listDiv = timeline.querySelector('.chore-log-list');
       if (listDiv) listDiv.innerHTML = rows;
       btn.closest('.chore-tl-more').remove();
-      /* 重新 bind 刪除按鈕 */
+      /* 重新 bind 刪除 / 附註按鈕 */
       timeline.querySelectorAll('.chore-log-del').forEach(function(delBtn) {
         delBtn.addEventListener('click', function(ev) {
           ev.stopPropagation();
@@ -4708,6 +4819,12 @@ function renderChores() {
             return Object.assign({}, cx, { logs: l });
           });
           saveChores(); renderChores();
+        });
+      });
+      timeline.querySelectorAll('.chore-note-btn').forEach(function(noteBtn) {
+        noteBtn.addEventListener('click', function(ev) {
+          ev.stopPropagation();
+          openNoteOverlay(noteBtn.dataset.hid, noteBtn.dataset.date, 'chore');
         });
       });
     });
@@ -4748,12 +4865,7 @@ function buildChoreCalHTML(chore) {
     var isToday = d === today;
     var diffD = Math.floor((new Date(today) - new Date(d)) / 86400000);
     var diffTxt = isToday ? '今天' : diffD + ' 天前';
-    return '<div class="chore-log-row" data-hid="' + chore.id + '" data-date="' + d + '">' +
-      '<span class="chore-log-dot"></span>' +
-      '<span class="chore-log-date">' + d + '</span>' +
-      '<span class="chore-log-diff">' + diffTxt + '</span>' +
-      '<button class="chore-log-del" data-hid="' + chore.id + '" data-date="' + d + '">✕</button>' +
-    '</div>';
+    return buildLogEntryHTML('chore', chore.id, d, null, d, diffTxt, (chore.notes||{})[d]);
   }).join('');
   var emptyTxt = allDates.length ? '' : '<div style="color:var(--tx3);font-size:12px;text-align:center;padding:8px 0">尚無打卡記錄</div>';
   return '<div class="chore-timeline">' +
@@ -4797,7 +4909,7 @@ function closeAddChoreModal() { $('add-chore-modal').classList.add('hidden'); }
 function saveNewChore() {
   var name = $('new-chore-name').value.trim();
   if (!name) { $('new-chore-name').focus(); return; }
-  state.chores.push({ id: genId(), name: name, color: _choreSelColor, type: 'yesno', unit: '', category: 'good', logs: {} });
+  state.chores.push({ id: genId(), name: name, color: _choreSelColor, type: 'yesno', unit: '', category: 'good', logs: {}, notes: {} });
   saveChores(); closeAddChoreModal(); renderChoreWeekHeader(); renderChores();
 }
 $('chore-add-btn').addEventListener('click', openAddChoreModal);
@@ -7833,7 +7945,7 @@ function renderBPChart() {
     var ppSvgId = 'bp-chart-pp-svg-' + hand;
     section.innerHTML='<div class="bp-chart-title">'+handLabels[hand]+'（最近 '+n+' 筆）</div>'+
       '<div class="bp-chart-svg-box">'+legend+svg.join('')+'</div>'+
-      '<div class="bp-chart-title" style="margin-top:14px">'+handLabels[hand]+' 脈壓差曲線</div>'+
+      '<div class="bp-chart-title" style="margin-top:14px">'+handLabels[hand]+' 脈壓差柱狀圖</div>'+
       '<div class="bp-chart-svg-box" style="padding:10px 6px 6px"><svg class="trend-svg" id="'+ppSvgId+'" viewBox="0 0 320 110"></svg></div>'+
       '<div class="bp-chart-legend"><div class="bp-chart-legend-item"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#C0392B;margin-right:3px"></span>脈壓差 ＜ 20（過低）</div>'+
       '<div class="bp-chart-legend-item"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D68A30;margin-right:3px"></span>脈壓差 ≥ 20</div></div>';
@@ -7842,7 +7954,7 @@ function renderBPChart() {
     var ppData = logs.map(function(b){
       return { x: (b.datetime||'').slice(5,10).replace('-','/'), y: b.sys - b.dia, hasData: true };
     });
-    drawLineChart(ppSvgId, ppData, {
+    drawPPBarChart(ppSvgId, ppData, {
       width: 320, height: 110,
       color: '#D68A30',
       lowThreshold: 20,
@@ -11004,6 +11116,81 @@ function drawLineChart(svgId, data, opts) {
     svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
     svg.innerHTML = parts.join('');
   }
+}
+
+/* 脈壓差柱狀圖（沿用 drawLineChart 的格線/警戒線/座標邏輯，改以長條呈現數值） */
+function drawPPBarChart(svgId, data, opts) {
+  var svg = $(svgId);
+  if (!svg) return;
+  var W = opts.width || 320, H = opts.height || 120;
+  var PL = 30, PR = 10, PT = 14, PB = 24;
+  var cW = W - PL - PR, cH = H - PT - PB;
+
+  var validData = data.filter(function(d) { return d.hasData; });
+  if (!validData.length) {
+    svg.innerHTML = '<text x="' + (W/2) + '" y="' + (H/2) + '" text-anchor="middle" fill="var(--tx3)" font-size="11">尚無資料</text>';
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    return;
+  }
+
+  var allY = validData.map(function(d) { return d.y; });
+  var yMin = opts.yMin !== undefined ? opts.yMin : 0;
+  var yMax = opts.yMax !== undefined ? opts.yMax : (Math.max.apply(null, allY.concat([opts.refValue || 0, opts.lowThreshold || 0])) + 5);
+  if (yMax <= yMin) yMax = yMin + 1;
+  var rng = yMax - yMin;
+  var n = data.length;
+
+  function vy(v) { return PT + cH * (1 - (v - yMin) / rng); }
+  function gx(i) { return PL + (i + 0.5) * (cW / n); }
+  var barW = Math.max(3, Math.min(16, (cW / n) * 0.6));
+
+  var parts = [];
+
+  /* Y grid + labels */
+  var gridCount = 3;
+  for (var gi = 0; gi < gridCount; gi++) {
+    var gv = yMin + rng * gi / (gridCount - 1);
+    var gy = vy(gv).toFixed(1);
+    var glabel = opts.yFormatter ? opts.yFormatter(gv) : (Math.round(gv * 10) / 10) + (opts.yUnit || '');
+    parts.push('<line x1="' + PL + '" y1="' + gy + '" x2="' + (PL + cW) + '" y2="' + gy + '" stroke="var(--bd)" stroke-width="0.5"/>');
+    parts.push('<text x="' + (PL - 3) + '" y="' + (parseFloat(gy) + 3).toFixed(1) + '" font-size="7" fill="var(--tx3)" text-anchor="end">' + glabel + '</text>');
+  }
+
+  /* Reference line */
+  if (opts.refValue !== undefined && opts.refValue >= yMin && opts.refValue <= yMax) {
+    var ry = vy(opts.refValue).toFixed(1);
+    parts.push('<line x1="' + PL + '" y1="' + ry + '" x2="' + (PL + cW) + '" y2="' + ry + '" stroke="var(--ac)" stroke-width="1" stroke-dasharray="3,3" opacity="0.65"/>');
+  }
+
+  /* Low-threshold warning line（脈壓差 < 20 警戒線） */
+  if (opts.lowThreshold !== undefined && opts.lowThreshold >= yMin && opts.lowThreshold <= yMax) {
+    var lty = vy(opts.lowThreshold).toFixed(1);
+    parts.push('<line x1="' + PL + '" y1="' + lty + '" x2="' + (PL + cW) + '" y2="' + lty + '" stroke="' + (opts.lowColor || '#C0392B') + '" stroke-width="1" stroke-dasharray="3,3" opacity="0.55"/>');
+  }
+
+  /* Bars */
+  var baseY = vy(yMin);
+  data.forEach(function(d, i) {
+    if (!d.hasData) return;
+    var isLow = opts.lowThreshold !== undefined && d.y < opts.lowThreshold;
+    var barColor = isLow ? (opts.lowColor || '#C0392B') : (opts.color || 'var(--ac)');
+    var by = vy(d.y);
+    var bh = Math.max(1.5, baseY - by);
+    var bx = (gx(i) - barW / 2).toFixed(1);
+    parts.push('<rect x="' + bx + '" y="' + by.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + bh.toFixed(1) + '" fill="' + barColor + '" rx="2"/>');
+    parts.push('<text x="' + gx(i).toFixed(1) + '" y="' + (by - 3).toFixed(1) + '" font-size="7" fill="' + barColor + '" text-anchor="middle">' + d.y + '</text>');
+  });
+
+  /* X labels (up to ~6) */
+  var step = Math.max(1, Math.ceil(n / 6));
+  data.forEach(function(d, i) {
+    if (i % step === 0 || i === n - 1) {
+      parts.push('<text x="' + gx(i).toFixed(1) + '" y="' + (H - 5) + '" font-size="7" fill="var(--tx3)" text-anchor="middle">' + d.x + '</text>');
+    }
+  });
+
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.innerHTML = parts.join('');
 }
 
 function drawHabitMiniChart(svgId, data, color) {
