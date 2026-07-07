@@ -2529,7 +2529,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <div class="food-edit-mode-label" id="food-edit-mode-lbl">新增飲食記錄</div>
     <input type="text" id="food-edit-name" placeholder="食物名稱（可搜尋食物資料庫）" maxlength="60" autocomplete="off" style="width:100%;font-size:16px">
     <div class="food-edit-suggest hidden" id="food-edit-suggest"></div>
-    <a href="#" target="_blank" rel="noopener noreferrer" class="food-edit-google-link hidden" id="food-edit-google-link">🔍 Google 查詢「<span id="food-edit-google-link-kw"></span>」營養成分</a>
+    <a href="#" target="_blank" rel="noopener noreferrer" class="food-edit-google-link hidden" id="food-edit-google-link">🔍 Google 查詢「<span id="food-edit-google-link-kw"></span>」每100克熱量/蛋白質/碳水/脂肪</a>
     </div>
     <div class="sf-row food-edit-qty-row hidden" id="food-edit-qty-row" style="margin-top:10px">
       <label class="sf-label">份量</label>
@@ -6124,14 +6124,14 @@ function openFoodEditById(id){
   _resetFoodEditAutocomplete();
   $('food-edit-overlay').classList.remove('hidden');
 }
-/* ── 食物名稱 → Google 搜尋營養成分連結（2026-07 加入）── */
+/* ── 食物名稱 → Google 搜尋每100克營養成分連結（2026-07 加入，07-07 微調查詢關鍵字）── */
 function updateFoodEditGoogleLink(){
   var link=$('food-edit-google-link'); if(!link) return;
   var nameEl=$('food-edit-name');
   var name=(nameEl?nameEl.value:'').trim();
   if(!name){ link.classList.add('hidden'); link.href='#'; return; }
   var kw=$('food-edit-google-link-kw'); if(kw) kw.textContent=name;
-  link.href='https://www.google.com/search?q='+encodeURIComponent(name+' 營養成分');
+  link.href='https://www.google.com/search?q='+encodeURIComponent(name+' 每100克 熱量 蛋白質 碳水 脂肪');
   link.classList.remove('hidden');
 }
 /* ── 食物資料庫自動帶入（方案A） ── */
