@@ -758,6 +758,9 @@ input::placeholder { color: var(--tx3); }
 .food-edit-suggest-item:last-child { border-bottom: none; }
 .food-edit-suggest-item:active, .food-edit-suggest-item:hover { background: var(--acl); }
 .food-edit-suggest-item .fes-sub { color: var(--tx3); font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+.food-edit-google-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--acd); margin-top: 6px; text-decoration: none; }
+.food-edit-google-link.hidden { display: none; }
+.food-edit-google-link:active { opacity: 0.7; }
 .food-edit-qty-row select#food-edit-qty-unit-sel { font-size: 12px; color: var(--tx2); border: 1px solid var(--bd); border-radius: 6px; background: var(--bg3); padding: 6px; }
 .food-multi-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .food-multi-row { display: flex; gap: 6px; align-items: center; }
@@ -788,8 +791,10 @@ input::placeholder { color: var(--tx3); }
 .food-day-note { width: 100%; box-sizing: border-box; font-size: 14px; font-family: var(--font); resize: none; border: 0.5px solid var(--bd); border-radius: var(--r); background: var(--bg); color: var(--tx); padding: 7px 10px; margin-top: 8px; }
 .food-day-note:focus { outline: none; border-color: var(--ac); }
 .food-carb-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-.food-skip-btn { flex:1; min-width:0; border:1px solid var(--bd); background:var(--bg3); color:var(--tx2); border-radius:var(--r); padding:6px 4px; font-size:13px; font-family:var(--font); cursor:pointer; text-align:center; transition:background 0.15s; }
-.food-skip-btn.active { background:#7a5c5c; border-color:#7a5c5c; color:#fff; }
+.food-skip-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.food-skip-row-lbl { font-size: 11.5px; color: var(--tx3); flex-shrink: 0; }
+.food-skip-meal-btn { flex: 1; min-width: 0; border: 1px solid var(--bd); background: var(--bg3); color: var(--tx2); border-radius: var(--r); padding: 5px 4px; font-size: 12.5px; font-family: var(--font); cursor: pointer; text-align: center; transition: background 0.15s; }
+.food-skip-meal-btn.active { background: #7a5c5c; border-color: #7a5c5c; color: #fff; }
 .food-skip-banner { background:rgba(120,80,80,0.12); border:1px solid rgba(120,80,80,0.3); border-radius:var(--r); padding:8px 12px; margin-bottom:6px; font-size:12px; color:var(--tx2); display:flex; align-items:center; gap:6px; }
 .food-carb-btn { flex: 1; min-width: 0; padding: 6px 4px; border-radius: var(--r); border: 1px solid var(--bd); background: var(--bg3); color: var(--tx2); font-size: 14px; font-family: var(--font); cursor: pointer; text-align: center; transition: background 0.15s; }
 .food-carb-btn.sel { background: var(--acl); border-color: var(--ac); color: var(--acd); font-weight: 600; }
@@ -859,7 +864,7 @@ input::placeholder { color: var(--tx3); }
 .food-dtype-btns { display: flex; gap: 6px; }
 .food-dtype-btn { flex: 1; padding: 7px 4px; border-radius: var(--r); border: 1px solid var(--bd); background: var(--bg3); color: var(--tx2); font-size: 13px; font-family: var(--font); cursor: pointer; text-align: center; transition: all 0.15s; }
 .food-dtype-btn.sel { background: var(--acl); border-color: var(--ac); color: var(--acd); font-weight: 600; }
-.food-target-bar { margin-top: 7px; background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); display: flex; align-items: center; padding: 8px 10px; gap: 0; }
+.food-target-bar { margin-top: 7px; background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); padding: 8px 10px 4px; }
 .food-target-lbl { font-size: 11px; color: var(--tx3); min-width: 28px; }
 .food-target-item { flex: 1; display: flex; flex-direction: column; align-items: center; }
 .food-target-v { font-size: 14px; font-weight: 600; color: var(--acd); }
@@ -1380,7 +1385,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .rcalc-today-lbl { font-size:11px; color:var(--tx3); width:50px; flex-shrink:0; }
 .rcalc-today-bar-track { flex:1; height:6px; background:var(--bg3); border-radius:3px; overflow:hidden; }
 .rcalc-today-bar-fill { height:100%; border-radius:3px; transition:width .3s; }
-.rcalc-today-val { font-size:11px; font-weight:700; width:72px; text-align:right; flex-shrink:0; }
+.rcalc-today-val { font-size:11px; font-weight:700; min-width:72px; text-align:right; flex-shrink:0; white-space:nowrap; }
 /* 排行榜 */
 .recipe-rank-section { padding: 10px 12px 4px; }
 .recipe-rank-title { font-size: 13px; font-weight: 700; color: var(--tx); margin-bottom: 8px; }
@@ -1674,7 +1679,13 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
           <button class="food-carb-btn" data-carb="low">碳水 40g 以下</button>
           <button class="food-carb-btn" data-carb="mid">碳水 50–90g</button>
           <button class="food-carb-btn" data-carb="high">爆碳</button>
-          <button class="food-skip-btn" id="food-skip-btn" title="標記這天外食或無法記錄，蛋白質圖表將排除此日" onclick="toggleFoodSkipDay()">🍽️ 外食/無記錄</button>
+        </div>
+        <div class="food-skip-row" id="food-skip-row" title="標記單一餐次外食或無法記錄，蛋白質圖表與歷史記錄將反映此標記">
+          <span class="food-skip-row-lbl">🍽️ 外食/無記錄</span>
+          <button class="food-skip-meal-btn" data-meal="早餐">早</button>
+          <button class="food-skip-meal-btn" data-meal="午餐">午</button>
+          <button class="food-skip-meal-btn" data-meal="晚餐">晚</button>
+          <button class="food-skip-meal-btn" data-meal="點心">點</button>
         </div>
         <textarea class="food-day-note" id="food-day-note" rows="4" placeholder="今日備註（聚餐、特殊飲食狀況…）"></textarea>
       </div>
@@ -2518,6 +2529,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <div class="food-edit-mode-label" id="food-edit-mode-lbl">新增飲食記錄</div>
     <input type="text" id="food-edit-name" placeholder="食物名稱（可搜尋食物資料庫）" maxlength="60" autocomplete="off" style="width:100%;font-size:16px">
     <div class="food-edit-suggest hidden" id="food-edit-suggest"></div>
+    <a href="#" target="_blank" rel="noopener noreferrer" class="food-edit-google-link hidden" id="food-edit-google-link">🔍 Google 查詢「<span id="food-edit-google-link-kw"></span>」營養成分</a>
     </div>
     <div class="sf-row food-edit-qty-row hidden" id="food-edit-qty-row" style="margin-top:10px">
       <label class="sf-label">份量</label>
@@ -5286,6 +5298,45 @@ function renderFoodNutritionSummary(items) {
   if (fPct) fPct.textContent = macroKcal>0 ? r1(fat*9/macroKcal*100)+'%' : '';
 }
 
+/* ── 飲食頁 × 食譜庫試算頁 共用：某日巨量目標進度 HTML ──
+   回傳空字串代表「尚未選擇日型」或「尚未填身體數據」，由呼叫端決定要隱藏還是顯示提示文字 */
+function buildMacroProgressHTML(dateKey) {
+  var macros = calcDayMacros(_bodyData);
+  var dtype = (_foodDayType && _foodDayType[dateKey]) || '';
+  var m = macros ? macros[dtype] : null;
+  if (!m) return '';
+  var items = (state.foodLogs || []).filter(function(l){ return l.date === dateKey; });
+  var sums = { cal:0, pro:0, carb:0, fat:0 };
+  items.forEach(function(l){
+    sums.cal += (+l.calories||0); sums.pro += (+l.protein||0);
+    sums.carb += (+l.carbs||0);   sums.fat += (+l.fat||0);
+  });
+  function colorFor(key, rawPct) {
+    if (key === 'pro') return rawPct >= 100 ? '#5A9888' : 'var(--ac)';
+    if (rawPct > 130) return '#C04030';
+    if (rawPct > 105) return '#C87A30';
+    return 'var(--ac)';
+  }
+  var rows = [
+    { key:'cal',  lbl:'熱量',   unit:'kcal', v:sums.cal,  g:m.cal },
+    { key:'pro',  lbl:'蛋白質', unit:'g',    v:sums.pro,  g:m.pro },
+    { key:'carb', lbl:'淨碳水', unit:'g',    v:sums.carb, g:m.carb },
+    { key:'fat',  lbl:'脂肪',   unit:'g',    v:sums.fat,  g:m.fat }
+  ];
+  return rows.map(function(r){
+    var rawPct = r.g ? Math.round(r.v / r.g * 100) : 0;
+    var barPct = Math.min(100, rawPct);
+    var col = colorFor(r.key, rawPct);
+    var diff = r.g - r.v;
+    var diffTxt = diff >= 0 ? ('剩' + r1(diff)) : ('超' + r1(-diff));
+    return '<div class="rcalc-today-item">' +
+      '<span class="rcalc-today-lbl">' + r.lbl + '</span>' +
+      '<div class="rcalc-today-bar-track"><div class="rcalc-today-bar-fill" style="width:' + barPct + '%;background:' + col + '"></div></div>' +
+      '<span class="rcalc-today-val" style="color:' + col + '">' + Math.round(r.v) + '/' + r.g + r.unit + ' · ' + diffTxt + '</span>' +
+    '</div>';
+  }).join('');
+}
+
 /* ── TDEE & Carb-Cycling Calculations ── */
 function calcBMR(bd) {
   var w=+(bd.weight)||55, h=+(bd.height)||165, a=+(bd.age)||30;
@@ -5416,15 +5467,10 @@ function renderFoodDayType() {
   var dtype=_foodDayType[_foodViewDate]||'';
   document.querySelectorAll('#food-dtype-btns .food-dtype-btn').forEach(function(b){ b.classList.toggle('sel',b.dataset.dtype===dtype); });
   var tbar=$('food-target-bar'); if(!tbar) return;
-  var macros=calcDayMacros(_bodyData);
-  if(!dtype||!macros){ tbar.style.display='none'; return; }
-  var m=macros[dtype]; if(!m){ tbar.style.display='none'; return; }
+  var html = buildMacroProgressHTML(_foodViewDate);
+  if(!html){ tbar.style.display='none'; return; }
   tbar.style.display='';
-  tbar.innerHTML='<div class="food-target-lbl">目標</div>'+
-    '<div class="food-target-item"><span class="food-target-v">'+m.cal+'</span><span class="food-target-u">kcal</span></div>'+
-    '<div class="food-target-item"><span class="food-target-v">'+m.pro+'</span><span class="food-target-u">蛋白質g</span></div>'+
-    '<div class="food-target-item"><span class="food-target-v">'+m.carb+'</span><span class="food-target-u">碳水g</span></div>'+
-    '<div class="food-target-item"><span class="food-target-v">'+m.fat+'</span><span class="food-target-u">脂肪g</span></div>';
+  tbar.innerHTML = '<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">🎯 目標進度</div>' + html;
 }
 
 /* ── protein 7-day chart ── */
@@ -5450,15 +5496,18 @@ function renderProteinChart() {
   for(var di=6;di>=0;di--) dateKeys.push(offsetDate(todayKey(),-di));
   vals.forEach(function(v,i){
     var dk=dateKeys[i];
-    var isSkip=_foodSkipDays&&_foodSkipDays[dk];
+    var skipStatus=foodDaySkipStatus(dk);
+    var isFullSkip=skipStatus.full, isPartialSkip=skipStatus.partial;
     var x=PL+i*(bw+gap);
     var bh=v>0?Math.max(3,Math.round(v/maxV*cH)):0;
     var y=PT+cH-bh;
     var isTdy=(i===6);
-    var fillColor=isSkip?'#b0a0a0':(isTdy?'var(--ac)':'var(--acl)');
+    var fillColor=isFullSkip?'#b0a0a0':(isTdy?'var(--ac)':'var(--acl)');
     svgParts.push('<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+bh+'" rx="3" fill="'+fillColor+'"/>');
-    if(isSkip) svgParts.push('<text x="'+(x+bw/2)+'" y="'+(PT+cH-2)+'" font-size="9" fill="#b0a0a0" text-anchor="middle">🍽</text>');
+    if(isFullSkip) svgParts.push('<text x="'+(x+bw/2)+'" y="'+(PT+cH-2)+'" font-size="9" fill="#b0a0a0" text-anchor="middle">🍽</text>');
     else if(v>0) svgParts.push('<text x="'+(x+bw/2)+'" y="'+(y-3)+'" font-size="8" fill="var(--tx2)" text-anchor="middle">'+v+'</text>');
+    /* 部分餐次外食：保留真實數值長條，僅在長條右上角加一個小圓點提示 */
+    if(isPartialSkip) svgParts.push('<circle cx="'+(x+bw-3)+'" cy="'+(y+4)+'" r="2.2" fill="#C87A30"/>');
     var lblParts=labels[i].split('\n');
     svgParts.push('<text x="'+(x+bw/2)+'" y="'+(PT+cH+12)+'" font-size="8" fill="'+(isTdy?'var(--ac)':'var(--tx3)')+'" text-anchor="middle">'+lblParts[0]+'</text>');
     svgParts.push('<text x="'+(x+bw/2)+'" y="'+(PT+cH+22)+'" font-size="7.5" fill="var(--tx3)" text-anchor="middle">'+lblParts[1]+'</text>');
@@ -5504,7 +5553,12 @@ function renderFoodHistory() {
     return '<div class="food-history-group">'+
       '<div class="food-history-group-hdr" data-dk="'+dk+'">'+
         '<span class="food-history-date">'+lbl.main+'</span>'+
-        ((_foodSkipDays&&_foodSkipDays[dk])?'<span style="font-size:11px;color:#9a7070;margin-left:4px">🍽️ 外食</span>':'')+
+        (function(){
+          var st=foodDaySkipStatus(dk);
+          if(st.none) return '';
+          var txt=st.full?'🍽️ 外食':'🍽️ '+st.meals.join('/')+'外食';
+          return '<span style="font-size:11px;color:#9a7070;margin-left:4px">'+txt+'</span>';
+        })()+
         '<span class="food-history-totals">'+(totTxt||items.length+'項')+'</span>'+
         '<button class="food-hist-add-date-btn" data-hist-add="'+dk+'" title="補記飲食">＋補記</button>'+
       '</div>'+
@@ -5931,35 +5985,46 @@ function saveFoodNote(){
   _foodDayNotes[_foodViewDate]=_foodNoteTA.value.trim();
   saveStorage('myapp_food_notes',_foodDayNotes);
 }
-function toggleFoodSkipDay(){
-  var skipBtn=$('food-skip-btn');
-  if(_foodSkipDays[_foodViewDate]){
-    delete _foodSkipDays[_foodViewDate];
-  } else {
-    _foodSkipDays[_foodViewDate]=true;
+function toggleFoodSkipMeal(meal){
+  var dk=_foodViewDate;
+  var cur=_foodSkipDays[dk];
+  if(!cur || cur===true){
+    cur = (cur===true) ? (function(){var o={};FOOD_MEALS.forEach(function(m){o[m]=true;});return o;})() : {};
   }
+  if(cur[meal]) delete cur[meal]; else cur[meal]=true;
+  var anyLeft=FOOD_MEALS.some(function(m){ return !!cur[m]; });
+  if(anyLeft) _foodSkipDays[dk]=cur; else delete _foodSkipDays[dk];
   saveStorage('myapp_food_skip_days',_foodSkipDays);
   updateFoodSkipUI();
+  renderProteinChart();
+  renderFoodHistory();
 }
 function updateFoodSkipUI(){
-  var skipBtn=$('food-skip-btn');
-  var isSkip=!!(_foodSkipDays&&_foodSkipDays[_foodViewDate]);
-  if(skipBtn) skipBtn.classList.toggle('active',isSkip);
+  var status=foodDaySkipStatus(_foodViewDate);
+  document.querySelectorAll('#food-skip-row .food-skip-meal-btn').forEach(function(b){
+    b.classList.toggle('active', status.meals.indexOf(b.dataset.meal)!==-1);
+  });
   /* show/hide banner */
   var banner=$('food-skip-banner');
-  if(isSkip){
+  if(!status.none){
+    var txt = status.full
+      ? '🍽️ <span>此日已標記為<strong>外食/無法記錄</strong>（四餐皆標記），蛋白質圖表將排除此日數據</span>'
+      : '🍽️ <span>已標記外食/無記錄：<strong>'+status.meals.join('、')+'</strong></span>';
     if(!banner){
       banner=document.createElement('div');
       banner.id='food-skip-banner';
       banner.className='food-skip-banner';
-      banner.innerHTML='🍽️ <span>此日已標記為<strong>外食/無法記錄</strong>，蛋白質圖表將排除此日數據</span>';
       var lb=$('food-log-list');
       if(lb&&lb.parentNode) lb.parentNode.insertBefore(banner,lb);
     }
+    banner.innerHTML=txt;
   } else {
     if(banner) banner.remove();
   }
 }
+document.querySelectorAll('#food-skip-row .food-skip-meal-btn').forEach(function(btn){
+  btn.addEventListener('click', function(){ toggleFoodSkipMeal(btn.dataset.meal); });
+});
 function saveFoodCarb(val){
   if(val) _foodDayCarbs[_foodViewDate]=val;
   else delete _foodDayCarbs[_foodViewDate];
@@ -6059,6 +6124,16 @@ function openFoodEditById(id){
   _resetFoodEditAutocomplete();
   $('food-edit-overlay').classList.remove('hidden');
 }
+/* ── 食物名稱 → Google 搜尋營養成分連結（2026-07 加入）── */
+function updateFoodEditGoogleLink(){
+  var link=$('food-edit-google-link'); if(!link) return;
+  var nameEl=$('food-edit-name');
+  var name=(nameEl?nameEl.value:'').trim();
+  if(!name){ link.classList.add('hidden'); link.href='#'; return; }
+  var kw=$('food-edit-google-link-kw'); if(kw) kw.textContent=name;
+  link.href='https://www.google.com/search?q='+encodeURIComponent(name+' 營養成分');
+  link.classList.remove('hidden');
+}
 /* ── 食物資料庫自動帶入（方案A） ── */
 var _foodEditPicked = null;
 function _resetFoodEditAutocomplete(){
@@ -6076,19 +6151,40 @@ function _resetFoodEditAutocomplete(){
   /* 常用清單重置 */
   _updateFoodFavBtn();
   renderFoodFavChips();
+  updateFoodEditGoogleLink();
+}
+/* ── 常用/私人菜單/試算食物庫：依名稱查找是否已存在於其他清單，
+   避免同一個食物在三處各自建立、數值各自漂移不同步（2026-07 加入，見 point 3）── */
+function findUserFoodByName(name){
+  name=(name||'').trim(); if(!name) return null;
+  var f=_favFoods.find(function(x){return x.name===name;});
+  if(f) return {source:'fav', food:f};
+  f=_privateFoods.find(function(x){return x.name===name;});
+  if(f) return {source:'private', food:f};
+  f=_customFoods.find(function(x){return x.name===name;});
+  if(f) return {source:'custom', food:f};
+  return null;
 }
 function _foodEditSearchList(kw){
   kw=(kw||'').trim().toLowerCase();
   if(!kw) return [];
-  var results=[];
+  var results=[], seen={};
+  function add(f){ if(seen[f.name]) return; seen[f.name]=true; results.push(f); }
+  /* 優先序：⭐常用 > 🍱私人菜單 > 試算食物庫（含標準食物庫+自訂食物），
+     同名時只顯示一筆，避免同一食物在建議清單裡重複出現 */
+  (_favFoods||[]).forEach(function(f){
+    if((f.name||'').toLowerCase().indexOf(kw)!==-1){
+      add({name:f.name,cal:+f.cal||0,pro:+f.pro||0,carb:+f.carb||0,fat:+f.fat||0,unit:f.unit||'份',base:f.base||1,isPrivate:f.isPrivate!==false,isFav:true});
+    }
+  });
   (_privateFoods||[]).forEach(function(f){
     if((f.name||'').toLowerCase().indexOf(kw)!==-1){
-      results.push({name:f.name,cal:+f.cal||0,pro:+f.pro||0,carb:+f.carb||0,fat:+f.fat||0,unit:f.unit||'份',base:1,isPrivate:true});
+      add({name:f.name,cal:+f.cal||0,pro:+f.pro||0,carb:+f.carb||0,fat:+f.fat||0,unit:f.unit||'份',base:1,isPrivate:true});
     }
   });
   (FOOD_DB||[]).forEach(function(f){
     if((f.name||'').toLowerCase().indexOf(kw)!==-1){
-      results.push({name:f.name,cal:+f.cal||0,pro:+f.pro||0,carb:+f.carb||0,fat:+f.fat||0,unit:'g',base:100,isPrivate:false});
+      add({name:f.name,cal:+f.cal||0,pro:+f.pro||0,carb:+f.carb||0,fat:+f.fat||0,unit:'g',base:100,isPrivate:false});
     }
   });
   return results.slice(0,8);
@@ -6100,7 +6196,7 @@ function renderFoodEditSuggest(){
   if(!list.length){box.classList.add('hidden');box.innerHTML='';box._list=null;return;}
   box.innerHTML=list.map(function(f,i){
     var sub=f.isPrivate?('每'+f.unit+' '+r1(f.cal)+'kcal'):('每100g '+r1(f.cal)+'kcal');
-    return '<div class="food-edit-suggest-item" data-idx="'+i+'"><span>'+esc(f.name)+'</span><span class="fes-sub">'+sub+'</span></div>';
+    return '<div class="food-edit-suggest-item" data-idx="'+i+'"><span>'+(f.isFav?'⭐ ':'')+esc(f.name)+'</span><span class="fes-sub">'+sub+'</span></div>';
   }).join('');
   box._list=list;
   box.classList.remove('hidden');
@@ -6125,6 +6221,7 @@ function _foodEditApplyQty(){
       _foodEditPicked=null;
       var qr=$('food-edit-qty-row'); if(qr) qr.classList.add('hidden');
       renderFoodEditSuggest();
+      updateFoodEditGoogleLink();
     });
     nameEl.addEventListener('focus',function(){ if(this.value.trim()) renderFoodEditSuggest(); });
     nameEl.addEventListener('blur',function(){ setTimeout(function(){ var sg=$('food-edit-suggest'); if(sg){sg.classList.add('hidden'); sg.innerHTML='';} },150); });
@@ -6144,6 +6241,7 @@ function _foodEditApplyQty(){
       if(qb) qb.textContent='每'+(f.isPrivate?f.unit:'100g')+'：'+r1(f.cal)+'kcal · 蛋白'+r1(f.pro)+'g · 碳水'+r1(f.carb)+'g · 脂肪'+r1(f.fat)+'g';
       _foodEditApplyQty();
       _updateFoodFavBtn();
+      updateFoodEditGoogleLink();
     });
   }
   var qi=$('food-edit-qty'); if(qi) qi.addEventListener('input',_foodEditApplyQty);
@@ -6223,6 +6321,7 @@ function _updateFoodFavBtn(){
       if(qb) qb.textContent='每'+f.unit+'：'+r1(f.cal)+'kcal · 蛋白'+r1(f.pro)+'g · 碳水'+r1(f.carb)+'g · 脂肪'+r1(f.fat)+'g';
       _foodEditApplyQty();
       _updateFoodFavBtn();
+      updateFoodEditGoogleLink();
     });
   }
   var fb=$('food-edit-fav-btn');
@@ -6315,6 +6414,7 @@ function _foodMultiSum(){
   $('food-edit-pro').value=r1(totalPro);
   $('food-edit-carb').value=r1(totalCarb);
   $('food-edit-fat').value=r1(totalFat);
+  updateFoodEditGoogleLink();
   _foodEditPicked=null;
   var qr=$('food-edit-qty-row'); if(qr) qr.classList.add('hidden');
   var sg=$('food-edit-suggest'); if(sg){sg.classList.add('hidden');sg.innerHTML='';}
@@ -6601,6 +6701,35 @@ function saveFoodFavHidden(){ saveStorage('myapp_fav_foods_hidden', _foodFavHidd
 var _foodDayNotes = loadStorage('myapp_food_notes', {});
 var _foodDayCarbs  = loadStorage('myapp_food_carbs', {});
 var _foodSkipDays  = loadStorage('myapp_food_skip_days', {});
+/* ── 外食/無記錄標記：2026-07 起改為「單一餐次」層級（原本是全天一個開關）──
+   新格式：_foodSkipDays[date] = { '早餐':true, '午餐':true, ... }（只存 true 的餐次）
+   舊資料遷移：若某天的值仍是舊格式的 boolean true（代表全天標記），
+   一律視為當天四個餐次全部標記，維持原本「整天沒吃/外食」的語意不變 */
+var FOOD_MEALS = ['早餐','午餐','晚餐','點心'];
+(function _migrateFoodSkipDays(){
+  var changed=false;
+  Object.keys(_foodSkipDays).forEach(function(dk){
+    if(_foodSkipDays[dk]===true){
+      var full={}; FOOD_MEALS.forEach(function(m){ full[m]=true; });
+      _foodSkipDays[dk]=full; changed=true;
+    }
+  });
+  if(changed) saveStorage('myapp_food_skip_days',_foodSkipDays);
+})();
+/* 回傳某天目前被標記的餐次陣列（新舊格式皆相容） */
+function _foodSkipMealsOf(dateKey){
+  var v=_foodSkipDays[dateKey];
+  if(!v) return [];
+  if(v===true) return FOOD_MEALS.slice();
+  return FOOD_MEALS.filter(function(m){ return !!v[m]; });
+}
+/* 回傳某天的外食標記狀態：{none:true} / {partial:true,meals:[...]} / {full:true,meals:[...]} */
+function foodDaySkipStatus(dateKey){
+  var meals=_foodSkipMealsOf(dateKey);
+  if(!meals.length) return {none:true, meals:[]};
+  if(meals.length>=FOOD_MEALS.length) return {full:true, meals:meals};
+  return {partial:true, meals:meals};
+}
 var _bodyData     = loadStorage('myapp_body_data', {gender:'female',age:30,height:165,weight:55,activity:'light',goal:'cut'});
 var _foodDayType  = loadStorage('myapp_food_day_type', {});
 var _calcCatOpen = {};
@@ -6889,6 +7018,7 @@ $('calc-add-to-log-btn') && $('calc-add-to-log-btn').addEventListener('click',fu
   var lbl=$('food-edit-mode-lbl');if(lbl)lbl.textContent='新增飲食記錄';
   document.querySelectorAll('#food-meal-btns .food-meal-btn').forEach(function(b){b.classList.toggle('sel',b.dataset.meal==='午餐');});
   $('food-edit-overlay').classList.remove('hidden');
+  updateFoodEditGoogleLink();
   setTimeout(function(){var nm=$('food-edit-name');if(nm)nm.focus();},150);
 });
 $('food-calc-overlay').addEventListener('click',function(e){if(e.target===$('food-calc-overlay'))$('food-calc-overlay').classList.add('hidden');});
@@ -9006,7 +9136,7 @@ function exportAllXLSX() {
      '當日熱量合計(kcal)','當日蛋白質合計(g)','當日碳水合計(g)','當日脂肪合計(g)'],
     state.foodLogs.slice().sort(function(a,b){return a.date<b.date?-1:1;}).map(function(l){
       var d = foodByDate[l.date]||{};
-      var skip = (typeof _foodSkipDays !== 'undefined' && _foodSkipDays[l.date]) ? '🍽️ 外食/無記錄' : '';
+      var skip = (_foodSkipDays[l.date] && _foodSkipDays[l.date][l.meal]) ? '🍽️ 外食/無記錄' : '';
       return [l.date,skip,l.meal||'',l.name||'',l.grams||'',l.calories||'',l.protein||'',l.carbs||'',l.fat||'',l.note||'',
               Math.round(d.cal*10)/10, Math.round(d.pro*10)/10, Math.round(d.carb*10)/10, Math.round(d.fat*10)/10];
     }), [4,5,6,7,8,10,11,12,13]);
@@ -9045,9 +9175,10 @@ function exportAllXLSX() {
   var fdSkip = typeof _foodSkipDays !== 'undefined' ? _foodSkipDays : {};
   var carbLabel = { low:'碳水40g以下', mid:'碳水50-90g', high:'爆碳' };
   var dtypeLabel = { high:'🔴 高碳日', low:'🟡 低碳日', rest:'⚫ 休息日' };
+  function _fdSkipMeals(d){ var v=fdSkip[d]; if(!v) return []; if(v===true) return FOOD_MEALS.slice(); return FOOD_MEALS.filter(function(m){return !!v[m];}); }
   var fdAllDates = Array.from(new Set(Object.keys(fdNotes).concat(Object.keys(fdCarbs)).concat(Object.keys(fdDayType)).concat(Object.keys(fdSkip)))).sort();
-  var fdRows = fdAllDates.filter(function(d){ return (fdNotes[d]&&fdNotes[d].trim()) || fdCarbs[d] || fdDayType[d] || fdSkip[d]; }).map(function(d){ return [d, dtypeLabel[fdDayType[d]]||'', carbLabel[fdCarbs[d]]||'', fdSkip[d]?'🍽️ 外食/無記錄':'', fdNotes[d]||'']; });
-  add('飲食日備註', ['日期','今日日型','碳水標記','外食/無記錄','備註'], fdRows);
+  var fdRows = fdAllDates.filter(function(d){ return (fdNotes[d]&&fdNotes[d].trim()) || fdCarbs[d] || fdDayType[d] || _fdSkipMeals(d).length; }).map(function(d){ var sm=_fdSkipMeals(d); return [d, dtypeLabel[fdDayType[d]]||'', carbLabel[fdCarbs[d]]||'', sm.length?('🍽️ '+sm.join('、')):'', fdNotes[d]||'']; });
+  add('飲食日備註', ['日期','今日日型','碳水標記','外食/無記錄（餐次）','備註'], fdRows);
 
   /* ── 身體數據 & TDEE ── */
   var bd = typeof _bodyData !== 'undefined' ? _bodyData : {};
@@ -10003,16 +10134,21 @@ function showFoodSavePopup(e, log, triggerBtn) {
   function addSep() {
     var s = document.createElement('div'); s.className = 'food-save-popup-sep'; popup.appendChild(s);
   }
+  var _foodSaveSrcLabel={fav:'常用清單',private:'私人菜單',custom:'試算食物庫'};
   function doSaveToFav() {
     if (_favFoods.some(function(f){ return f.name === foodData.name; })) {
       showToast('「' + foodData.name + '」已在常用清單'); return;
     }
-    _favFoods.push({ name:foodData.name, cal:foodData.cal, pro:foodData.pro, carb:foodData.carb, fat:foodData.fat, unit:'份', base:1, isPrivate:true });
+    var existing = findUserFoodByName(foodData.name);
+    var rec = existing
+      ? { name:foodData.name, cal:existing.food.cal, pro:existing.food.pro, carb:existing.food.carb, fat:existing.food.fat, unit:existing.food.unit||'份', base:existing.food.base||1, isPrivate:true }
+      : { name:foodData.name, cal:foodData.cal, pro:foodData.pro, carb:foodData.carb, fat:foodData.fat, unit:'份', base:1, isPrivate:true };
+    _favFoods.push(rec);
     saveFavFoods();
     var _hi=_foodFavHidden.indexOf(foodData.name);
     if(_hi>=0){ _foodFavHidden.splice(_hi,1); saveFoodFavHidden(); }
     renderFoodFavChips();
-    showToast('⭐ 已加入常用清單：' + foodData.name);
+    showToast(existing ? ('⭐ 已加入常用清單（套用「'+_foodSaveSrcLabel[existing.source]+'」既有數值同步）：'+foodData.name) : ('⭐ 已加入常用清單：' + foodData.name));
     triggerBtn.textContent = '✅'; triggerBtn.style.color = 'var(--ac)';
     setTimeout(function(){ triggerBtn.textContent = '📥'; triggerBtn.style.color = ''; }, 1500);
   }
@@ -10020,9 +10156,13 @@ function showFoodSavePopup(e, log, triggerBtn) {
     if (_privateFoods.some(function(f){ return f.name === foodData.name; })) {
       showToast('「' + foodData.name + '」已在私人菜單'); return;
     }
-    _privateFoods.push({ id:genId(), name:foodData.name, cal:foodData.cal, pro:foodData.pro, carb:foodData.carb, fat:foodData.fat, unit:'份', base:1 });
+    var existing = findUserFoodByName(foodData.name);
+    var rec = existing
+      ? { id:genId(), name:foodData.name, cal:existing.food.cal, pro:existing.food.pro, carb:existing.food.carb, fat:existing.food.fat, unit:existing.food.unit||'份', base:existing.food.base||1 }
+      : { id:genId(), name:foodData.name, cal:foodData.cal, pro:foodData.pro, carb:foodData.carb, fat:foodData.fat, unit:'份', base:1 };
+    _privateFoods.push(rec);
     savePrivateFoods();
-    showToast('🍱 已加入私人菜單：' + foodData.name);
+    showToast(existing ? ('🍱 已加入私人菜單（套用「'+_foodSaveSrcLabel[existing.source]+'」既有數值同步）：'+foodData.name) : ('🍱 已加入私人菜單：' + foodData.name));
     triggerBtn.textContent = '✅'; triggerBtn.style.color = 'var(--ac)';
     setTimeout(function(){ triggerBtn.textContent = '📥'; triggerBtn.style.color = ''; }, 1500);
   }
@@ -10030,9 +10170,13 @@ function showFoodSavePopup(e, log, triggerBtn) {
     if (_customFoods.some(function(f){ return f.name === foodData.name && (f.cat||'') === cat; })) {
       showToast('已在「' + cat + '」分類中'); return;
     }
-    _customFoods.push({ id:genId(), name:foodData.name, cal:foodData.cal, pro:foodData.pro, carb:foodData.carb, fat:foodData.fat, unit:'份', base:1, cat:cat });
+    var existing = findUserFoodByName(foodData.name);
+    var rec = existing
+      ? { id:genId(), name:foodData.name, cal:existing.food.cal, pro:existing.food.pro, carb:existing.food.carb, fat:existing.food.fat, unit:existing.food.unit||'份', base:existing.food.base||1, cat:cat }
+      : { id:genId(), name:foodData.name, cal:foodData.cal, pro:foodData.pro, carb:foodData.carb, fat:foodData.fat, unit:'份', base:1, cat:cat };
+    _customFoods.push(rec);
     saveCustomFoods();
-    showToast('✅ 已加入「' + cat + '」：' + foodData.name);
+    showToast(existing ? ('✅ 已加入「'+cat+'」（套用「'+_foodSaveSrcLabel[existing.source]+'」既有數值同步）：'+foodData.name) : ('✅ 已加入「' + cat + '」：' + foodData.name));
     triggerBtn.textContent = '✅'; triggerBtn.style.color = 'var(--ac)';
     setTimeout(function(){ triggerBtn.textContent = '📥'; triggerBtn.style.color = ''; }, 1500);
   }
@@ -10197,6 +10341,7 @@ function rcalcAddToLog() {
     _foodEditMeal = meal;
     var sg = document.getElementById('food-edit-suggest');
     if (sg) { sg.classList.add('hidden'); sg.innerHTML = ''; }
+    updateFoodEditGoogleLink();
   }, 80);
 }
 
@@ -10204,39 +10349,19 @@ function rcalcRenderTodayBar() {
   var bar = document.getElementById('rcalc-today-bar'); if (!bar) return;
   var items = (state.foodLogs || []).filter(function(l){ return l.date === todayKey(); });
   if (!items.length) { bar.innerHTML = '<div style="font-size:11px;color:var(--tx3);text-align:center;padding:2px 0">今日尚無飲食記錄</div>'; return; }
-  var totPro  = items.reduce(function(s,l){ return s + (parseFloat(l.protein)||0); }, 0);
-  var totCarb = items.reduce(function(s,l){ return s + (parseFloat(l.carbs)||0); }, 0);
-  var totFat  = items.reduce(function(s,l){ return s + (parseFloat(l.fat)||0); }, 0);
-  var totCal  = items.reduce(function(s,l){ return s + (parseFloat(l.calories)||0); }, 0);
-  // 目標值來自 bodyData + 今日日型
-  var bd = typeof _bodyData !== 'undefined' ? _bodyData : {};
-  var macros = (typeof calcDayMacros === 'function') ? calcDayMacros(bd) : null;
-  // 讀取今天的日型（高碳/低碳/休息），fallback 用低碳日，再 fallback 用固定預設值
-  var todayDtype = (typeof _foodDayType !== 'undefined' && _foodDayType[todayKey()]) || 'low';
-  var dayMacro = macros ? (macros[todayDtype] || macros.low || macros.rest) : null;
-  var goalPro  = dayMacro ? dayMacro.pro  : (macros ? macros.high && macros.high.pro : null) || 95;
-  var goalCarb = dayMacro ? dayMacro.carb : 45;
-  var goalCal  = dayMacro ? dayMacro.cal  : (macros ? macros.goalCal : null) || 1400;
-  // 日型標籤
+  // 目標/進度計算與飲食頁共用同一套邏輯（buildMacroProgressHTML），避免兩處各自維護一份
   var dtypeLbl = { high:'🔴 高碳日', low:'🟡 低碳日', rest:'⚫ 休息日' };
+  var todayDtype = (typeof _foodDayType !== 'undefined' && _foodDayType[todayKey()]) || '';
+  var html = buildMacroProgressHTML(todayKey());
+  if (!html) {
+    var hint = (!calcDayMacros(_bodyData))
+      ? '請先到「設定」頁填寫身體數據，才能計算目標值'
+      : '請先在上方標題列選擇今日日型（高碳/低碳/休息），才能顯示目標進度';
+    bar.innerHTML = '<div style="font-size:11px;color:var(--tx3);text-align:center;padding:2px 0">' + hint + '</div>';
+    return;
+  }
   var dtypeStr = dtypeLbl[todayDtype] || '';
-  function pct(v, g) { return g ? Math.min(100, Math.round(v / g * 100)) : 0; }
-  var rows = [
-    { lbl:'蛋白質', v:totPro,  g:goalPro,  col:'#C87A30' },
-    { lbl:'淨碳水', v:totCarb, g:goalCarb, col:'#5A9888' },
-    { lbl:'熱量',   v:totCal,  g:goalCal,  col:'var(--ac)', unit:'kcal' },
-  ];
-  bar.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:6px">📊 今日攝取進度' + (dtypeStr ? ' <span style="font-size:11px;color:var(--tx3)">' + dtypeStr + '</span>' : '') + '</div>' +
-    rows.map(function(r) {
-      var p = pct(r.v, r.g);
-      var fillCol = p >= 100 ? '#c0392b' : r.col;
-      var unit = r.unit || 'g';
-      return '<div class="rcalc-today-item">' +
-        '<span class="rcalc-today-lbl">' + r.lbl + '</span>' +
-        '<div class="rcalc-today-bar-track"><div class="rcalc-today-bar-fill" style="width:' + p + '%;background:' + fillCol + '"></div></div>' +
-        '<span class="rcalc-today-val" style="color:' + fillCol + '">' + Math.round(r.v) + '/' + (r.g||'?') + unit + '</span>' +
-      '</div>';
-    }).join('');
+  bar.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:6px">📊 今日攝取進度' + (dtypeStr ? ' <span style="font-size:11px;color:var(--tx3)">' + dtypeStr + '</span>' : '') + '</div>' + html;
 }
 
 function rcalcRenderTodayFoods() {
