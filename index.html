@@ -6182,6 +6182,14 @@ function _foodEditSearchList(kw){
       add({name:f.name,cal:+f.cal||0,pro:+f.pro||0,carb:+f.carb||0,fat:+f.fat||0,unit:f.unit||'份',base:1,isPrivate:true});
     }
   });
+  /* 試算工具「新增自訂食物」（_customFoods，每100g 基準）：
+     頁面載入時 FOOD_DB 尚未併入自訂食物，故這裡直接搜尋 _customFoods，
+     確保新增飲食記錄的建議清單一定找得到自訂食物（2026-07 修正） */
+  (_customFoods||[]).forEach(function(f){
+    if((f.name||'').toLowerCase().indexOf(kw)!==-1){
+      add({name:f.name,cal:+f.cal||0,pro:+f.pro||0,carb:+f.carb||0,fat:+f.fat||0,unit:'g',base:100,isPrivate:false});
+    }
+  });
   (FOOD_DB||[]).forEach(function(f){
     if((f.name||'').toLowerCase().indexOf(kw)!==-1){
       add({name:f.name,cal:+f.cal||0,pro:+f.pro||0,carb:+f.carb||0,fat:+f.fat||0,unit:'g',base:100,isPrivate:false});
