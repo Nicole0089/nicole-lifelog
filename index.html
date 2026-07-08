@@ -9641,14 +9641,15 @@ var _ingCustomGrams = {};
 // ── 新增/刪除食材造成的1人份營養差異 ────────────────────────
 var _ingNutrDelta = { pro: 0, carb: 0, fat: 0, kcal: 0 };
 
-// 判斷是否為可微調的主要食材（肉魚蛋奶豆類蔬菜）
-var ING_MAIN_KEYWORDS = ['雞','豬','牛','羊','鮭','鱸','鮪','秋刀','蝦','蟹','透抽',
-  '豆腐','蛋','起司','奶油','鮮奶油','杏仁粉','花椰','菠菜','四季豆','蘆筍',
-  '高麗菜','大白菜','娃娃菜','蘑菇','洋蔥','番茄','甜椒','小黃瓜','酪梨',
-  '青花','豆漿','椰奶','鮮奶','莫札瑞拉','切達','帕瑪森','泡菜','櫛瓜'];
+// 判斷是否為「醬料/調味類」食材（此類固定不提供克數微調與刪除）
+// 先檢查例外清單：名稱雖含調味關鍵字（如「無鹽奶油」「無糖優格」），但實為主要食材者
+var ING_SAUCE_EXCEPTIONS = ['奶油','優格','豆漿','可可粉','椰漿','杏仁奶','花生醬','椰子絲','起司','巧克力','泡菜'];
+var ING_SAUCE_KEYWORDS = ['醬','鹽','糖','胡椒','味噌','醋','酒','味醂','魚露','麻油','香油','橄欖油',
+  '咖哩','辣椒','香料','香草精','蒜','薑','蔥花','青蔥','蔥薑','檸檬汁','泡打粉','太白粉'];
 
-function isMainIngredient(name) {
-  return ING_MAIN_KEYWORDS.some(function(kw){ return name.indexOf(kw) >= 0; });
+function isSauceIngredient(name) {
+  if (ING_SAUCE_EXCEPTIONS.some(function(kw){ return name.indexOf(kw) >= 0; })) return false;
+  return ING_SAUCE_KEYWORDS.some(function(kw){ return name.indexOf(kw) >= 0; });
 }
 
 // 從營養標注字串解析出每100g的營養值
@@ -9789,10 +9790,10 @@ function buildIngList(scale) {
     var scaledAmt = scale === 1 ? ing[1] : formatScaled(parsed, scale);
     var changed = (scale !== 1 && parsed.parseable) ? ' changed' : '';
     var nutrScaled = scaleNutrStr(ing[2], scale);
-    var isMain = isMainIngredient(ing[0]) && parsed.parseable;
-    // 微調器（僅主要食材且能解析克數）
+    var isSauce = isSauceIngredient(ing[0]);
+    // 微調器（醬料/調味類除外，其餘食材只要能解析克數皆可微調）
     var gMatch = ing[1].match(/(\d+(?:\.\d+)?)\s*g/);
-    var canAdj = isMain && gMatch;
+    var canAdj = !isSauce && parsed.parseable && gMatch;
     var origG = canAdj ? Math.round(parseFloat(gMatch[1]) * scale * 10) / 10 : 0;
     var curG = (typeof _ingCustomGrams[idx] !== 'undefined') ? _ingCustomGrams[idx] : origG;
     var adjHtml = canAdj
@@ -9809,7 +9810,7 @@ function buildIngList(scale) {
       '<div class="recipe-ing-top">' +
         '<span class="recipe-ing-name">'+ing[0]+'</span>' +
         '<span class="recipe-ing-amt'+changed+'">'+scaledAmt+'</span>' +
-        '<button class="recipe-ing-del" onclick="event.stopPropagation();deleteRecipeIngredient('+idx+')" title="刪除此食材">🗑</button>' +
+        (isSauce ? '' : '<button class="recipe-ing-del" onclick="event.stopPropagation();deleteRecipeIngredient('+idx+')" title="刪除此食材">🗑</button>') +
       '</div>' +
       (nutrScaled ? '<div class="recipe-ing-nutr">'+nutrScaled+'</div>' : '') +
       adjHtml +
@@ -9830,7 +9831,7 @@ function buildIngList(scale) {
     '<input type="number" class="recipe-ing-add-input" id="ing-add-fat" placeholder="脂肪g" style="max-width:80px" min="0" step="0.1">' +
     '<button class="recipe-ing-add-btn" onclick="event.stopPropagation();addRecipeIngredient()">＋ 新增食材</button>' +
     '</div>' +
-    '<div class="recipe-ing-add-hint">輸入食材名稱可從試算食物庫搜尋並自動帶入每100g營養值（依份量克數換算）；也可手動填寫。份量請填「1人份」對應的克數，新增/刪除食材後上方總營養會自動更新</div>';
+    '<div class="recipe-ing-add-hint">輸入食材名稱可從試算食物庫搜尋並自動帶入每100g營養值（依份量克數換算）；也可手動填寫。份量請填「1人份」對應的克數，新增/刪除食材後上方總營養會自動更新。醬料/調味類食材為食譜風味基礎，固定不提供調整與刪除</div>';
   return '<div class="recipe-ing-section" id="ing-section">' +
     '<div class="recipe-modal-sec" id="ing-label">'+label+'</div>' +
     '<div class="recipe-ing-list" id="ing-list">'+rows+'</div>' +
