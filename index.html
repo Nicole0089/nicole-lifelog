@@ -2029,6 +2029,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
             <button class="btn-ghost" id="settings-export-btn">📤 匯出 JSON</button>
             <button class="btn-ghost" id="settings-import-btn">📥 匯入 JSON</button>
           </div>
+          <div style="font-size:10px;color:var(--tx3);margin-top:5px;line-height:1.5">
+            ℹ️ 匯出後請手動把 JSON 檔再存一份到雲端硬碟（如 Google 雲端硬碟同步資料夾），
+            不要只留在這台裝置的下載資料夾，裝置遺失或重置時才不會連本機備份也一起不見。
+          </div>
           <div id="settings-export-last-lbl" style="font-size:10px;color:var(--tx3);margin-top:5px;text-align:right"></div>
         </div>
         <input type="file" id="import-file-input" accept=".json" style="display:none">
@@ -8983,6 +8987,10 @@ function exportBackup() {
   if (typeof renderLocalExportReminder === 'function') renderLocalExportReminder();
   var lbl = $('settings-export-last-lbl');
   if (lbl) lbl.textContent = '上次匯出：' + localDateTimeStr(new Date(+_localExportLast));
+  /* 2026-07-24 加入：下載完成後主動提醒把檔案再存一份到雲端硬碟，
+     補上「本機 JSON 匯出後存在哪裡沒有規範」的缺口——沒有額外同步到雲端硬碟的話，
+     這份本機備份其實還是只活在同一台裝置上，跟完全沒有本機備份的風險差不多 */
+  showToast('✅ 已下載 JSON 備份，建議接著存一份到雲端硬碟（如 Google 雲端硬碟同步資料夾）');
 }
 
 function importBackup_data(data, opts) {
@@ -11846,9 +11854,11 @@ function renderLocalExportReminder() {
     : '尚未匯出過本機備份';
   el.style.cssText = 'display:flex;align-items:center;gap:8px;background:#f5efec;border:1px solid #A07878;border-radius:10px;padding:10px 12px;margin:0 0 10px;font-size:12.5px;color:#7a5c52;cursor:pointer';
   el.innerHTML = '<span style="font-size:16px;flex-shrink:0">💾</span>'+
-    '<span style="flex:1;line-height:1.4">建議定期把資料匯出存到自己的電腦，不要只放在 Google 帳號裡。'+subMsg+'，點此立即匯出 JSON</span>'+
+    '<span style="flex:1;line-height:1.4">建議定期匯出資料，並存一份到雲端硬碟（不要只留在這台裝置上）。'+subMsg+'，點此立即匯出 JSON</span>'+
     '<span style="font-size:14px;flex-shrink:0">›</span>';
-  el.onclick = function(){ exportBackup(); showToast('已匯出，請記得把檔案存到安全的地方'); };
+  /* 2026-07-24：不再在這裡另外跳 toast，改由 exportBackup() 內統一顯示
+     「存一份到雲端硬碟」提醒，避免點擊時疊出兩則 toast */
+  el.onclick = function(){ exportBackup(); };
 }
 
 /* 總覽頁同步狀態警告 banner：自動同步已開啟但目前處於失敗狀態時持續顯示，
