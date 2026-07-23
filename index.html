@@ -3031,6 +3031,15 @@ var _storageOK = (function() {
   catch(e) { return false; }
 })();
 
+/* 請求瀏覽器將本站資料標記為「持久化儲存」，降低瀏覽器在儲存空間不足或
+   長時間未開啟時，主動清空 localStorage 的機率（例如 iOS Safari 的
+   智慧防追蹤機制，對長期未互動的網站有較高機率清除其本機資料）。
+   純屬「降低風險」的請求，瀏覽器不一定核准，也可能完全不支援此 API，
+   失敗或不支援都靜默略過，不影響其餘功能。2026-07-24 加入 */
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().catch(function(){});
+}
+
 function loadStorage(key, def) {
   if (!_storageOK) return def;
   try { var r = localStorage.getItem(key); return r !== null ? JSON.parse(r) : def; }
@@ -8610,31 +8619,31 @@ var _localExportLast = loadStorage('myapp_local_export_last', '');
 var _xlsxExportLast = loadStorage('myapp_xlsx_export_last', '');
 var _LOCAL_EXPORT_REMINDER_DAYS = 15;
 
+/* 備份排除清單：純 App 內部狀態/時間戳記（gdrive 連線狀態、上次匯出時間等），
+   不屬於使用者資料本身，不需要也不應該被備份/還原覆蓋。
+   沿用 scheduleGDriveSync 既有的 _GDRIVE_SYNC_EXCLUDE_KEYS，另外加上
+   本機/Excel 匯出時間戳記兩個 key。2026-07-24 加入 */
+var _BACKUP_EXCLUDE_KEYS = _GDRIVE_SYNC_EXCLUDE_KEYS.concat(['myapp_local_export_last','myapp_xlsx_export_last']);
+
+/* 2026-07-24 改版：改為自動掃描所有 myapp_ 開頭的 localStorage key 存入 raw，
+   不再需要每次新增資料欄位時手動回來這裡加一行——只要新資料透過既有的
+   saveStorage() 存成 myapp_ 開頭的 key，就會自動被納入備份，避免重演過去
+   多次「發現某欄位其實一直沒被備份」的漏洞（見文件更新紀錄 2026-06、
+   2026-07-23 等多筆記錄，例如 foodFavHidden／fastState 都曾經漏掉過）。
+   version 提升為 2；importBackup_data() 仍保留舊版 version:1 具名欄位格式
+   的讀取相容性，舊的本機 JSON 備份檔／Google Drive 舊快照仍可正常還原。 */
 function buildBackupData() {
-  return { version:1, exportDate:new Date().toISOString(),
-    todos:state.todos, habits:state.habits, chores:state.chores,
-    sleepLogs:state.sleepLogs, bpLogs:state.bpLogs, waterLogs:state.waterLogs,
-    foodLogs:state.foodLogs, memos:state.memos, diaryEntries:state.diaryEntries,
-    navOrder:_navOrder, waterGoal:WATER_GOAL,
-    fastLogs:(typeof _fastLogs!=='undefined'?_fastLogs:[]),
-    foodDayNotes:(typeof _foodDayNotes!=='undefined'?_foodDayNotes:{}),
-    foodDayCarbs:(typeof _foodDayCarbs!=='undefined'?_foodDayCarbs:{}),
-    foodSkipDays:(typeof _foodSkipDays!=='undefined'?_foodSkipDays:{}),
-    privateFoods:(typeof _privateFoods!=='undefined'?_privateFoods:[]),
-    bodyData:(typeof _bodyData!=='undefined'?_bodyData:{}),
-    foodDayType:(typeof _foodDayType!=='undefined'?_foodDayType:{}),
-    /* 2026-06 補上：原本完全不在備份範圍內的欄位（曾發生救援時這些資料救不回來的風險） */
-    customFoods:(typeof _customFoods!=='undefined'?_customFoods:[]),
-    favFoods:(typeof _favFoods!=='undefined'?_favFoods:[]),
-    deletedStdFoods:(typeof _deletedStdFoods!=='undefined'?_deletedStdFoods:[]),
-    sleepCustomFields:(typeof _sfCustomFields!=='undefined'?_sfCustomFields:[]),
-    tempMemo:loadStorage('myapp_temp_memo',''),
-    fastGoal:(typeof _fastGoal!=='undefined'?_fastGoal:loadStorage('myapp_fast_goal',16)),
-    slogan:loadStorage('myapp_slogan',''),
-    favRecipes:(typeof _favRecipes!=='undefined'?_favRecipes:[]),
-    /* 2026-07 補上：原本完全不在備份範圍內的欄位（使用者分析發現） */
-    foodFavHidden:(typeof _foodFavHidden!=='undefined'?_foodFavHidden:[]),
-    fastState:(typeof _fastState!=='undefined'?_fastState:loadStorage('myapp_fast',{running:false,startTime:null})) };
+  var raw = {};
+  try {
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (!k || k.indexOf('myapp_') !== 0) continue;
+      if (_BACKUP_EXCLUDE_KEYS.indexOf(k) >= 0) continue;
+      var v = localStorage.getItem(k);
+      try { raw[k] = JSON.parse(v); } catch(e2) { raw[k] = v; }
+    }
+  } catch(e) {}
+  return { version:2, exportDate:new Date().toISOString(), raw:raw };
 }
 
 function initGDriveClient() {
@@ -8780,11 +8789,19 @@ async function gdriveDownloadFile(token, fileId) {
    作為備份/還原前的安全防呆依據（2026-06 加入，避免空資料無聲覆蓋雲端好備份） */
 function _backupRecordCount(data) {
   if (!data) return 0;
-  var arrs = [data.todos, data.habits, data.chores, data.sleepLogs, data.bpLogs,
-              data.waterLogs, data.foodLogs, data.memos, data.diaryEntries, data.fastLogs,
-              data.privateFoods, data.customFoods, data.favFoods];
+  /* 2026-07-24：新版 buildBackupData() 改為 {version:2, raw:{...}} 格式，
+     這裡同時相容新舊兩種格式，比對的仍是同一組「主要資料紀錄」陣列，
+     語意跟改版前完全一致，只是 key 名稱依格式不同 */
+  var isRaw = data.version >= 2 && data.raw;
+  var src = isRaw ? data.raw : data;
+  var keys = isRaw
+    ? ['myapp_todos','myapp_habits','myapp_chores','myapp_sleep','myapp_bp','myapp_water',
+       'myapp_food','myapp_memos','myapp_diary','myapp_fast_logs','myapp_private_foods',
+       'myapp_custom_foods','myapp_fav_foods']
+    : ['todos','habits','chores','sleepLogs','bpLogs','waterLogs','foodLogs','memos',
+       'diaryEntries','fastLogs','privateFoods','customFoods','favFoods'];
   var n = 0;
-  arrs.forEach(function(a){ if (Array.isArray(a)) n += a.length; });
+  keys.forEach(function(k){ if (Array.isArray(src[k])) n += src[k].length; });
   return n;
 }
 
@@ -8970,7 +8987,7 @@ function exportBackup() {
 
 function importBackup_data(data, opts) {
   opts = opts || {};
-  if (!data.version) { alert('備份檔格式錯誤'); return; }
+  if (!data || !data.version) { alert('備份檔格式錯誤'); return; }
   /* 安全檢查：匯入資料筆數若比目前本機資料少很多，先警告再決定是否繼續
      （呼叫端若已經在自己的 confirm 裡顯示過筆數比對，可傳 skipCountCheck:true 避免重複跳窗） */
   if (!opts.skipCountCheck) {
@@ -8984,34 +9001,47 @@ function importBackup_data(data, opts) {
       if (!proceed) return;
     }
   }
-  if (data.todos)        { state.todos        = data.todos;        saveTodos(); }
-  if (data.habits)       { state.habits       = data.habits;       saveHabits(); }
-  if (data.chores)       { state.chores       = data.chores;       saveChores(); }
-  if (data.sleepLogs)    { state.sleepLogs    = data.sleepLogs;    saveSleep(); }
-  if (data.bpLogs)       { state.bpLogs       = data.bpLogs;       saveBP(); }
-  if (data.waterLogs)    { state.waterLogs    = data.waterLogs;    saveWater(); }
-  if (data.foodLogs)     { state.foodLogs     = data.foodLogs;     saveFood(); }
-  if (data.memos)        { state.memos        = data.memos;        saveMemos(); }
-  if (data.diaryEntries) { state.diaryEntries = data.diaryEntries; saveDiary(); }
-  if (data.navOrder)     { _navOrder = data.navOrder; saveStorage('myapp_navOrder', _navOrder); }
-  if (data.waterGoal)    { WATER_GOAL = data.waterGoal; saveStorage('myapp_water_goal', WATER_GOAL); }
-  if (data.fastLogs)     { saveStorage('myapp_fast_logs', data.fastLogs); }
-  if (data.foodDayNotes) { saveStorage('myapp_food_notes', data.foodDayNotes); }
-  if (data.foodDayCarbs) { saveStorage('myapp_food_carbs', data.foodDayCarbs); }
-  if (data.foodSkipDays) { saveStorage('myapp_food_skip_days', data.foodSkipDays); }
-  if (data.privateFoods) { saveStorage('myapp_private_foods', data.privateFoods); }
-  if (data.bodyData) { saveStorage('myapp_body_data', data.bodyData); }
-  if (data.foodDayType) { saveStorage('myapp_food_day_type', data.foodDayType); }
-  if (data.customFoods) { saveStorage('myapp_custom_foods', data.customFoods); }
-  if (data.favFoods) { saveStorage('myapp_fav_foods', data.favFoods); }
-  if (data.deletedStdFoods) { saveStorage('myapp_deleted_std_foods', data.deletedStdFoods); }
-  if (data.sleepCustomFields) { saveStorage('myapp_sleep_custom_fields', data.sleepCustomFields); }
-  if (data.tempMemo !== undefined) { saveStorage('myapp_temp_memo', data.tempMemo); }
-  if (data.fastGoal) { saveStorage('myapp_fast_goal', data.fastGoal); }
-  if (data.slogan !== undefined) { saveStorage('myapp_slogan', data.slogan); }
-  if (data.favRecipes) { saveStorage('myapp_fav_recipes', data.favRecipes); }
-  if (data.foodFavHidden) { saveStorage('myapp_fav_foods_hidden', data.foodFavHidden); }
-  if (data.fastState) { saveStorage('myapp_fast', data.fastState); }
+  if (data.version >= 2 && data.raw) {
+    /* 2026-07-24 起新格式：raw 直接是「localStorage key → 值」，逐一寫回
+       localStorage 即可；下面 location.reload() 會透過 loadStorage() 重新
+       從 localStorage 讀出所有 state，不需要再手動同步 state.* 或呼叫
+       各自的 save*() 函式 */
+    Object.keys(data.raw).forEach(function(k) {
+      if (_BACKUP_EXCLUDE_KEYS.indexOf(k) >= 0) return; /* 防呆：不覆蓋 gdrive 連線狀態等 meta key */
+      try { localStorage.setItem(k, JSON.stringify(data.raw[k])); } catch(e) {}
+    });
+  } else {
+    /* 舊版備份（2026-07-24 前建立，version:1、具名欄位格式）：
+       沿用逐欄位對照還原，確保舊的本機 JSON 檔／Google Drive 舊快照仍可正常還原 */
+    if (data.todos)        { saveStorage('myapp_todos',  data.todos); }
+    if (data.habits)       { saveStorage('myapp_habits', data.habits); }
+    if (data.chores)       { saveStorage('myapp_chores', data.chores); }
+    if (data.sleepLogs)    { saveStorage('myapp_sleep',  data.sleepLogs); }
+    if (data.bpLogs)       { saveStorage('myapp_bp',     data.bpLogs); }
+    if (data.waterLogs)    { saveStorage('myapp_water',  data.waterLogs); }
+    if (data.foodLogs)     { saveStorage('myapp_food',   data.foodLogs); }
+    if (data.memos)        { saveStorage('myapp_memos',  data.memos); }
+    if (data.diaryEntries) { saveStorage('myapp_diary',  data.diaryEntries); }
+    if (data.navOrder)     { saveStorage('myapp_navOrder', data.navOrder); }
+    if (data.waterGoal)    { saveStorage('myapp_water_goal', data.waterGoal); }
+    if (data.fastLogs)     { saveStorage('myapp_fast_logs', data.fastLogs); }
+    if (data.foodDayNotes) { saveStorage('myapp_food_notes', data.foodDayNotes); }
+    if (data.foodDayCarbs) { saveStorage('myapp_food_carbs', data.foodDayCarbs); }
+    if (data.foodSkipDays) { saveStorage('myapp_food_skip_days', data.foodSkipDays); }
+    if (data.privateFoods) { saveStorage('myapp_private_foods', data.privateFoods); }
+    if (data.bodyData)     { saveStorage('myapp_body_data', data.bodyData); }
+    if (data.foodDayType)  { saveStorage('myapp_food_day_type', data.foodDayType); }
+    if (data.customFoods)  { saveStorage('myapp_custom_foods', data.customFoods); }
+    if (data.favFoods)     { saveStorage('myapp_fav_foods', data.favFoods); }
+    if (data.deletedStdFoods)   { saveStorage('myapp_deleted_std_foods', data.deletedStdFoods); }
+    if (data.sleepCustomFields) { saveStorage('myapp_sleep_custom_fields', data.sleepCustomFields); }
+    if (data.tempMemo !== undefined) { saveStorage('myapp_temp_memo', data.tempMemo); }
+    if (data.fastGoal)     { saveStorage('myapp_fast_goal', data.fastGoal); }
+    if (data.slogan !== undefined)   { saveStorage('myapp_slogan', data.slogan); }
+    if (data.favRecipes)   { saveStorage('myapp_fav_recipes', data.favRecipes); }
+    if (data.foodFavHidden){ saveStorage('myapp_fav_foods_hidden', data.foodFavHidden); }
+    if (data.fastState)    { saveStorage('myapp_fast', data.fastState); }
+  }
   alert('備份還原成功！'); location.reload();
 }
 function importBackup(file) {
