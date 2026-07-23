@@ -8631,7 +8631,10 @@ function buildBackupData() {
     tempMemo:loadStorage('myapp_temp_memo',''),
     fastGoal:(typeof _fastGoal!=='undefined'?_fastGoal:loadStorage('myapp_fast_goal',16)),
     slogan:loadStorage('myapp_slogan',''),
-    favRecipes:(typeof _favRecipes!=='undefined'?_favRecipes:[]) };
+    favRecipes:(typeof _favRecipes!=='undefined'?_favRecipes:[]),
+    /* 2026-07 補上：原本完全不在備份範圍內的欄位（使用者分析發現） */
+    foodFavHidden:(typeof _foodFavHidden!=='undefined'?_foodFavHidden:[]),
+    fastState:(typeof _fastState!=='undefined'?_fastState:loadStorage('myapp_fast',{running:false,startTime:null})) };
 }
 
 function initGDriveClient() {
@@ -9007,6 +9010,8 @@ function importBackup_data(data, opts) {
   if (data.fastGoal) { saveStorage('myapp_fast_goal', data.fastGoal); }
   if (data.slogan !== undefined) { saveStorage('myapp_slogan', data.slogan); }
   if (data.favRecipes) { saveStorage('myapp_fav_recipes', data.favRecipes); }
+  if (data.foodFavHidden) { saveStorage('myapp_fav_foods_hidden', data.foodFavHidden); }
+  if (data.fastState) { saveStorage('myapp_fast', data.fastState); }
   alert('備份還原成功！'); location.reload();
 }
 function importBackup(file) {
