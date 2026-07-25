@@ -1120,6 +1120,18 @@ input::placeholder { color: var(--tx3); }
 .note-search-item:last-child { border-bottom: none; }
 .note-search-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .note-search-date { font-size: 12px; color: var(--tx2); font-weight: 600; }
+/* ── 搜尋列表／時間軸日記 切換分頁（2026-07-25 加入） ── */
+.note-view-tabs { display: flex; gap: 6px; margin-top: 8px; }
+.note-view-tab { flex: 1; padding: 8px 6px; font-size: 13px; color: var(--tx3); background: var(--bg3); border: 1px solid var(--bd); border-radius: var(--rr); font-family: var(--font); cursor: pointer; }
+.note-view-tab.active { color: #fff; background: var(--ac); border-color: var(--ac); font-weight: 600; }
+.note-timeline-day { padding: 12px 14px; border-bottom: 0.5px solid var(--bd); }
+.note-timeline-day:last-child { border-bottom: none; }
+.note-timeline-date { font-size: 13px; font-weight: 700; color: var(--ac); margin-bottom: 8px; }
+.note-timeline-item { position: relative; padding-left: 14px; margin-bottom: 10px; }
+.note-timeline-item:last-child { margin-bottom: 0; }
+.note-timeline-item::before { content: ''; position: absolute; left: 0; top: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--ac); opacity: 0.55; }
+.note-timeline-type { font-size: 11px; padding: 2px 8px; border-radius: 8px; background: var(--acl); color: var(--acd); display: inline-block; margin-bottom: 4px; }
+.note-timeline-text { font-size: 13px; color: var(--tx); line-height: 1.5; white-space: pre-wrap; }
 .note-search-type { font-size: 11px; padding: 2px 8px; border-radius: 8px; background: var(--acl); color: var(--acd); font-weight: 600; }
 .note-search-text { font-size: 14px; color: var(--tx); line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
 .settings-item { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); margin-bottom: 10px; cursor: pointer; }
@@ -1900,6 +1912,10 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
           <span class="note-date-sep">～</span>
           <input type="date" id="note-date-to" class="note-date-input">
           <button id="note-date-clear" class="note-date-clear-btn">清除</button>
+        </div>
+        <div class="note-view-tabs" id="note-view-tabs">
+          <button class="note-view-tab active" id="note-view-list" data-view="list">🔍 搜尋列表</button>
+          <button class="note-view-tab" id="note-view-timeline" data-view="timeline">📖 時間軸日記</button>
         </div>
         <div id="note-search-results" class="note-search-results" style="display:none"></div>
       </div>
@@ -7059,42 +7075,37 @@ var _calcG=$('food-calc-grams');
 if(_calcG)_calcG.addEventListener('input',updateCalcResult);
 
 /* ══════════════════════════════════════════════════
-   🔍 全域備註索引搜尋
+   🔍 全域備註索引搜尋 ＋ 📖 時間軸日記
    ══════════════════════════════════════════════════ */
-function runNoteSearch() {
-  var kw       = ($('note-search-input') ? $('note-search-input').value : '').trim();
-  var dateFrom = ($('note-date-from')    ? $('note-date-from').value    : '');
-  var dateTo   = ($('note-date-to')      ? $('note-date-to').value      : '');
-  var res = $('note-search-results');
-  if (!res) return;
-  if (!kw && !dateFrom && !dateTo) { res.style.display = 'none'; return; }
-
+/* 共用：蒐集各頁面備註，kw 為空字串時代表「不篩關鍵字、全部列出」
+   （時間軸日記模式即靠這點瀏覽所有備註） */
+function collectNoteHits(kw, dateFrom, dateTo) {
   var hits = [];
 
   /* 飲食日備註 */
   var fdNotes = typeof _foodDayNotes !== 'undefined' ? _foodDayNotes : {};
   Object.keys(fdNotes).forEach(function(d) {
     var txt = fdNotes[d] || '';
-    if (txt && txt.indexOf(kw) >= 0) hits.push({ sortDate: d, date: d, type: '飲食日備註', text: txt });
+    if (txt && (!kw || txt.indexOf(kw) >= 0)) hits.push({ sortDate: d, date: d, type: '飲食日備註', text: txt });
   });
 
   /* 斷食備註 */
   var fastList = typeof _fastLogs !== 'undefined' ? _fastLogs : [];
   fastList.forEach(function(l) {
-    if (l.note && l.note.indexOf(kw) >= 0)
+    if (l.note && (!kw || l.note.indexOf(kw) >= 0))
       hits.push({ sortDate: l.date || '', date: l.date || '', type: '斷食備註', text: l.note });
   });
 
   /* 睡眠備註 */
   (state.sleepLogs || []).forEach(function(s) {
-    if (s.note && s.note.indexOf(kw) >= 0)
+    if (s.note && (!kw || s.note.indexOf(kw) >= 0))
       hits.push({ sortDate: s.date || '', date: s.date || '', type: '睡眠備註', text: s.note });
   });
 
   /* 日記（生活 + 感恩） */
   (state.diaryEntries || []).forEach(function(d) {
     var fullTxt = ((d.title || '') + (d.body ? ' ' + d.body : '')).trim();
-    if (fullTxt.indexOf(kw) >= 0) {
+    if (fullTxt && (!kw || fullTxt.indexOf(kw) >= 0)) {
       var label = d.diaryType === 'gratitude' ? '感恩日記' : '生活日記';
       var displayTxt = (d.title ? '【' + d.title + '】' : '') + (d.body ? (d.title ? '\n' : '') + d.body : '');
       hits.push({ sortDate: d.date || '', date: d.date || '', type: label, text: displayTxt.trim() });
@@ -7104,7 +7115,7 @@ function runNoteSearch() {
   /* 備忘錄 */
   (state.memos || []).forEach(function(m) {
     var fullTxt = ((m.title || '') + (m.body ? ' ' + m.body : '')).trim();
-    if (fullTxt.indexOf(kw) >= 0) {
+    if (fullTxt && (!kw || fullTxt.indexOf(kw) >= 0)) {
       var ua = m.updatedAt || '';
       var match = ua.match(/^(\d+)\/(\d+)/);
       var yr = new Date().getFullYear();
@@ -7112,6 +7123,26 @@ function runNoteSearch() {
       var displayTxt = (m.title ? '【' + m.title + '】' : '') + (m.body ? (m.title ? '\n' : '') + m.body : '');
       hits.push({ sortDate: sd, date: ua || '—', type: '備忘錄', text: displayTxt.trim() });
     }
+  });
+
+  /* 習慣打卡附註 */
+  (state.habits || []).forEach(function(h) {
+    var notes = h.notes || {};
+    Object.keys(notes).forEach(function(d) {
+      var txt = notes[d] || '';
+      if (txt && (!kw || txt.indexOf(kw) >= 0))
+        hits.push({ sortDate: d, date: d, type: '習慣附註・' + (h.name || ''), text: txt });
+    });
+  });
+
+  /* 家務打卡附註 */
+  (state.chores || []).forEach(function(h) {
+    var notes = h.notes || {};
+    Object.keys(notes).forEach(function(d) {
+      var txt = notes[d] || '';
+      if (txt && (!kw || txt.indexOf(kw) >= 0))
+        hits.push({ sortDate: d, date: d, type: '家務附註・' + (h.name || ''), text: txt });
+    });
   });
 
   /* 日期範圍篩選（只填「從」= 單日模式） */
@@ -7126,6 +7157,22 @@ function runNoteSearch() {
   }
   /* 依日期由新到舊排序 */
   hits.sort(function(a, b) { return a.sortDate < b.sortDate ? 1 : a.sortDate > b.sortDate ? -1 : 0; });
+  return hits;
+}
+
+var _noteViewMode = 'list'; /* 'list' | 'timeline' */
+
+function runNoteSearch() {
+  var kw       = ($('note-search-input') ? $('note-search-input').value : '').trim();
+  var dateFrom = ($('note-date-from')    ? $('note-date-from').value    : '');
+  var dateTo   = ($('note-date-to')      ? $('note-date-to').value      : '');
+  var res = $('note-search-results');
+  if (!res) return;
+
+  if (_noteViewMode === 'timeline') { renderNoteTimeline(kw, dateFrom, dateTo); return; }
+
+  if (!kw && !dateFrom && !dateTo) { res.style.display = 'none'; return; }
+  var hits = collectNoteHits(kw, dateFrom, dateTo);
 
   res.style.display = '';
   if (!hits.length) {
@@ -7142,6 +7189,59 @@ function runNoteSearch() {
       '</div>';
   }).join('');
 }
+
+/* 📖 時間軸日記：不需要關鍵字即可瀏覽，依日期分組、由新到舊，
+   把各頁面（飲食/斷食/睡眠/日記/備忘錄/習慣/家務）備註整合成單一時間軸 */
+function renderNoteTimeline(kw, dateFrom, dateTo) {
+  var res = $('note-search-results');
+  if (!res) return;
+  var hits = collectNoteHits(kw, dateFrom, dateTo);
+
+  res.style.display = '';
+  if (!hits.length) {
+    res.innerHTML = '<div class="note-search-empty">' +
+      (kw || dateFrom || dateTo ? '沒有找到相關備註' : '目前還沒有任何備註紀錄') +
+      '</div>';
+    return;
+  }
+
+  var groups = {}, order = [];
+  hits.forEach(function(h) {
+    var key = h.sortDate || '—';
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(h);
+  });
+
+  res.innerHTML = order.map(function(dateKey) {
+    var dispDate = dateKey;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+      var wd = '';
+      try { wd = WEEKDAYS[new Date(dateKey + 'T00:00:00').getDay()]; } catch (e) {}
+      dispDate = dateKey.replace(/^(\d{4})-(\d{2})-(\d{2})$/, function(_, y, mo, d) {
+        return y + '年' + parseInt(mo) + '月' + parseInt(d) + '日' + (wd ? '（週' + wd + '）' : '');
+      });
+    }
+    var itemsHTML = groups[dateKey].map(function(h) {
+      return '<div class="note-timeline-item">' +
+        '<span class="note-timeline-type">' + esc(h.type) + '</span>' +
+        '<div class="note-timeline-text">' + esc(h.text) + '</div>' +
+        '</div>';
+    }).join('');
+    return '<div class="note-timeline-day">' +
+      '<div class="note-timeline-date">' + esc(dispDate) + '</div>' +
+      itemsHTML +
+      '</div>';
+  }).join('');
+}
+
+function setNoteViewMode(mode) {
+  _noteViewMode = mode;
+  var lb = $('note-view-list'), tb = $('note-view-timeline');
+  if (lb) lb.classList.toggle('active', mode === 'list');
+  if (tb) tb.classList.toggle('active', mode === 'timeline');
+  runNoteSearch();
+}
+
 var _nsInput = $('note-search-input'), _nsBtn = $('note-search-btn');
 if (_nsBtn)   _nsBtn.addEventListener('click', runNoteSearch);
 if (_nsInput) _nsInput.addEventListener('keydown', function(e){ if(e.key==='Enter') runNoteSearch(); });
@@ -7153,8 +7253,11 @@ if (_nsDateClearEl) _nsDateClearEl.addEventListener('click',  function(){
   runNoteSearch();
 });
 if (_nsInput) _nsInput.addEventListener('input', function(){
-  if (!_nsInput.value.trim()) { var r=$('note-search-results'); if(r){r.style.display='none';r.innerHTML='';} }
+  if (_noteViewMode === 'list' && !_nsInput.value.trim()) { var r=$('note-search-results'); if(r){r.style.display='none';r.innerHTML='';} }
 });
+var _nvListBtn = $('note-view-list'), _nvTimelineBtn = $('note-view-timeline');
+if (_nvListBtn)     _nvListBtn.addEventListener('click', function(){ setNoteViewMode('list'); });
+if (_nvTimelineBtn) _nvTimelineBtn.addEventListener('click', function(){ setNoteViewMode('timeline'); });
 
 /* ═══════════════════════════════════════════════════
    📝 備忘錄
