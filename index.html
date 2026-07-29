@@ -2681,7 +2681,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
     </div>
     <div class="bp-field-row" style="align-items:flex-start">
       <span class="bp-field-lbl" style="margin-top:10px">備註</span>
-      <textarea id="bp-note" style="flex:1;min-height:64px;resize:none;font-size:13px;padding:8px 10px" placeholder="測量狀況（如飯後、運動後、起床後…）"></textarea>
+      <textarea id="bp-note" style="flex:1;min-height:64px;resize:none;font-size:13px;padding:8px 10px" placeholder="測量狀況（如睡前、起床後、餐後、運動後…）"></textarea>
     </div>
   </div>
 </div>
@@ -11529,6 +11529,81 @@ function drawHabitMiniChart(svgId, data, color) {
   svg.innerHTML = parts.join('');
 }
 
+/* ── 血壓備註關鍵字分類（睡前/起床後/餐後/運動後）── */
+var BP_NOTE_CATS = [
+  { key: 'bedtime',       label: '😴 睡前',   re: /睡前/ },
+  { key: 'wake',          label: '🌅 起床後', re: /起床/ },
+  { key: 'afterMeal',     label: '🍚 餐後',   re: /餐後|飯後|進食後|吃完/ },
+  { key: 'afterExercise', label: '🏃 運動後', re: /運動/ }
+];
+function classifyBPNote(note) {
+  if (!note) return [];
+  return BP_NOTE_CATS.filter(function(c){ return c.re.test(note); }).map(function(c){ return c.key; });
+}
+
+/* ── 血壓備註分類趨勢（睡前/起床後/餐後/運動後，各自統計收縮壓/舒張壓/脈壓差趨勢）── */
+function renderBPNoteCategoryTrends() {
+  var sec = $('bp-trend-view');
+  if (!sec) return;
+  var bodyHtml = '';
+  var pendingDraws = [];
+  BP_NOTE_CATS.forEach(function(cat) {
+    var recs = state.bpLogs.filter(function(b){
+      return b.sys > 0 && b.dia > 0 && classifyBPNote(b.note).indexOf(cat.key) >= 0;
+    });
+    recs.sort(function(a,b){ return (a.datetime||'') < (b.datetime||'') ? -1 : 1; });
+    if (recs.length < 3) return; /* 少於3筆不分析該分類 */
+    var recent = recs.slice(-20); /* 最多顯示近20筆，避免圖表過擠 */
+
+    var sysData = recent.map(function(b){
+      return { x: (b.datetime||'').slice(5,16).replace('-','/').replace('T',' '), y: b.sys, hasData: true };
+    });
+    var diaData = recent.map(function(b){
+      return { x: (b.datetime||'').slice(5,16).replace('-','/').replace('T',' '), y: b.dia, hasData: true };
+    });
+    var avgSys = r1(recent.reduce(function(s,b){return s+b.sys;},0)/recent.length);
+    var avgDia = r1(recent.reduce(function(s,b){return s+b.dia;},0)/recent.length);
+    var avgPP  = r1(recent.reduce(function(s,b){return s+(b.sys-b.dia);},0)/recent.length);
+
+    /* 前後半段平均比較，判斷收縮壓大致走勢 */
+    var half = Math.floor(recent.length/2) || 1;
+    var firstHalf = recent.slice(0, half), secondHalf = recent.slice(half);
+    var arrow = '';
+    if (firstHalf.length && secondHalf.length) {
+      var fAvg = firstHalf.reduce(function(s,b){return s+b.sys;},0)/firstHalf.length;
+      var sAvg = secondHalf.reduce(function(s,b){return s+b.sys;},0)/secondHalf.length;
+      var diff = sAvg - fAvg;
+      arrow = diff > 3 ? '↑ 收縮壓上升中' : (diff < -3 ? '↓ 收縮壓下降中' : '→ 大致穩定');
+    }
+
+    var svgId = 'bp-note-trend-svg-' + cat.key;
+    var allV = sysData.map(function(d){return d.y;}).concat(diaData.map(function(d){return d.y;}));
+    var yMin = Math.max(0, Math.floor((Math.min.apply(null, allV) - 10)/10)*10);
+    var yMax = Math.ceil((Math.max.apply(null, allV) + 10)/10)*10;
+
+    bodyHtml += '<div class="trend-section">';
+    bodyHtml += '<div class="trend-title">' + cat.label + ' 血壓趨勢（近 ' + recent.length + ' 筆）</div>';
+    bodyHtml += '<div class="trend-meta">平均 <strong>' + avgSys + '/' + avgDia + '</strong> mmHg　脈壓差 <strong' + (avgPP < 20 ? ' style="color:#C0392B"' : '') + '>' + avgPP + '</strong>' + (arrow ? '　' + arrow : '') + '</div>';
+    bodyHtml += '<svg class="trend-svg" id="' + svgId + '" viewBox="0 0 320 120"></svg>';
+    bodyHtml += '</div>';
+
+    pendingDraws.push({ svgId: svgId, sysData: sysData, diaData: diaData, yMin: yMin, yMax: yMax });
+  });
+
+  var headHtml = '<div class="trend-section"><div class="trend-title">📝 依備註分類的血壓趨勢</div>' +
+    '<div class="trend-meta">依記錄備註中的關鍵字（睡前／起床後／餐後／運動後）自動分類統計；同一筆記錄若同時符合多個關鍵字，會同時計入各分類</div></div>';
+
+  if (bodyHtml) {
+    sec.insertAdjacentHTML('beforeend', headHtml + bodyHtml);
+    pendingDraws.forEach(function(pd) {
+      drawLineChart(pd.svgId, pd.diaData, { width: 320, height: 120, color: '#7878A0', yMin: pd.yMin, yMax: pd.yMax });
+      drawLineChart(pd.svgId, pd.sysData, { width: 320, height: 120, color: '#A07878', yMin: pd.yMin, yMax: pd.yMax, append: true });
+    });
+  } else {
+    sec.insertAdjacentHTML('beforeend', headHtml + '<div class="trend-section"><div class="trend-empty" style="padding:16px 0">目前備註中符合睡前／起床後／餐後／運動後關鍵字的記錄還不足（每類需至少3筆），持續記錄後即可看到分類趨勢</div></div>');
+  }
+}
+
 /* ── 血壓趨勢（30天） ── */
 function renderBPTrend() {
   var sec = $('bp-trend-view');
@@ -11637,6 +11712,9 @@ function renderBPTrend() {
       lowColor: '#C0392B'
     });
   }
+
+  /* ── 依備註分類（睡前/起床後/餐後/運動後）的趨勢 ── */
+  renderBPNoteCategoryTrends();
 }
 
 /* ── 睡眠趨勢 ── */
