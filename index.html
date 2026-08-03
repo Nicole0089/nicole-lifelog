@@ -1779,6 +1779,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         <span class="sleep-date-nav-label" id="sleep-date-label">顯示全部</span>
         <button class="sleep-date-nav-btn" id="sleep-date-next">›</button>
       </div>
+      <div class="note-date-row" style="padding:0 12px 8px"><span class="note-date-label">📅 日期範圍</span><input type="date" id="sleep-hist-date-from" class="note-date-input"><span class="note-date-sep">～</span><input type="date" id="sleep-hist-date-to" class="note-date-input"><button id="sleep-hist-date-clear" class="note-date-clear-btn">清除</button></div>
       <div class="sleep-tabs">
         <button class="sleep-tab active" data-tab="log" id="sleep-tab-log">記錄</button>
         <button class="sleep-tab" data-tab="stats" id="sleep-tab-stats">統計表</button>
@@ -5951,6 +5952,7 @@ function renderFood() {
 /* ── fasting ── */
 var _fastState = loadStorage('myapp_fast', { running: false, startTime: null });
 var _fastLogs  = loadStorage('myapp_fast_logs', []);
+var _fastHistMonthsShown = 1; /* 斷食日誌分月摺疊展開到第幾個月（2026-08 加入） */
 function renderFastTimer() {
   var timerEl=$('fast-timer');
   var startBtn=$('fast-start-btn'),stopBtn=$('fast-stop-btn');
@@ -6043,10 +6045,21 @@ function renderFastStats(){
           groups[dk].push(l);
         });
         var dates=Object.keys(groups).sort(function(a,b){return a<b?1:-1;});
-        return dates.map(function(dk){
+
+        /* 2026-08 加入：分月摺疊，只預設載入最近 _fastHistMonthsShown 個月，
+           避免斷食紀錄累積多年後，斷食統計區一次把所有日子全部渲染出來 */
+        var seenM={}, monthOrderAll=[];
+        dates.forEach(function(dk){ var mk=dk.slice(0,7); if(mk!=='─'&&!seenM[mk]){seenM[mk]=true; monthOrderAll.push(mk);} });
+        var visibleMonths = monthOrderAll.slice(0,_fastHistMonthsShown);
+        var remainMonths = monthOrderAll.length - visibleMonths.length;
+        var visibleSet={}; visibleMonths.forEach(function(mk){visibleSet[mk]=true;});
+        var unknownDates = dates.filter(function(dk){ return dk.slice(0,7)==='─'.slice(0,7) || dk==='─'; });
+        var visibleDates = dates.filter(function(dk){ return visibleSet[dk.slice(0,7)] || dk==='─'; });
+
+        function dayGroupHTML(dk){
           var items=groups[dk];
           var totalH=items.reduce(function(s,l){return s+(+l.hours||0);},0);
-          var lbl=foodDateLabel(dk);
+          var lbl=dk==='─'?{main:'日期不明'}:foodDateLabel(dk);
           return '<div class="fast-log-group">'+
             '<div class="fast-log-group-hdr" data-fdk="'+dk+'">'+
               '<span class="food-history-date">'+lbl.main+'</span>'+
@@ -6074,7 +6087,21 @@ function renderFastStats(){
             }).join('')+
             '</div>'+
           '</div>';
+        }
+
+        var monthGroups = groupKeysByMonth(visibleDates.filter(function(dk){return dk!=='─';}));
+        var html = monthGroups.map(function(g, idx){
+          var open = idx===0;
+          var dayCount = g.keys.length;
+          return buildHistMonthHeaderHTML(g.mk, dayCount+'天有記錄', open)+
+            '<div class="hist-month-body"'+(open?'':' style="display:none"')+'>'+
+              g.keys.map(dayGroupHTML).join('')+
+            '</div>';
         }).join('');
+        /* 日期不明（極少見的舊資料）一律附加在最後，不分月 */
+        html += unknownDates.map(dayGroupHTML).join('');
+        if (remainMonths>0) html += '<button class="hist-load-more-btn" id="fast-hist-load-more">顯示更早的月份（還有 '+remainMonths+' 個月）</button>';
+        return html;
       })()+
       '</div>'+
     '</div>';
@@ -6110,6 +6137,9 @@ function renderFastStats(){
       body.style.display=body.style.display==='none'?'':'none';
     });
   });
+  bindHistMonthToggle(wrap);
+  var fastHistLoadMoreBtn = wrap.querySelector('#fast-hist-load-more');
+  if (fastHistLoadMoreBtn) fastHistLoadMoreBtn.addEventListener('click', function(){ _fastHistMonthsShown+=1; renderFastStats(); });
   /* bind edit/delete */
   wrap.querySelectorAll('.fast-log-edit-btn').forEach(function(btn){
     btn.addEventListener('click', function(e){ e.stopPropagation(); openFastForm(btn.dataset.fid); });
@@ -7742,6 +7772,9 @@ if (_pinToggleBtn) {
 var _sfEditId = null;
 var _sfData   = {};
 var _sleepViewDate = null;  /* null = show all; string = filter by date */
+var _sleepHistDateFrom = '';
+var _sleepHistDateTo = '';
+var _sleepHistMonthsShown = 1;
 var _sfCustomFields = loadStorage('myapp_sleep_custom_fields', []);
 function saveSleepCustomFields() { saveStorage('myapp_sleep_custom_fields', _sfCustomFields); }
 var _sleepTab = 'log';
@@ -8014,10 +8047,8 @@ function renderSleep() {
   renderSleepStats();
   if (!state.sleepLogs.length) { list.innerHTML = '<div class="empty">還沒有睡眠記錄<br>點右上角 ＋ 新增吧！</div>'; return; }
   var _sleepLbl = $('sleep-date-label'); if(_sleepLbl) _sleepLbl.textContent = _sleepViewDate ? _sleepViewDate : '顯示全部';
-  var logsToShow = _sleepViewDate
-    ? state.sleepLogs.filter(function(s){ return s.date===_sleepViewDate; })
-    : state.sleepLogs;
-  list.innerHTML = logsToShow.slice().sort(function(a,b){ return b.date < a.date ? -1 : 1; }).map(function(s) {
+
+  function sleepItemHTML(s) {
     var qualityStars = s.quality ? '★'.repeat(s.quality)+'☆'.repeat(5-s.quality) : '─';
     var times = (s.bedtime||'─') + (s.wakeTime ? ' → '+s.wakeTime : '');
     return '<div class="sleep-log-item" data-id="'+s.id+'">' +
@@ -8031,7 +8062,58 @@ function renderSleep() {
         '<button class="sleep-log-del"  data-id="'+s.id+'" title="刪除">×</button>'+
       '</div>' +
     '</div>';
-  }).join('');
+  }
+
+  if (_sleepViewDate) {
+    /* 單日檢視（既有功能，維持不變）：本身就只會顯示一天的資料，不需要分月摺疊 */
+    var dayLogs = state.sleepLogs.filter(function(s){ return s.date===_sleepViewDate; });
+    list.innerHTML = dayLogs.length ? dayLogs.map(sleepItemHTML).join('') : '<div style="text-align:center;color:var(--tx3);font-size:12px;padding:16px">這天沒有睡眠記錄</div>';
+  } else {
+    /* 「顯示全部」：2026-08 起改為分月摺疊＋日期區間篩選，取代原本一次攤平列出全部歷史 */
+    var dFrom = _sleepHistDateFrom||'', dTo = _sleepHistDateTo||'';
+    var hasFilter = !!(dFrom || dTo);
+    var sorted = state.sleepLogs.slice().sort(function(a,b){ return b.date < a.date ? -1 : 1; });
+    if (dFrom) sorted = sorted.filter(function(s){ return s.date >= dFrom; });
+    if (dTo)   sorted = sorted.filter(function(s){ return s.date <= dTo; });
+
+    var remainMonths = 0;
+    if (!hasFilter) {
+      var seenM={}, monthOrderAll=[];
+      sorted.forEach(function(s){ var mk=(s.date||'').slice(0,7); if(mk && !seenM[mk]){seenM[mk]=true; monthOrderAll.push(mk);} });
+      var visibleMonths = monthOrderAll.slice(0,_sleepHistMonthsShown);
+      remainMonths = monthOrderAll.length - visibleMonths.length;
+      var visibleSet={}; visibleMonths.forEach(function(mk){visibleSet[mk]=true;});
+      sorted = sorted.filter(function(s){ return visibleSet[(s.date||'').slice(0,7)]; });
+    }
+
+    if (!sorted.length) {
+      list.innerHTML = '<div style="text-align:center;color:var(--tx3);font-size:12px;padding:16px">'+(hasFilter?'找不到符合條件的睡眠記錄':'還沒有睡眠記錄')+'</div>';
+    } else if (hasFilter) {
+      list.innerHTML = sorted.map(sleepItemHTML).join('');
+    } else {
+      var monthMap={}, monthOrder=[];
+      sorted.forEach(function(s){
+        var mk=(s.date||'').slice(0,7);
+        if(!monthMap[mk]){ monthMap[mk]=[]; monthOrder.push(mk); }
+        monthMap[mk].push(s);
+      });
+      list.innerHTML = monthOrder.map(function(mk, idx){
+        var recs = monthMap[mk];
+        var avgH = r1(recs.reduce(function(a,x){return a+(parseFloat(x.sleepHours)||0);},0)/recs.length);
+        var summaryTxt = recs.length+'筆 · 平均'+avgH+'h';
+        var open = idx===0;
+        return buildHistMonthHeaderHTML(mk, summaryTxt, open)+
+          '<div class="hist-month-body"'+(open?'':' style="display:none"')+'>'+
+            recs.map(sleepItemHTML).join('')+
+          '</div>';
+      }).join('') + (remainMonths>0 ? '<button class="hist-load-more-btn" id="sleep-hist-load-more">顯示更早的月份（還有 '+remainMonths+' 個月）</button>' : '');
+    }
+  }
+
+  bindHistMonthToggle(list);
+  var sleepHistLoadMoreBtn = $('sleep-hist-load-more');
+  if (sleepHistLoadMoreBtn) sleepHistLoadMoreBtn.addEventListener('click', function(){ _sleepHistMonthsShown+=1; renderSleep(); });
+
   list.querySelectorAll('.sleep-log-edit').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -8185,6 +8267,17 @@ if (_sfAddCustomBtn) {
   });
 }
 /* sleep date nav */
+var _sleepHistDateFromEl = $('sleep-hist-date-from');
+if (_sleepHistDateFromEl) _sleepHistDateFromEl.addEventListener('change', function(){ _sleepHistDateFrom=this.value; renderSleep(); });
+var _sleepHistDateToEl = $('sleep-hist-date-to');
+if (_sleepHistDateToEl) _sleepHistDateToEl.addEventListener('change', function(){ _sleepHistDateTo=this.value; renderSleep(); });
+var _sleepHistDateClearBtn = $('sleep-hist-date-clear');
+if (_sleepHistDateClearBtn) _sleepHistDateClearBtn.addEventListener('click', function(){
+  _sleepHistDateFrom=''; _sleepHistDateTo='';
+  if (_sleepHistDateFromEl) _sleepHistDateFromEl.value='';
+  if (_sleepHistDateToEl) _sleepHistDateToEl.value='';
+  renderSleep();
+});
 $('sleep-date-prev').addEventListener('click', function(){
   var base = _sleepViewDate || todayKey();
   var d = new Date(base); d.setDate(d.getDate()-1); _sleepViewDate = localDateStr(d);
@@ -9773,6 +9866,11 @@ function computeMonthSummaryLive(mk) {
   var diaryDaySet = {};
   state.diaryEntries.forEach(function(d){ if((d.date||'').indexOf(mk)===0) diaryDaySet[d.date]=true; });
 
+  var fastArr = _fastLogs.filter(function(l){
+    var dk = l.startTime ? fmtLocalTime(l.startTime).slice(0,10) : (l.date||'');
+    return dk.indexOf(mk)===0;
+  });
+
   var todoDoneCount = state.todos.filter(function(t){
     return t.done && t.doneAt && localDateStr(new Date(t.doneAt)).indexOf(mk)===0;
   }).length;
@@ -9818,7 +9916,8 @@ function computeMonthSummaryLive(mk) {
     habitRate: habitRate,
     diaryDays: Object.keys(diaryDaySet).length,
     todoDone: todoDoneCount,
-    memoCount: memoCount
+    memoCount: memoCount,
+    fasting: { avgHours: avg(fastArr.map(function(l){return +l.hours||0;})), count: fastArr.length }
   };
 }
 
@@ -9835,6 +9934,7 @@ function getMonthSummary(mk) {
     state.diaryEntries.some(function(d){ return (d.date||'').indexOf(mk)===0; }) ||
     state.todos.some(function(t){ return t.done && t.doneAt && localDateStr(new Date(t.doneAt)).indexOf(mk)===0; }) ||
     state.memos.some(function(m){ return !m.pinned && m.ts && localDateStr(new Date(m.ts)).indexOf(mk)===0; }) ||
+    _fastLogs.some(function(l){ var dk=l.startTime?fmtLocalTime(l.startTime).slice(0,10):(l.date||''); return dk.indexOf(mk)===0; }) ||
     state.habits.some(function(h){ return Object.keys(h.logs||{}).some(function(dk){ return dk.indexOf(mk)===0; }); });
   if (!hasAny) return null;
   return computeMonthSummaryLive(mk);
@@ -9873,7 +9973,9 @@ function getYearSummary(year) {
     habitRate: wavg(function(s){return s.habitRate;}, function(s){return s.habitRate!==null?1:0;}),
     diaryDays: withData.reduce(function(a,x){return a+x.s.diaryDays;},0),
     todoDone:  withData.reduce(function(a,x){return a+x.s.todoDone;},0),
-    memoCount: withData.reduce(function(a,x){return a+x.s.memoCount;},0)
+    memoCount: withData.reduce(function(a,x){return a+x.s.memoCount;},0),
+    fasting: { avgHours: wavg(function(s){return s.fasting.avgHours;}, function(s){return s.fasting.count;}),
+               totalCount: withData.reduce(function(a,x){return a+x.s.fasting.count;},0) }
   };
 }
 
@@ -9898,11 +10000,12 @@ function previewDataCleanup() {
     diary:  state.diaryEntries.filter(function(d){ return d.date && d.date < cutoffDate; }).length,
     memo:   state.memos.filter(function(m){ return !m.pinned && m.ts && localDateStr(new Date(m.ts)) < cutoffDate; }).length,
     todoDone: state.todos.filter(function(t){ return t.done && t.doneAt && localDateStr(new Date(t.doneAt)) < cutoffDate; }).length,
+    fasting: _fastLogs.filter(function(l){ var dk=l.startTime?fmtLocalTime(l.startTime).slice(0,10):(l.date||''); return dk && dk < cutoffDate; }).length,
     habitLogs: 0, choreLogs: 0
   };
   state.habits.forEach(function(h){ Object.keys(h.logs||{}).forEach(function(dk){ if (dk < cutoffDate) counts.habitLogs++; }); });
   state.chores.forEach(function(c){ Object.keys(c.logs||{}).forEach(function(dk){ if (dk < cutoffDate) counts.choreLogs++; }); });
-  counts.total = counts.sleep+counts.bp+counts.water+counts.food+counts.diary+counts.memo+counts.todoDone+counts.habitLogs+counts.choreLogs;
+  counts.total = counts.sleep+counts.bp+counts.water+counts.food+counts.diary+counts.memo+counts.todoDone+counts.fasting+counts.habitLogs+counts.choreLogs;
   return counts;
 }
 
@@ -9916,7 +10019,7 @@ function runDataCleanup() {
   var msg = '即將清理 '+preview.cutoffMk+' 月之前（不含）的舊資料，只保留最近3個月：\n\n' +
     '睡眠 '+preview.sleep+' 筆、血壓 '+preview.bp+' 筆、飲水 '+preview.water+' 筆\n' +
     '飲食 '+preview.food+' 筆、日記 '+preview.diary+' 篇、筆記本 '+preview.memo+' 則\n' +
-    '已完成待辦 '+preview.todoDone+' 項、習慣/家務打卡 '+(preview.habitLogs+preview.choreLogs)+' 筆\n' +
+    '已完成待辦 '+preview.todoDone+' 項、斷食記錄 '+preview.fasting+' 筆、習慣/家務打卡 '+(preview.habitLogs+preview.choreLogs)+' 筆\n' +
     '（共 '+preview.total+' 筆）\n\n' +
     '刪除前會先把每個月的統計摘要保留起來，週報頁的月回顧／年回顧仍可查看整體數據，\n' +
     '但無法再看到單筆逐日紀錄。此動作無法復原，建議先確認 Google Drive／本機 JSON 備份是最新的。\n\n' +
@@ -9935,6 +10038,7 @@ function runDataCleanup() {
   state.diaryEntries.forEach(function(d){ collectMk(d.date); });
   state.todos.forEach(function(t){ if (t.done && t.doneAt) collectMk(localDateStr(new Date(t.doneAt))); });
   state.memos.forEach(function(m){ if (!m.pinned && m.ts) collectMk(localDateStr(new Date(m.ts))); });
+  _fastLogs.forEach(function(l){ var dk=l.startTime?fmtLocalTime(l.startTime).slice(0,10):(l.date||''); if(dk) collectMk(dk); });
   state.habits.forEach(function(h){ Object.keys(h.logs||{}).forEach(collectMk); });
   state.chores.forEach(function(c){ Object.keys(c.logs||{}).forEach(collectMk); });
 
@@ -9953,6 +10057,7 @@ function runDataCleanup() {
   state.diaryEntries  = state.diaryEntries.filter(function(d){ return !d.date || d.date >= cutoffDate; });
   state.memos         = state.memos.filter(function(m){ return m.pinned || !m.ts || localDateStr(new Date(m.ts)) >= cutoffDate; });
   state.todos         = state.todos.filter(function(t){ return !(t.done && t.doneAt && localDateStr(new Date(t.doneAt)) < cutoffDate); });
+  _fastLogs           = _fastLogs.filter(function(l){ var dk=l.startTime?fmtLocalTime(l.startTime).slice(0,10):(l.date||''); return !dk || dk >= cutoffDate; });
   state.habits = state.habits.map(function(h){
     var newLogs={}, newNotes={};
     Object.keys(h.logs||{}).forEach(function(dk){ if (dk >= cutoffDate) newLogs[dk]=h.logs[dk]; });
@@ -9967,6 +10072,7 @@ function runDataCleanup() {
   });
 
   saveSleep(); saveBP(); saveWater(); saveFood(); saveDiary(); saveMemos(); saveTodos(); saveHabits(); saveChores();
+  saveStorage('myapp_fast_logs', _fastLogs);
 
   _lastCleanupTs = Date.now();
   saveStorage('myapp_last_cleanup', _lastCleanupTs);
@@ -9982,6 +10088,7 @@ function runDataCleanup() {
   if (state.currentPage==='food')   renderFood();
   if (state.currentPage==='diary')  renderDiary();
   if (state.currentPage==='memo')   renderMemos();
+  if (state.currentPage==='food')   renderFastStats();
   if (state.currentPage==='todos')  renderTodos();
   if (state.currentPage==='habits') renderHabits();
   if (state.currentPage==='chores') renderChores();
@@ -13308,6 +13415,14 @@ function renderMonthReview() {
       html += '<div class="weekly-row"><span>本月新增筆記</span><span class="weekly-row-val">'+sum.memoCount+' 則</span></div>';
       html += '</div>';
 
+      if (sum.fasting.count>0 || (prevSum && prevSum.fasting.count>0)) {
+        html += '<div class="weekly-section"><div class="weekly-section-title">⏱ 斷食</div>';
+        html += sum.fasting.count>0
+          ? '<div class="weekly-row"><span>平均斷食時數</span><span class="weekly-row-val">'+sum.fasting.avgHours+' h'+(prevSum?buildPeriodVsBadge(sum.fasting.avgHours,prevSum.fasting.avgHours,'h',false):'')+'</span></div>'
+          : '<div class="weekly-row"><span style="color:var(--tx3)">本月無斷食記錄</span></div>';
+        html += '</div>';
+      }
+
       content.innerHTML = html;
     }
   }
@@ -13396,6 +13511,15 @@ function renderYearReview() {
       html += '<div class="weekly-section"><div class="weekly-section-title">📝 筆記本</div>';
       html += '<div class="weekly-row"><span>全年新增筆記</span><span class="weekly-row-val">'+sum.memoCount+' 則</span></div>';
       html += '</div>';
+
+      if (sum.fasting.totalCount>0 || (prevSum && prevSum.fasting.totalCount>0)) {
+        html += '<div class="weekly-section"><div class="weekly-section-title">⏱ 斷食</div>';
+        html += sum.fasting.totalCount>0
+          ? ('<div class="weekly-row"><span>全年平均斷食時數</span><span class="weekly-row-val">'+sum.fasting.avgHours+' h'+(prevSum?buildPeriodVsBadge(sum.fasting.avgHours,prevSum.fasting.avgHours,'h',false):'')+'</span></div>'+
+             buildYearMiniBars(sum.months, function(s){return s.fasting.avgHours;}))
+          : '<div class="weekly-row"><span style="color:var(--tx3)">全年無斷食記錄</span></div>';
+        html += '</div>';
+      }
 
       content.innerHTML = html;
     }
