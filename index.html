@@ -1994,6 +1994,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         </div>
         <div class="bd-tdee-box" id="bd-tdee-box"><div class="bd-hint">請填入身體數據以計算 TDEE</div></div>
         <div class="bd-macros-box" id="bd-macros-box"></div>
+        <div class="bd-section-lbl">📈 體重歷史</div>
+        <div id="body-data-history"></div>
       </div>
             <div class="settings-section" style="margin-top:8px">
         <div class="settings-section-title">☁️ 雲端備份（Google Drive）</div>
@@ -5536,6 +5538,7 @@ function calcDayMacros(bd) {
 
 /* ── renderBodySettings ── */
 function renderBodySettings() {
+  renderBodyDataHistory();
   function syncChips(cid,val,cls) {
     var el=$(cid); if(!el) return;
     el.querySelectorAll('.'+(cls||'bd-chip')).forEach(function(b){ b.classList.toggle('sel',b.dataset.val===val); });
@@ -6303,13 +6306,13 @@ if(_foodCollapseBtn)_foodCollapseBtn.addEventListener('click',function(){
 
 /* Body data event listeners */
 document.querySelectorAll('#bd-gender-chips .bd-gender-btn').forEach(function(btn){
-  btn.addEventListener('click',function(){ _bodyData.gender=btn.dataset.val; saveStorage('myapp_body_data',_bodyData); renderBodySettings(); });
+  btn.addEventListener('click',function(){ _bodyData.gender=btn.dataset.val; saveStorage('myapp_body_data',_bodyData); recordBodyDataSnapshot(); renderBodySettings(); });
 });
 document.querySelectorAll('#bd-activity-chips .bd-chip').forEach(function(btn){
-  btn.addEventListener('click',function(){ _bodyData.activity=btn.dataset.val; saveStorage('myapp_body_data',_bodyData); renderBodySettings(); });
+  btn.addEventListener('click',function(){ _bodyData.activity=btn.dataset.val; saveStorage('myapp_body_data',_bodyData); recordBodyDataSnapshot(); renderBodySettings(); });
 });
 document.querySelectorAll('#bd-goal-chips .bd-chip').forEach(function(btn){
-  btn.addEventListener('click',function(){ _bodyData.goal=btn.dataset.val; saveStorage('myapp_body_data',_bodyData); renderBodySettings(); renderFoodDayType(); });
+  btn.addEventListener('click',function(){ _bodyData.goal=btn.dataset.val; saveStorage('myapp_body_data',_bodyData); recordBodyDataSnapshot(); renderBodySettings(); renderFoodDayType(); });
 });
 ['bd-age','bd-height','bd-weight'].forEach(function(id){
   var el=$(id); if(!el) return;
@@ -6320,7 +6323,7 @@ document.querySelectorAll('#bd-goal-chips .bd-chip').forEach(function(btn){
       else if(id==='bd-height') _bodyData.height=Math.round(v);
       else if(id==='bd-weight') _bodyData.weight=v;
     }
-    saveStorage('myapp_body_data',_bodyData); renderBodySettings();
+    saveStorage('myapp_body_data',_bodyData); recordBodyDataSnapshot(); renderBodySettings();
   });
 });
 
@@ -6993,6 +6996,93 @@ function foodDaySkipStatus(dateKey){
   return {partial:true, meals:meals};
 }
 var _bodyData     = loadStorage('myapp_body_data', {gender:'female',age:30,height:165,weight:55,activity:'light',goal:'cut'});
+
+/* ── 身體數據歷史紀錄（2026-08 加入）──
+   原本 _bodyData 只是單一物件、每次編輯直接覆蓋，完全沒有歷史可查。
+   現在每次編輯性別/年齡/身高/體重/活動量/目標時，除了更新 _bodyData 本身，
+   也會把目前的完整快照 upsert 進 _bodyDataLogs（同一天多次編輯只覆蓋當天那筆，
+   不會重複累積）。體重變化是長期健康趨勢的重要資料，故意不納入「資料清理只保留
+   3個月」的範圍（見 previewDataCleanup/runDataCleanup），永久保留、不會被清理掉。 */
+var _bodyDataLogs = loadStorage('myapp_body_data_logs', []);
+function saveBodyDataLogs() { saveStorage('myapp_body_data_logs', _bodyDataLogs); }
+function recordBodyDataSnapshot() {
+  if (!_bodyData.weight && !_bodyData.height) return; /* 還沒填任何數據就不記錄，避免空白快照 */
+  var dk = todayKey();
+  var snap = {
+    date: dk,
+    weight: _bodyData.weight || null,
+    height: _bodyData.height || null,
+    age: _bodyData.age || null,
+    gender: _bodyData.gender || '',
+    activity: _bodyData.activity || '',
+    goal: _bodyData.goal || ''
+  };
+  var idx = _bodyDataLogs.findIndex(function(l){ return l.date === dk; });
+  if (idx >= 0) _bodyDataLogs[idx] = snap; else _bodyDataLogs.push(snap);
+  saveBodyDataLogs();
+}
+function deleteBodyDataLog(dk) {
+  _bodyDataLogs = _bodyDataLogs.filter(function(l){ return l.date !== dk; });
+  saveBodyDataLogs();
+  renderBodyDataHistory();
+}
+var _bodyHistMonthsShown = 1;
+function renderBodyDataHistory() {
+  var box = $('body-data-history');
+  if (!box) return;
+  var sorted = _bodyDataLogs.slice().sort(function(a,b){ return b.date < a.date ? -1 : 1; });
+  if (!sorted.length) {
+    box.innerHTML = '<div style="text-align:center;color:var(--tx3);font-size:12px;padding:12px">還沒有體重歷史紀錄，填寫上方體重後會自動開始記錄</div>';
+    return;
+  }
+  function bmiOf(l) {
+    if (!l.weight || !l.height) return null;
+    var h = l.height/100;
+    return Math.round(l.weight/(h*h)*10)/10;
+  }
+  function rowHTML(l) {
+    var bmi = bmiOf(l);
+    return '<div class="weekly-row" data-date="'+l.date+'">'+
+      '<span>'+l.date+'</span>'+
+      '<span class="weekly-row-val">'+(l.weight?l.weight+' kg':'—')+(bmi?'　BMI '+bmi:'')+
+      '　<button class="food-hist-action-btn body-hist-del-btn" data-date="'+l.date+'" title="刪除">×</button></span>'+
+    '</div>';
+  }
+  /* 最新一筆 vs 前一筆的體重變化，一眼看出方向 */
+  var latestBadge = '';
+  if (sorted.length >= 2 && sorted[0].weight && sorted[1].weight) {
+    var diff = Math.round((sorted[0].weight - sorted[1].weight)*10)/10;
+    if (diff !== 0) {
+      var arrow = diff>0 ? '▲' : '▼';
+      latestBadge = '<span style="font-size:11px;color:var(--tx3);margin-left:6px">'+arrow+' '+Math.abs(diff)+'kg（vs 上次記錄）</span>';
+    }
+  }
+  var groups = groupKeysByMonth(sorted.map(function(l){ return l.date; }));
+  var byDate = {}; sorted.forEach(function(l){ byDate[l.date]=l; });
+  var visibleMonths = groups.slice(0, _bodyHistMonthsShown);
+  var remainMonths = groups.length - visibleMonths.length;
+  var html = '<div style="font-size:11px;color:var(--tx3);padding:0 2px 6px">共 '+sorted.length+' 筆記錄'+latestBadge+'</div>';
+  html += visibleMonths.map(function(g, idx){
+    var open = idx===0;
+    var summaryTxt = g.keys.length+'筆';
+    return buildHistMonthHeaderHTML(g.mk, summaryTxt, open)+
+      '<div class="hist-month-body"'+(open?'':' style="display:none"')+'>'+
+        g.keys.map(function(dk){ return rowHTML(byDate[dk]); }).join('')+
+      '</div>';
+  }).join('');
+  if (remainMonths>0) html += '<button class="hist-load-more-btn" id="body-hist-load-more">顯示更早的月份（還有 '+remainMonths+' 個月）</button>';
+  box.innerHTML = html;
+  bindHistMonthToggle(box);
+  var loadMoreBtn = $('body-hist-load-more');
+  if (loadMoreBtn) loadMoreBtn.addEventListener('click', function(){ _bodyHistMonthsShown+=1; renderBodyDataHistory(); });
+  box.querySelectorAll('.body-hist-del-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      if (!confirm('刪除 '+btn.dataset.date+' 這筆體重紀錄？')) return;
+      deleteBodyDataLog(btn.dataset.date);
+    });
+  });
+}
 var _foodDayType  = loadStorage('myapp_food_day_type', {});
 var _calcCatOpen = {};
 var _pfEditIdx = null;
