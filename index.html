@@ -739,6 +739,14 @@ input::placeholder { color: var(--tx3); }
 .food-history-date { font-size: 14px; font-weight: 500; color: var(--tx); }
 .food-history-totals { font-size: 12px; color: var(--tx3); }
 .food-history-items { padding: 0 14px; border-top: 0.5px solid var(--bd); }
+/* ── 歷史紀錄「分月摺疊」共用樣式（2026-08 加入，飲食/血壓/日記歷史頁共用）── */
+.hist-month-hdr { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 14px; background:var(--acl); border-radius:var(--r); cursor:pointer; margin-bottom:6px; }
+.hist-month-title { font-size:14px; font-weight:600; color:var(--ac); white-space:nowrap; }
+.hist-month-summary { font-size:12px; color:var(--tx2); flex:1; text-align:right; }
+.hist-month-arrow { font-size:11px; color:var(--tx3); transition:transform .15s; }
+.hist-month-arrow.open { transform:rotate(90deg); }
+.hist-month-body { margin-bottom:10px; }
+.hist-load-more-btn { display:block; width:100%; margin-top:6px; padding:10px; text-align:center; font-size:13px; color:var(--ac); background:var(--bg3); border:0.5px dashed var(--bd); border-radius:var(--rr); cursor:pointer; font-family:var(--font); }
 .food-hist-day-note { font-size: 12px; color: var(--tx3); padding: 7px 0 4px; border-bottom: 0.5px solid var(--bd); line-height: 1.5; word-break: break-all; }
 /* Food edit overlay */
 .food-edit-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 190; display: flex; align-items: flex-end; justify-content: center; }
@@ -985,6 +993,12 @@ input::placeholder { color: var(--tx3); }
 .bp-tab.active { color: var(--ac); font-weight: 600; }
 .bp-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 28px; height: 2px; background: var(--ac); border-radius: 1px; }
 .bp-list { padding: 0 12px 80px; }
+/* 週報頁「週/月/年」頁籤（2026-08 加入）：外觀比照 .bp-tabs/.bp-tab，但用獨立 class 名稱，
+   避免跟 switchBPTab() 裡未限定範圍的 document.querySelectorAll('.bp-tab') 互相影響 */
+.weekly-period-tabs { display: flex; border-bottom: 0.5px solid var(--bd); background: var(--bg); position: sticky; top: 0; z-index: 4; }
+.weekly-period-tab { flex: 1; padding: 9px 6px 8px; font-size: 14px; color: var(--tx3); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
+.weekly-period-tab.active { color: var(--ac); font-weight: 600; }
+.weekly-period-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 28px; height: 2px; background: var(--ac); border-radius: 1px; }
 .bp-log-item { background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
 .bp-log-date { font-size: 12px; color: var(--tx3); flex-shrink: 0; min-width: 80px; }
 .bp-log-vals { flex: 1; min-width: 0; }
@@ -1722,7 +1736,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       <!-- Historical records -->
       <div class="food-history-section">
         <div class="food-history-title">歷史飲食記錄</div>
-        <div class="page-search-bar" style="padding:0 0 8px"><input class="page-search-input" id="food-history-search-input" type="text" placeholder="🔍 搜尋歷史飲食記錄..."></div>
+        <div class="page-search-bar" style="padding:0 0 8px"><input class="page-search-input" id="food-history-search-input" type="text" placeholder="🔍 搜尋歷史飲食記錄..."><div class="note-date-row"><span class="note-date-label">📅 日期範圍</span><input type="date" id="food-history-date-from" class="note-date-input"><span class="note-date-sep">～</span><input type="date" id="food-history-date-to" class="note-date-input"><button id="food-history-date-clear" class="note-date-clear-btn">清除</button></div></div>
         <div id="food-history-list"></div>
       </div>
     </div>
@@ -1734,7 +1748,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         <button class="memo-add-btn" id="memo-add-btn" aria-label="新增筆記">＋</button>
       </div>
       <div style="font-size:10px;color:var(--tx3);padding:0 16px 6px;letter-spacing:0.3px">💡 適合儲存長期筆記、參考資料、不會消失的想法</div>
-      <div class="page-search-bar"><input class="page-search-input" id="memo-search-input" type="text" placeholder="🔍 搜尋標題或內容..."></div>
+      <div class="page-search-bar"><input class="page-search-input" id="memo-search-input" type="text" placeholder="🔍 搜尋標題或內容..."><div class="note-date-row"><span class="note-date-label">📅 日期範圍</span><input type="date" id="memo-date-from" class="note-date-input"><span class="note-date-sep">～</span><input type="date" id="memo-date-to" class="note-date-input"><button id="memo-date-clear" class="note-date-clear-btn">清除</button></div></div>
       <div class="memo-list" id="memo-list"></div>
     </div>
 
@@ -1815,6 +1829,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         <button class="bp-tab" data-tab="trend" id="bp-tab-trend">趨勢</button>
       </div>
       <div id="bp-log-view">
+        <div class="page-search-bar" style="padding:0 0 8px"><input class="page-search-input" id="bp-history-search-input" type="text" placeholder="🔍 搜尋備註..."><div class="note-date-row"><span class="note-date-label">📅 日期範圍</span><input type="date" id="bp-history-date-from" class="note-date-input"><span class="note-date-sep">～</span><input type="date" id="bp-history-date-to" class="note-date-input"><button id="bp-history-date-clear" class="note-date-clear-btn">清除</button></div></div>
         <div class="bp-list" id="bp-list"></div>
       </div>
       <div id="bp-stats-view" style="display:none">
@@ -2065,7 +2080,26 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         </div>
         <div id="settings-xlsx-last-lbl" style="font-size:10px;color:var(--tx3);margin-top:5px;text-align:right"></div>
 
-      </div>      <div class="settings-section" style="margin-top:8px;padding-bottom:80px" id="notif-settings-section">
+      </div>
+      <div class="settings-section" style="margin-top:8px">
+        <div class="settings-section-title">🗑️ 資料清理</div>
+        <div class="settings-item" id="cleanup-run-btn" style="background:var(--acl)">
+          <span class="settings-item-icon">🧹</span>
+          <div class="settings-item-body">
+            <div class="settings-item-title" style="font-weight:700">立即清理舊資料</div>
+            <div class="settings-item-sub">只保留最近3個月逐筆紀錄，更早的先摘要保留再刪除</div>
+          </div>
+          <span class="settings-item-arrow">›</span>
+        </div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:6px;line-height:1.5">
+          ℹ️ 適用範圍：睡眠／血壓／飲水／飲食／日記／筆記本（未釘選）／已完成待辦／
+          習慣與家務打卡紀錄。刪除前會先列出筆數請你確認，且會把每個月的統計摘要
+          保留下來，供「週報」頁的月回顧／年回顧查看整體數據；只是無法再看到單筆
+          逐日紀錄。此動作無法復原，建議先確認 Google Drive／本機 JSON 備份是最新的。
+        </div>
+        <div id="settings-cleanup-last-lbl" style="font-size:10px;color:var(--tx3);margin-top:5px;text-align:right"></div>
+      </div>
+      <div class="settings-section" style="margin-top:8px;padding-bottom:80px" id="notif-settings-section">
         <div class="settings-section-title">待辦提醒</div>
         <div class="settings-item" id="notif-perm-btn">
           <span class="settings-item-icon">🔔</span>
@@ -2122,15 +2156,47 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 
     <!-- 📅 當週健康週報 -->
     <div id="page-weekly" class="page">
-      <div class="weekly-header">
-        <div class="weekly-title">📅 當週健康週報</div>
-        <div class="weekly-nav">
-          <button class="weekly-nav-btn" id="weekly-prev-btn">‹ 上週</button>
-          <button class="weekly-nav-btn" id="weekly-next-btn">下週 ›</button>
-        </div>
+      <div class="weekly-period-tabs" id="weekly-period-tabs">
+        <button class="weekly-period-tab active" data-period="week" id="weekly-ptab-week">週報</button>
+        <button class="weekly-period-tab" data-period="month" id="weekly-ptab-month">月回顧</button>
+        <button class="weekly-period-tab" data-period="year" id="weekly-ptab-year">年回顧</button>
       </div>
-      <div class="weekly-range" id="weekly-range"></div>
-      <div id="weekly-content" style="padding-bottom:80px"></div>
+
+      <div id="weekly-view-week">
+        <div class="weekly-header">
+          <div class="weekly-title">📅 當週健康週報</div>
+          <div class="weekly-nav">
+            <button class="weekly-nav-btn" id="weekly-prev-btn">‹ 上週</button>
+            <button class="weekly-nav-btn" id="weekly-next-btn">下週 ›</button>
+          </div>
+        </div>
+        <div class="weekly-range" id="weekly-range"></div>
+        <div id="weekly-content" style="padding-bottom:80px"></div>
+      </div>
+
+      <div id="weekly-view-month" style="display:none">
+        <div class="weekly-header">
+          <div class="weekly-title">📆 月回顧</div>
+          <div class="weekly-nav">
+            <button class="weekly-nav-btn" id="month-review-prev-btn">‹ 上月</button>
+            <button class="weekly-nav-btn" id="month-review-next-btn">下月 ›</button>
+          </div>
+        </div>
+        <div class="weekly-range" id="month-review-range"></div>
+        <div id="month-review-content" style="padding-bottom:80px"></div>
+      </div>
+
+      <div id="weekly-view-year" style="display:none">
+        <div class="weekly-header">
+          <div class="weekly-title">🗓️ 年回顧</div>
+          <div class="weekly-nav">
+            <button class="weekly-nav-btn" id="year-review-prev-btn">‹ 去年</button>
+            <button class="weekly-nav-btn" id="year-review-next-btn">明年 ›</button>
+          </div>
+        </div>
+        <div class="weekly-range" id="year-review-range"></div>
+        <div id="year-review-content" style="padding-bottom:80px"></div>
+      </div>
     </div>
 
   </div>
@@ -3120,6 +3186,13 @@ function saveFood()    { saveStorage('myapp_food',   state.foodLogs); }
 function saveMemos()   { saveStorage('myapp_memos',  state.memos); }
 function saveDiary()   { saveStorage('myapp_diary',  state.diaryEntries); }
 
+/* ── 資料清理／回顧摘要封存（2026-08 加入） ──
+   《月／年回顧》要能在原始逐筆紀錄被清理刪除後仍顯示整體統計，
+   所以清理前一定要先把該月摘要算好存進這裡 */
+var _archiveSummary = loadStorage('myapp_archive_summary', { months: {} });
+function saveArchiveSummary() { saveStorage('myapp_archive_summary', _archiveSummary); }
+var _lastCleanupTs = loadStorage('myapp_last_cleanup', 0);
+
 /* ═══════════════════════════════════════════════════
    🛠️ 工具函式
    ═══════════════════════════════════════════════════ */
@@ -3301,7 +3374,7 @@ function switchPage(page) {
   if (page === 'diary')     renderDiary();
   if (page === 'settings')  renderSettings();
   if (page === 'dashboard') renderDashboard();
-  if (page === 'weekly')    renderWeekly();
+  if (page === 'weekly')    renderWeeklyPage();
   if (page === 'recipes' && typeof renderRecipePage === 'function') renderRecipePage();
 }
 
@@ -3339,6 +3412,9 @@ function isDuePast(dateKey) { return dateKey && dateKey < todayKey(); }
 
 /* ── 渲染待辦事項 ── */
 var _doneOpen = false;
+var _todoDoneDateFrom = '';
+var _todoDoneDateTo = '';
+var _todoDoneMonthsShown = 1;
 
 /* ── 待辦搜尋 ── */
 function runTodoSearch(kw) {
@@ -3492,17 +3568,71 @@ function renderTodos() {
   }
 
   if (done.length) {
+    var doneDFrom = _todoDoneDateFrom||'', doneDTo = _todoDoneDateTo||'';
+    var doneHasFilter = !!(doneDFrom || doneDTo);
+    var doneFiltered = done;
+    if(doneDFrom) doneFiltered = doneFiltered.filter(function(t){ return t.doneAt && localDateStr(new Date(t.doneAt)) >= doneDFrom; });
+    if(doneDTo)   doneFiltered = doneFiltered.filter(function(t){ return t.doneAt && localDateStr(new Date(t.doneAt)) <= doneDTo; });
+
     html += '<div class="done-section-header ' + (_doneOpen?'open':'') + '" id="done-header" onclick="_doneOpen=!_doneOpen;renderTodos();">' +
       '<span class="done-arrow">▶</span>' +
       '<span>已完成 ' + done.length + ' 項</span>' +
     '</div>';
     html += '<div class="done-section-body ' + (_doneOpen?'':'hidden') + '" id="done-body">';
-    done.forEach(function(t){ html += buildTodoHTML(t); });
+    html += '<div class="note-date-row" style="padding:0 2px 8px"><span class="note-date-label">📅 完成日期區間</span>' +
+      '<input type="date" id="todo-done-date-from" class="note-date-input" value="'+esc(doneDFrom)+'">' +
+      '<span class="note-date-sep">～</span>' +
+      '<input type="date" id="todo-done-date-to" class="note-date-input" value="'+esc(doneDTo)+'">' +
+      '<button id="todo-done-date-clear" class="note-date-clear-btn">清除</button></div>';
+
+    if(!doneFiltered.length){
+      html += '<div style="text-align:center;color:var(--tx3);font-size:12px;padding:12px">找不到符合日期區間的已完成項目</div>';
+    } else if(doneHasFilter){
+      /* 有日期區間篩選時，攤平列出所有符合結果，不分月摺疊 */
+      doneFiltered.slice().sort(function(a,b){ return (b.doneAt||0)-(a.doneAt||0); }).forEach(function(t){ html += buildTodoHTML(t); });
+    } else {
+      /* 無篩選：依完成月份分組摺疊，只有最新月份預設展開 */
+      var doneSorted = doneFiltered.slice().sort(function(a,b){ return (b.doneAt||0)-(a.doneAt||0); });
+      var monthMap={}, monthOrderAll=[];
+      doneSorted.forEach(function(t){
+        var mk = t.doneAt ? localDateStr(new Date(t.doneAt)).slice(0,7) : '未知';
+        if(!monthMap[mk]){ monthMap[mk]=[]; monthOrderAll.push(mk); }
+        monthMap[mk].push(t);
+      });
+      var visibleMonths = monthOrderAll.slice(0,_todoDoneMonthsShown);
+      var remainMonths = monthOrderAll.length - visibleMonths.length;
+      html += visibleMonths.map(function(mk, idx){
+        var recs = monthMap[mk];
+        var summaryTxt = recs.length+'項';
+        var open = idx===0;
+        var label = mk==='未知' ? '未知完成日期' : histMonthLabel(mk);
+        return '<div class="hist-month-hdr" data-mk="'+mk+'"><span class="hist-month-title">'+label+'</span>'+
+          '<span class="hist-month-summary">'+summaryTxt+'</span>'+
+          '<span class="hist-month-arrow'+(open?' open':'')+'">▶</span></div>'+
+          '<div class="hist-month-body"'+(open?'':' style="display:none"')+'>'+
+            recs.map(buildTodoHTML).join('')+
+          '</div>';
+      }).join('');
+      if(remainMonths>0) html += '<button class="hist-load-more-btn" id="todo-done-load-more">顯示更早的月份（還有 '+remainMonths+' 個月）</button>';
+    }
     html += '</div>';
   }
 
   container.innerHTML = html;
 
+  var doneBodyEl = $('done-body');
+  if(doneBodyEl) bindHistMonthToggle(doneBodyEl);
+  var todoDoneLoadMoreBtn = $('todo-done-load-more');
+  if(todoDoneLoadMoreBtn) todoDoneLoadMoreBtn.addEventListener('click', function(){ _todoDoneMonthsShown+=1; renderTodos(); });
+  var todoDoneDateFromEl = $('todo-done-date-from');
+  if(todoDoneDateFromEl) todoDoneDateFromEl.addEventListener('change', function(){ _todoDoneDateFrom=this.value; renderTodos(); });
+  var todoDoneDateToEl = $('todo-done-date-to');
+  if(todoDoneDateToEl) todoDoneDateToEl.addEventListener('change', function(){ _todoDoneDateTo=this.value; renderTodos(); });
+  var todoDoneDateClearBtn = $('todo-done-date-clear');
+  if(todoDoneDateClearBtn) todoDoneDateClearBtn.addEventListener('click', function(){
+    _todoDoneDateFrom=''; _todoDoneDateTo='';
+    renderTodos();
+  });
 }
 
 /* Todo buttons use inline onclick */
@@ -5553,10 +5683,47 @@ function renderProteinChart() {
 
 /* ── history ── */
 var _foodHistSearch = '';
+var _foodHistDateFrom = '';
+var _foodHistDateTo = '';
+var _foodHistMonthsShown = 1;
+
+/* ── 歷史紀錄共用：分月分組工具（2026-08 加入，飲食/血壓/日記歷史頁共用） ── */
+function groupKeysByMonth(sortedDescKeys) {
+  /* sortedDescKeys：由新到舊排序的日期字串（'YYYY-MM-DD'，取前7碼當月份 key）*/
+  var map = {}, order = [];
+  sortedDescKeys.forEach(function(k){
+    var mk = k.slice(0,7);
+    if(!map[mk]){ map[mk]=[]; order.push(mk); }
+    map[mk].push(k);
+  });
+  return order.map(function(mk){ return {mk:mk, keys:map[mk]}; });
+}
+function histMonthLabel(mk){ var p=mk.split('-'); return p[0]+'年'+parseInt(p[1],10)+'月'; }
+function buildHistMonthHeaderHTML(mk, summaryTxt, open){
+  return '<div class="hist-month-hdr" data-mk="'+mk+'">'+
+    '<span class="hist-month-title">'+histMonthLabel(mk)+'</span>'+
+    '<span class="hist-month-summary">'+summaryTxt+'</span>'+
+    '<span class="hist-month-arrow'+(open?' open':'')+'">▶</span>'+
+  '</div>';
+}
+function bindHistMonthToggle(box){
+  box.querySelectorAll('.hist-month-hdr').forEach(function(hdr){
+    hdr.addEventListener('click', function(){
+      var body = hdr.nextElementSibling;
+      var arrow = hdr.querySelector('.hist-month-arrow');
+      var open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : '';
+      if(arrow) arrow.classList.toggle('open', !open);
+    });
+  });
+}
+
 function renderFoodHistory() {
   var box = $('food-history-list'); if (!box) return;
   var today = todayKey();
   var kw = (_foodHistSearch||'').trim().toLowerCase();
+  var dFrom = _foodHistDateFrom||'', dTo = _foodHistDateTo||'';
+  var hasFilter = !!(kw || dFrom || dTo);
   var grouped = {};
   state.foodLogs.forEach(function(l){
     if(l.date && l.date<today) { if(!grouped[l.date]) grouped[l.date]=[]; grouped[l.date].push(l); }
@@ -5569,11 +5736,25 @@ function renderFoodHistory() {
         return hay.indexOf(kw)!==-1;
       });
     });
-  } else {
-    dates = dates.slice(0,30);
   }
-  if(!dates.length){box.innerHTML='<div style="text-align:center;color:var(--tx3);font-size:12px;padding:16px">'+(kw?'找不到符合「'+esc(_foodHistSearch)+'」的飲食記錄':'無歷史記錄')+'</div>';return;}
-  box.innerHTML = dates.map(function(dk){
+  if(dFrom) dates = dates.filter(function(dk){ return dk>=dFrom; });
+  if(dTo)   dates = dates.filter(function(dk){ return dk<=dTo; });
+
+  /* 分月載入：無任何篩選條件時，預設只載入最近 _foodHistMonthsShown 個月，
+     其餘月份靠「顯示更早的月份」按鈕逐步展開，避免一次把多年資料全塞進 DOM */
+  var remainMonths = 0;
+  if(!hasFilter){
+    var seenM = {}, monthOrderAll = [];
+    dates.forEach(function(dk){ var mk=dk.slice(0,7); if(!seenM[mk]){seenM[mk]=true; monthOrderAll.push(mk);} });
+    var visibleMonths = monthOrderAll.slice(0, _foodHistMonthsShown);
+    remainMonths = monthOrderAll.length - visibleMonths.length;
+    var visibleSet = {}; visibleMonths.forEach(function(mk){visibleSet[mk]=true;});
+    dates = dates.filter(function(dk){ return visibleSet[dk.slice(0,7)]; });
+  }
+
+  if(!dates.length){box.innerHTML='<div style="text-align:center;color:var(--tx3);font-size:12px;padding:16px">'+(hasFilter?'找不到符合條件的飲食記錄':'無歷史記錄')+'</div>';return;}
+
+  function dayGroupHTML(dk, open){
     var items=grouped[dk];
     if(kw){ items = items.filter(function(l){
       var hay=((l.text||l.name||'')+' '+(l.meal||'')+' '+(l.note||'')).toLowerCase();
@@ -5598,7 +5779,7 @@ function renderFoodHistory() {
         '<span class="food-history-totals">'+(totTxt||items.length+'項')+'</span>'+
         '<button class="food-hist-add-date-btn" data-hist-add="'+dk+'" title="補記飲食">＋補記</button>'+
       '</div>'+
-      '<div class="food-history-items"'+(kw?'':' style="display:none"')+'>'+
+      '<div class="food-history-items"'+(open?'':' style="display:none"')+'>'+
       (dayNote?'<div class="food-hist-day-note">📝 '+esc(dayNote)+'</div>':'')+
         items.map(function(l){
           var nutChips=(l.calories?'<span class="food-nut-chip">'+r1(l.calories)+'kcal</span>':'')+
@@ -5622,7 +5803,30 @@ function renderFoodHistory() {
         }).join('')+
       '</div>'+
     '</div>';
-  }).join('');
+  }
+
+  if(hasFilter){
+    /* 有篩選條件（關鍵字或日期區間）時，直接列出所有符合的日期，不分月摺疊 */
+    box.innerHTML = dates.map(function(dk){ return dayGroupHTML(dk, true); }).join('');
+  } else {
+    var groups = groupKeysByMonth(dates);
+    box.innerHTML = groups.map(function(g, idx){
+      var monthLogs = [];
+      g.keys.forEach(function(dk){ monthLogs = monthLogs.concat(grouped[dk]); });
+      var mCal = monthLogs.reduce(function(a,x){return a+(+x.calories||0);},0);
+      var summaryTxt = g.keys.length+'天 · 平均'+(g.keys.length?r1(mCal/g.keys.length):0)+'kcal/天';
+      var open = idx===0; /* 最新月份預設展開，其餘收合 */
+      return buildHistMonthHeaderHTML(g.mk, summaryTxt, open)+
+        '<div class="hist-month-body"'+(open?'':' style="display:none"')+'>'+
+          g.keys.map(function(dk){ return dayGroupHTML(dk, false); }).join('')+
+        '</div>';
+    }).join('') + (remainMonths>0 ? '<button class="hist-load-more-btn" id="food-hist-load-more">顯示更早的月份（還有 '+remainMonths+' 個月）</button>' : '');
+  }
+
+  bindHistMonthToggle(box);
+  var foodHistLoadMoreBtn = $('food-hist-load-more');
+  if(foodHistLoadMoreBtn) foodHistLoadMoreBtn.addEventListener('click', function(){ _foodHistMonthsShown += 1; renderFoodHistory(); });
+
   box.querySelectorAll('.food-history-group-hdr').forEach(function(hdr){
     hdr.addEventListener('click',function(){
       var body=hdr.nextElementSibling;
@@ -6504,6 +6708,17 @@ function saveFoodEdit(){
 $('food-today-add-btn').addEventListener('click',openFoodEdit);
 var _foodHistSearchEl = $('food-history-search-input');
 if(_foodHistSearchEl){ _foodHistSearchEl.addEventListener('input',function(){ _foodHistSearch=this.value; renderFoodHistory(); }); }
+var _foodHistDateFromEl = $('food-history-date-from');
+if(_foodHistDateFromEl) _foodHistDateFromEl.addEventListener('change', function(){ _foodHistDateFrom=this.value; renderFoodHistory(); });
+var _foodHistDateToEl = $('food-history-date-to');
+if(_foodHistDateToEl) _foodHistDateToEl.addEventListener('change', function(){ _foodHistDateTo=this.value; renderFoodHistory(); });
+var _foodHistDateClearBtn = $('food-history-date-clear');
+if(_foodHistDateClearBtn) _foodHistDateClearBtn.addEventListener('click', function(){
+  _foodHistDateFrom=''; _foodHistDateTo='';
+  if(_foodHistDateFromEl) _foodHistDateFromEl.value='';
+  if(_foodHistDateToEl) _foodHistDateToEl.value='';
+  renderFoodHistory();
+});
 $('food-edit-save-btn').addEventListener('click',saveFoodEdit);
 $('food-edit-cancel-btn').addEventListener('click',closeFoodEdit);
 $('food-edit-overlay').addEventListener('click',function(e){if(e.target===$('food-edit-overlay'))closeFoodEdit();});
@@ -7266,22 +7481,19 @@ var _memoEditId = null;
 var _memoEditPinned = false;
 
 var _memoSearchKw = '';
+var _memoDateFrom = '';
+var _memoDateTo = '';
+var _memoMonthsShown = 1;
 function renderMemos() {
   var list = $('memo-list');
   if (!list) return;
   if (!state.memos.length) { list.innerHTML = '<div class="empty">還沒有備忘錄<br>點右上角 ＋ 新增吧！</div>'; return; }
   var today = todayKey();
-  // sort: pinned first, then by updatedAt descending (we use original order reversed)
-  var sorted = state.memos.slice().sort(function(a, b) {
-    if (a.pinned && !b.pinned) return -1;
-    if (!a.pinned && b.pinned) return 1;
-    return 0; // preserve relative order within each group
-  });
-  // reverse non-pinned within their group (newest first)
-  var pinned   = state.memos.filter(function(m){ return m.pinned && (!_memoSearchKw || (m.title||'').indexOf(_memoSearchKw)>=0 || (m.body||'').indexOf(_memoSearchKw)>=0); });
-  var unpinned = state.memos.filter(function(m){ return !m.pinned && (!_memoSearchKw || (m.title||'').indexOf(_memoSearchKw)>=0 || (m.body||'').indexOf(_memoSearchKw)>=0); }).slice().reverse();
-  var items    = pinned.concat(unpinned);
-  list.innerHTML = items.map(function(m) {
+  var kw = _memoSearchKw||'';
+  var dFrom = _memoDateFrom||'', dTo = _memoDateTo||'';
+  var hasFilter = !!(kw || dFrom || dTo);
+
+  function memoItemHTML(m) {
     var dueChip = '';
     if (m.dueDate) {
       var overdue = m.dueDate < today;
@@ -7298,7 +7510,56 @@ function renderMemos() {
         dueChip +
       '</div>' +
     '</div>';
-  }).join('');
+  }
+
+  /* 釘選筆記固定置頂，不參與分月摺疊／日期區間篩選，只受關鍵字篩選 */
+  var pinned = state.memos.filter(function(m){ return m.pinned && (!kw || (m.title||'').indexOf(kw)>=0 || (m.body||'').indexOf(kw)>=0); });
+
+  var unpinned = state.memos.filter(function(m){ return !m.pinned && (!kw || (m.title||'').indexOf(kw)>=0 || (m.body||'').indexOf(kw)>=0); }).slice().reverse();
+  if (dFrom) unpinned = unpinned.filter(function(m){ return m.ts && localDateStr(new Date(m.ts)) >= dFrom; });
+  if (dTo)   unpinned = unpinned.filter(function(m){ return m.ts && localDateStr(new Date(m.ts)) <= dTo; });
+
+  var html = pinned.map(memoItemHTML).join('');
+
+  if (!unpinned.length && !pinned.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--tx3);font-size:12px;padding:16px">'+(hasFilter?'找不到符合條件的備忘錄':'還沒有備忘錄')+'</div>';
+    return;
+  }
+
+  if (hasFilter) {
+    /* 有關鍵字或日期區間篩選時，攤平列出所有符合的未釘選筆記 */
+    html += unpinned.map(memoItemHTML).join('');
+  } else {
+    /* 無篩選：未釘選筆記依月份（ts）分組摺疊，只有最新月份預設展開；
+       沒有 ts 的舊資料（2026-08 之前建立、未再編輯過的筆記）歸入「未知」桶 */
+    var monthMap={}, monthOrderAll=[];
+    unpinned.forEach(function(m){
+      var mk = m.ts ? localDateStr(new Date(m.ts)).slice(0,7) : '未知';
+      if(!monthMap[mk]){ monthMap[mk]=[]; monthOrderAll.push(mk); }
+      monthMap[mk].push(m);
+    });
+    var visibleMonths = monthOrderAll.slice(0,_memoMonthsShown);
+    var remainMonths = monthOrderAll.length - visibleMonths.length;
+    html += visibleMonths.map(function(mk, idx){
+      var recs = monthMap[mk];
+      var summaryTxt = recs.length+'則';
+      var open = idx===0;
+      var label = mk==='未知' ? '未知日期' : histMonthLabel(mk);
+      return '<div class="hist-month-hdr" data-mk="'+mk+'"><span class="hist-month-title">'+label+'</span>'+
+        '<span class="hist-month-summary">'+summaryTxt+'</span>'+
+        '<span class="hist-month-arrow'+(open?' open':'')+'">▶</span></div>'+
+        '<div class="hist-month-body"'+(open?'':' style="display:none"')+'>'+
+          recs.map(memoItemHTML).join('')+
+        '</div>';
+    }).join('');
+    if(remainMonths>0) html += '<button class="hist-load-more-btn" id="memo-hist-load-more">顯示更早的月份（還有 '+remainMonths+' 個月）</button>';
+  }
+
+  list.innerHTML = html;
+  bindHistMonthToggle(list);
+  var memoLoadMoreBtn = $('memo-hist-load-more');
+  if(memoLoadMoreBtn) memoLoadMoreBtn.addEventListener('click', function(){ _memoMonthsShown+=1; renderMemos(); });
+
   list.querySelectorAll('.memo-item').forEach(function(el) {
     el.addEventListener('click', function(e) {
       if (e.target.classList.contains('memo-del-btn')) return;
@@ -7349,18 +7610,30 @@ function saveMemoEdit() {
   if (!title && !body) { closeMemoEdit(); return; }
   var now = new Date();
   var dateStr = (now.getMonth()+1) + '/' + now.getDate() + ' ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
+  var nowTs = Date.now();
   if (_memoEditId) {
     state.memos = state.memos.map(function(m) {
-      return m.id === _memoEditId ? Object.assign({}, m, { title: title, body: body, dueDate: dueDate, pinned: _memoEditPinned, updatedAt: dateStr }) : m;
+      return m.id === _memoEditId ? Object.assign({}, m, { title: title, body: body, dueDate: dueDate, pinned: _memoEditPinned, updatedAt: dateStr, ts: nowTs }) : m;
     });
   } else {
-    state.memos.push({ id: genId(), title: title, body: body, dueDate: dueDate, pinned: _memoEditPinned, updatedAt: dateStr });
+    state.memos.push({ id: genId(), title: title, body: body, dueDate: dueDate, pinned: _memoEditPinned, updatedAt: dateStr, ts: nowTs });
   }
   saveMemos(); closeMemoEdit(); renderMemos();
 }
 $('memo-add-btn').addEventListener('click', function(){ openMemoEdit(null); });
 var _memoSearchEl = $('memo-search-input');
 if (_memoSearchEl) _memoSearchEl.addEventListener('input', function() { _memoSearchKw = _memoSearchEl.value.trim(); renderMemos(); });
+var _memoDateFromEl = $('memo-date-from');
+if(_memoDateFromEl) _memoDateFromEl.addEventListener('change', function(){ _memoDateFrom=this.value; renderMemos(); });
+var _memoDateToEl = $('memo-date-to');
+if(_memoDateToEl) _memoDateToEl.addEventListener('change', function(){ _memoDateTo=this.value; renderMemos(); });
+var _memoDateClearBtn = $('memo-date-clear');
+if(_memoDateClearBtn) _memoDateClearBtn.addEventListener('click', function(){
+  _memoDateFrom=''; _memoDateTo='';
+  if(_memoDateFromEl) _memoDateFromEl.value='';
+  if(_memoDateToEl) _memoDateToEl.value='';
+  renderMemos();
+});
 $('memo-edit-save-btn').addEventListener('click', saveMemoEdit);
 $('memo-edit-cancel-btn').addEventListener('click', closeMemoEdit);
 $('memo-edit-overlay').addEventListener('click', function(e){ if (e.target === $('memo-edit-overlay')) closeMemoEdit(); });
@@ -7852,6 +8125,10 @@ var _bpEditHand = 'left';
 var _bpTab      = 'log';
 var _bpTblView  = (function(){ var n=new Date(); return { year:n.getFullYear(), month:n.getMonth() }; })();
 var _bpHandFilter = 'all';
+var _bpHistKw = '';
+var _bpHistDateFrom = '';
+var _bpHistDateTo = '';
+var _bpHistMonthsShown = 1;
 var _bpChartHand = 'both';
 var _bpChartWeekOffset = 0; /* 0=本週, -1=上週, ... */
 function _bpChartWeekRange(offset) {
@@ -8002,8 +8279,33 @@ function renderBP() {
   var list = $('bp-list');
   if (!list) return;
   if (!state.bpLogs.length) { list.innerHTML = '<div class="empty">還沒有血壓記錄<br>點右上角 ＋ 新增吧！</div>'; return; }
+
+  var kw = (_bpHistKw||'').trim().toLowerCase();
+  var dFrom = _bpHistDateFrom||'', dTo = _bpHistDateTo||'';
+  var hasFilter = !!(kw || dFrom || dTo);
+
   var sorted = state.bpLogs.slice().sort(function(a,b){ return b.datetime < a.datetime ? -1 : 1; });
-  list.innerHTML = sorted.map(function(b) {
+  if(kw) sorted = sorted.filter(function(b){ return (b.note||'').toLowerCase().indexOf(kw)!==-1; });
+  if(dFrom) sorted = sorted.filter(function(b){ return (b.datetime||'').slice(0,10) >= dFrom; });
+  if(dTo)   sorted = sorted.filter(function(b){ return (b.datetime||'').slice(0,10) <= dTo; });
+
+  /* 分月載入：無篩選條件時只顯示最近 _bpHistMonthsShown 個月，其餘靠「顯示更早的月份」展開 */
+  var remainMonths = 0;
+  if(!hasFilter){
+    var seenM={}, monthOrderAll=[];
+    sorted.forEach(function(b){ var mk=(b.datetime||'').slice(0,7); if(mk && !seenM[mk]){seenM[mk]=true; monthOrderAll.push(mk);} });
+    var visibleMonths = monthOrderAll.slice(0,_bpHistMonthsShown);
+    remainMonths = monthOrderAll.length - visibleMonths.length;
+    var visibleSet={}; visibleMonths.forEach(function(mk){visibleSet[mk]=true;});
+    sorted = sorted.filter(function(b){ return visibleSet[(b.datetime||'').slice(0,7)]; });
+  }
+
+  if(!sorted.length){
+    list.innerHTML = '<div style="text-align:center;color:var(--tx3);font-size:12px;padding:16px">'+(hasFilter?'找不到符合條件的血壓記錄':'還沒有血壓記錄')+'</div>';
+    return;
+  }
+
+  function bpItemHTML(b) {
     var handCls = b.hand==='right' ? 'right' : 'left';
     var handTxt = b.hand==='right' ? '🧡 右手' : '💙 左手';
     var st      = bpStatus(b.sys, b.dia);
@@ -8020,7 +8322,34 @@ function renderBP() {
       '</div>' +
       '<button class="bp-log-del" data-id="' + b.id + '">×</button>' +
     '</div>';
-  }).join('');
+  }
+
+  if(hasFilter){
+    list.innerHTML = sorted.map(bpItemHTML).join('');
+  } else {
+    var monthMap = {}, monthOrder = [];
+    sorted.forEach(function(b){
+      var mk = (b.datetime||'').slice(0,7);
+      if(!monthMap[mk]){ monthMap[mk]=[]; monthOrder.push(mk); }
+      monthMap[mk].push(b);
+    });
+    list.innerHTML = monthOrder.map(function(mk, idx){
+      var recs = monthMap[mk];
+      var avgSys = r1(recs.reduce(function(a,x){return a+(+x.sys||0);},0)/recs.length);
+      var avgDia = r1(recs.reduce(function(a,x){return a+(+x.dia||0);},0)/recs.length);
+      var summaryTxt = recs.length+'筆 · 平均'+avgSys+'/'+avgDia+' mmHg';
+      var open = idx===0;
+      return buildHistMonthHeaderHTML(mk, summaryTxt, open)+
+        '<div class="hist-month-body"'+(open?'':' style="display:none"')+'>'+
+          recs.map(bpItemHTML).join('')+
+        '</div>';
+    }).join('') + (remainMonths>0 ? '<button class="hist-load-more-btn" id="bp-hist-load-more">顯示更早的月份（還有 '+remainMonths+' 個月）</button>' : '');
+  }
+
+  bindHistMonthToggle(list);
+  var bpHistLoadMoreBtn = $('bp-hist-load-more');
+  if(bpHistLoadMoreBtn) bpHistLoadMoreBtn.addEventListener('click', function(){ _bpHistMonthsShown += 1; renderBP(); });
+
   list.querySelectorAll('.bp-log-item').forEach(function(el) {
     el.addEventListener('click', function(e) {
       if (e.target.classList.contains('bp-log-del')) return;
@@ -8089,6 +8418,21 @@ function saveBPForm() {
 ['left','right'].forEach(function(h) {
   var btn = $('bp-hand-'+h);
   if (btn) btn.addEventListener('click', function() { _bpEditHand = h; syncBPHandBtns(); });
+});
+
+/* 血壓歷史搜尋／日期區間篩選（2026-08 加入） */
+var _bpHistSearchEl = $('bp-history-search-input');
+if(_bpHistSearchEl) _bpHistSearchEl.addEventListener('input', function(){ _bpHistKw=this.value; renderBP(); });
+var _bpHistDateFromEl = $('bp-history-date-from');
+if(_bpHistDateFromEl) _bpHistDateFromEl.addEventListener('change', function(){ _bpHistDateFrom=this.value; renderBP(); });
+var _bpHistDateToEl = $('bp-history-date-to');
+if(_bpHistDateToEl) _bpHistDateToEl.addEventListener('change', function(){ _bpHistDateTo=this.value; renderBP(); });
+var _bpHistDateClearBtn = $('bp-history-date-clear');
+if(_bpHistDateClearBtn) _bpHistDateClearBtn.addEventListener('click', function(){
+  _bpHistDateFrom=''; _bpHistDateTo='';
+  if(_bpHistDateFromEl) _bpHistDateFromEl.value='';
+  if(_bpHistDateToEl) _bpHistDateToEl.value='';
+  renderBP();
 });
 
 /* Tab switching */
@@ -8343,9 +8687,12 @@ function closeDiaryLightbox(e){
   if(e && e.target && e.target.tagName==='IMG')return; /* don't close on img click */
   $('diary-lightbox').classList.add('hidden');
 }
+var _diaryMonthsShown = 1;
+
 function renderDiaryList() {
   var list = $('diary-list');
   if (!list) return;
+  var hasFilter = !!(_diarySearchKw || _diarySearchDateFrom || _diarySearchDateTo);
   var filteredEntries = state.diaryEntries.filter(function(d){
     if ((d.diaryType||'life') !== _diaryTypeTab) return false;
     if (_diarySearchKw && (d.title||'').indexOf(_diarySearchKw)<0 && (d.body||'').indexOf(_diarySearchKw)<0) return false;
@@ -8360,7 +8707,20 @@ function renderDiaryList() {
     var typeName = _diaryTypeTab==='gratitude' ? '感恩日記' : '生活日記';
     list.innerHTML = '<div class="empty">還沒有'+typeName+'<br>點右上角 ＋ 新增吧！</div>'; return;
   }
-  list.innerHTML = filteredEntries.slice().sort(function(a,b){ return b.date < a.date ? -1 : 1; }).map(function(d) {
+  var sortedEntries = filteredEntries.slice().sort(function(a,b){ return b.date < a.date ? -1 : 1; });
+
+  /* 分月載入：無篩選條件時只顯示最近 _diaryMonthsShown 個月，其餘靠「顯示更早的月份」展開 */
+  var remainMonths = 0;
+  if(!hasFilter){
+    var seenM={}, monthOrderAll=[];
+    sortedEntries.forEach(function(d){ var mk=(d.date||'').slice(0,7); if(mk && !seenM[mk]){seenM[mk]=true; monthOrderAll.push(mk);} });
+    var visibleMonths = monthOrderAll.slice(0,_diaryMonthsShown);
+    remainMonths = monthOrderAll.length - visibleMonths.length;
+    var visibleSet={}; visibleMonths.forEach(function(mk){visibleSet[mk]=true;});
+    sortedEntries = sortedEntries.filter(function(d){ return visibleSet[(d.date||'').slice(0,7)]; });
+  }
+
+  function diaryItemHTML(d) {
     var attHtml = '';
     if (d.attachments && d.attachments.length) {
       attHtml = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">' +
@@ -8382,7 +8742,32 @@ function renderDiaryList() {
         '<button class="chore-more-btn" onclick="openDiaryActionSheet(event,\'' + d.id + '\')">···</button>' +
       '</div>' +
     '</div>';
-  }).join('');
+  }
+
+  if(hasFilter){
+    list.innerHTML = sortedEntries.map(diaryItemHTML).join('');
+  } else {
+    var monthMap={}, monthOrder=[];
+    sortedEntries.forEach(function(d){
+      var mk=(d.date||'').slice(0,7);
+      if(!monthMap[mk]){ monthMap[mk]=[]; monthOrder.push(mk); }
+      monthMap[mk].push(d);
+    });
+    list.innerHTML = monthOrder.map(function(mk, idx){
+      var recs = monthMap[mk];
+      var summaryTxt = recs.length+'篇';
+      var open = idx===0;
+      return buildHistMonthHeaderHTML(mk, summaryTxt, open)+
+        '<div class="hist-month-body"'+(open?'':' style="display:none"')+'>'+
+          recs.map(diaryItemHTML).join('')+
+        '</div>';
+    }).join('') + (remainMonths>0 ? '<button class="hist-load-more-btn" id="diary-hist-load-more">顯示更早的月份（還有 '+remainMonths+' 個月）</button>' : '');
+  }
+
+  bindHistMonthToggle(list);
+  var diaryHistLoadMoreBtn = $('diary-hist-load-more');
+  if(diaryHistLoadMoreBtn) diaryHistLoadMoreBtn.addEventListener('click', function(){ _diaryMonthsShown += 1; renderDiaryList(); });
+
   list.querySelectorAll('.diary-item').forEach(function(el) {
     el.addEventListener('click', function(e) {
       if (e.target.closest('.chore-more-btn')) return;
@@ -9035,6 +9420,12 @@ function renderGDriveSettings() {
       ? '上次匯出：' + localDateTimeStr(new Date(+_localExportLast))
       : '尚未匯出過本機備份';
   }
+  var cleanupLastLbl = $('settings-cleanup-last-lbl');
+  if (cleanupLastLbl) {
+    cleanupLastLbl.textContent = _lastCleanupTs
+      ? '上次清理：' + localDateTimeStr(new Date(+_lastCleanupTs))
+      : '尚未清理過';
+  }
   var xlsxLbl = $('settings-xlsx-last-lbl');
   if (xlsxLbl) {
     xlsxLbl.textContent = _xlsxExportLast
@@ -9257,6 +9648,280 @@ function _fmtHandNumbXlsx(arr) {
   return parts.length ? parts.join('/') : '─';
 }
 
+/* ── 計算全部歷史紀錄實際涵蓋的日期區間（2026-08 加入，供匯出檔名標註用）── */
+/* ── 月／年摘要計算與資料清理（2026-08 加入）── */
+
+/* 即時掃描目前 state 裡「還沒被清理」的原始紀錄，算出指定月份（'YYYY-MM'）的摘要。
+   清理舊資料時會呼叫這個函式，把結果存進 _archiveSummary，之後即使原始紀錄被刪除，
+   月／年回顧仍能顯示這份摘要（見 getMonthSummary）*/
+function computeMonthSummaryLive(mk) {
+  function avg(arr){ return arr.length ? r1(arr.reduce(function(a,b){return a+b;},0)/arr.length) : null; }
+
+  var sleepArr = state.sleepLogs.filter(function(s){ return (s.date||'').indexOf(mk)===0; });
+  var sleepHoursArr = sleepArr.map(function(s){ return parseFloat(s.sleepHours)||0; }).filter(function(x){return x>0;});
+  var sleepQualArr  = sleepArr.map(function(s){ return s.quality||0; }).filter(function(x){return x>0;});
+
+  var bpArr = state.bpLogs.filter(function(b){ return (b.datetime||'').indexOf(mk)===0; });
+
+  var waterByDate = {};
+  state.waterLogs.forEach(function(l){ if((l.date||'').indexOf(mk)===0){ waterByDate[l.date]=(waterByDate[l.date]||0)+(+l.ml||0); } });
+  var waterDayVals = Object.keys(waterByDate).map(function(dk){ return waterByDate[dk]; });
+  var wGoal = typeof WATER_GOAL !== 'undefined' ? WATER_GOAL : 2000;
+
+  var foodByDate = {};
+  state.foodLogs.forEach(function(l){
+    if((l.date||'').indexOf(mk)===0){
+      if(!foodByDate[l.date]) foodByDate[l.date] = {cal:0,pro:0,carb:0,fat:0};
+      foodByDate[l.date].cal  += (+l.calories||0);
+      foodByDate[l.date].pro  += (+l.protein||0);
+      foodByDate[l.date].carb += (+l.carbs||0);
+      foodByDate[l.date].fat  += (+l.fat||0);
+    }
+  });
+  var foodDays = Object.keys(foodByDate);
+
+  var diaryDaySet = {};
+  state.diaryEntries.forEach(function(d){ if((d.date||'').indexOf(mk)===0) diaryDaySet[d.date]=true; });
+
+  var todoDoneCount = state.todos.filter(function(t){
+    return t.done && t.doneAt && localDateStr(new Date(t.doneAt)).indexOf(mk)===0;
+  }).length;
+
+  var memoCount = state.memos.filter(function(m){
+    return !m.pinned && m.ts && localDateStr(new Date(m.ts)).indexOf(mk)===0;
+  }).length;
+
+  /* 習慣完成率：該月每一天（不含未來）×每個目前存在的習慣，是否有打卡 */
+  var habitRate = null;
+  if (state.habits.length) {
+    var daysInM = new Date(+mk.slice(0,4), +mk.slice(5,7), 0).getDate();
+    var totalSlots = 0, doneSlots = 0;
+    var tk = todayKey();
+    for (var d=1; d<=daysInM; d++) {
+      var dk = mk+'-'+String(d).padStart(2,'0');
+      if (dk > tk) break;
+      state.habits.forEach(function(h){
+        totalSlots++;
+        if ((h.logs||{})[dk]) doneSlots++;
+      });
+    }
+    habitRate = totalSlots>0 ? r1(doneSlots/totalSlots*100) : null;
+  }
+
+  return {
+    mk: mk,
+    sleep: { avgHours: avg(sleepHoursArr), avgQuality: avg(sleepQualArr), days: sleepHoursArr.length },
+    bp: {
+      avgSys: bpArr.length ? r1(bpArr.reduce(function(s,b){return s+(+b.sys||0);},0)/bpArr.length) : null,
+      avgDia: bpArr.length ? r1(bpArr.reduce(function(s,b){return s+(+b.dia||0);},0)/bpArr.length) : null,
+      avgPP:  bpArr.length ? r1(bpArr.reduce(function(s,b){return s+((+b.sys||0)-(+b.dia||0));},0)/bpArr.length) : null,
+      count: bpArr.length
+    },
+    water: { avgMl: avg(waterDayVals), goalDays: waterDayVals.filter(function(x){return x>=wGoal;}).length, days: waterDayVals.length },
+    food: {
+      avgCal:  avg(foodDays.map(function(dk){return foodByDate[dk].cal;})),
+      avgPro:  avg(foodDays.map(function(dk){return foodByDate[dk].pro;})),
+      avgCarb: avg(foodDays.map(function(dk){return foodByDate[dk].carb;})),
+      avgFat:  avg(foodDays.map(function(dk){return foodByDate[dk].fat;})),
+      days: foodDays.length
+    },
+    habitRate: habitRate,
+    diaryDays: Object.keys(diaryDaySet).length,
+    todoDone: todoDoneCount,
+    memoCount: memoCount
+  };
+}
+
+/* 取得指定月份摘要：已封存過（該月已被清理掉）就直接讀封存資料，
+   否則若原始資料還在就即時算一份（不封存，維持即時性），
+   兩種情況都沒有資料就回傳 null（代表這個月本來就沒有任何記錄，不是被刪除） */
+function getMonthSummary(mk) {
+  if (_archiveSummary.months && _archiveSummary.months[mk]) return _archiveSummary.months[mk];
+  var hasAny =
+    state.sleepLogs.some(function(s){ return (s.date||'').indexOf(mk)===0; }) ||
+    state.bpLogs.some(function(b){ return (b.datetime||'').indexOf(mk)===0; }) ||
+    state.waterLogs.some(function(l){ return (l.date||'').indexOf(mk)===0; }) ||
+    state.foodLogs.some(function(l){ return (l.date||'').indexOf(mk)===0; }) ||
+    state.diaryEntries.some(function(d){ return (d.date||'').indexOf(mk)===0; }) ||
+    state.todos.some(function(t){ return t.done && t.doneAt && localDateStr(new Date(t.doneAt)).indexOf(mk)===0; }) ||
+    state.memos.some(function(m){ return !m.pinned && m.ts && localDateStr(new Date(m.ts)).indexOf(mk)===0; }) ||
+    state.habits.some(function(h){ return Object.keys(h.logs||{}).some(function(dk){ return dk.indexOf(mk)===0; }); });
+  if (!hasAny) return null;
+  return computeMonthSummaryLive(mk);
+}
+
+/* 合併某一年12個月的摘要（不論每個月是即時算的還是從封存讀的，一律用同樣的加權平均方式合併） */
+function getYearSummary(year) {
+  var months = [];
+  for (var m=1; m<=12; m++) {
+    var mk = year + '-' + String(m).padStart(2,'0');
+    months.push({ mk: mk, s: getMonthSummary(mk) });
+  }
+  var withData = months.filter(function(x){ return x.s; });
+  if (!withData.length) return null;
+  function wavg(getter, weightGetter) {
+    var num=0, den=0;
+    withData.forEach(function(x){
+      var v = getter(x.s), w = weightGetter ? weightGetter(x.s) : 1;
+      if (v!==null && v!==undefined && w>0) { num += v*w; den += w; }
+    });
+    return den>0 ? r1(num/den) : null;
+  }
+  return {
+    year: year,
+    months: months,
+    sleep: { avgHours: wavg(function(s){return s.sleep.avgHours;}, function(s){return s.sleep.days;}),
+             totalDays: withData.reduce(function(a,x){return a+x.s.sleep.days;},0) },
+    bp: { avgSys: wavg(function(s){return s.bp.avgSys;}, function(s){return s.bp.count;}),
+          avgDia: wavg(function(s){return s.bp.avgDia;}, function(s){return s.bp.count;}),
+          totalCount: withData.reduce(function(a,x){return a+x.s.bp.count;},0) },
+    water: { avgMl: wavg(function(s){return s.water.avgMl;}, function(s){return s.water.days;}),
+             totalGoalDays: withData.reduce(function(a,x){return a+x.s.water.goalDays;},0) },
+    food: { avgCal:  wavg(function(s){return s.food.avgCal;},  function(s){return s.food.days;}),
+            avgPro:  wavg(function(s){return s.food.avgPro;},  function(s){return s.food.days;}),
+            avgCarb: wavg(function(s){return s.food.avgCarb;}, function(s){return s.food.days;}) },
+    habitRate: wavg(function(s){return s.habitRate;}, function(s){return s.habitRate!==null?1:0;}),
+    diaryDays: withData.reduce(function(a,x){return a+x.s.diaryDays;},0),
+    todoDone:  withData.reduce(function(a,x){return a+x.s.todoDone;},0),
+    memoCount: withData.reduce(function(a,x){return a+x.s.memoCount;},0)
+  };
+}
+
+/* 清理保留規則：保留「本月＋前2月」共3個月，此月份（含）之前的資料會被清理 */
+function _cleanupCutoffMonthKey() {
+  var now = new Date(), y = now.getFullYear(), m = now.getMonth() - 2;
+  while (m < 0) { m += 12; y--; }
+  return y + '-' + String(m+1).padStart(2,'0');
+}
+function _cleanupCutoffDateStr() { return _cleanupCutoffMonthKey() + '-01'; }
+
+/* 試算：不修改任何資料，只回傳「如果現在清理，會刪掉幾筆」，供確認對話框使用 */
+function previewDataCleanup() {
+  var cutoffDate = _cleanupCutoffDateStr();
+  var counts = {
+    cutoffMk: _cleanupCutoffMonthKey(),
+    cutoffDate: cutoffDate,
+    sleep:  state.sleepLogs.filter(function(s){ return s.date && s.date < cutoffDate; }).length,
+    bp:     state.bpLogs.filter(function(b){ return b.datetime && b.datetime.slice(0,10) < cutoffDate; }).length,
+    water:  state.waterLogs.filter(function(l){ return l.date && l.date < cutoffDate; }).length,
+    food:   state.foodLogs.filter(function(l){ return l.date && l.date < cutoffDate; }).length,
+    diary:  state.diaryEntries.filter(function(d){ return d.date && d.date < cutoffDate; }).length,
+    memo:   state.memos.filter(function(m){ return !m.pinned && m.ts && localDateStr(new Date(m.ts)) < cutoffDate; }).length,
+    todoDone: state.todos.filter(function(t){ return t.done && t.doneAt && localDateStr(new Date(t.doneAt)) < cutoffDate; }).length,
+    habitLogs: 0, choreLogs: 0
+  };
+  state.habits.forEach(function(h){ Object.keys(h.logs||{}).forEach(function(dk){ if (dk < cutoffDate) counts.habitLogs++; }); });
+  state.chores.forEach(function(c){ Object.keys(c.logs||{}).forEach(function(dk){ if (dk < cutoffDate) counts.choreLogs++; }); });
+  counts.total = counts.sleep+counts.bp+counts.water+counts.food+counts.diary+counts.memo+counts.todoDone+counts.habitLogs+counts.choreLogs;
+  return counts;
+}
+
+/* 實際執行清理：手動觸發，執行前一定會先跳 confirm 列出筆數（見 Settings 按鈕綁定） */
+function runDataCleanup() {
+  var preview = previewDataCleanup();
+  if (preview.total === 0) {
+    alert('目前沒有超過3個月（'+preview.cutoffMk+' 之前）的舊資料可以清理。');
+    return;
+  }
+  var msg = '即將清理 '+preview.cutoffMk+' 月之前（不含）的舊資料，只保留最近3個月：\n\n' +
+    '睡眠 '+preview.sleep+' 筆、血壓 '+preview.bp+' 筆、飲水 '+preview.water+' 筆\n' +
+    '飲食 '+preview.food+' 筆、日記 '+preview.diary+' 篇、筆記本 '+preview.memo+' 則\n' +
+    '已完成待辦 '+preview.todoDone+' 項、習慣/家務打卡 '+(preview.habitLogs+preview.choreLogs)+' 筆\n' +
+    '（共 '+preview.total+' 筆）\n\n' +
+    '刪除前會先把每個月的統計摘要保留起來，週報頁的月回顧／年回顧仍可查看整體數據，\n' +
+    '但無法再看到單筆逐日紀錄。此動作無法復原，建議先確認 Google Drive／本機 JSON 備份是最新的。\n\n' +
+    '確定要繼續嗎？';
+  if (!confirm(msg)) return;
+
+  var cutoffDate = preview.cutoffDate;
+
+  /* 1. 先把即將被刪除涉及的月份摘要算好、存進封存區（若尚未封存過才算，避免覆蓋掉更早已封存的資料） */
+  var oldMonthKeys = {};
+  function collectMk(dateStr) { if (dateStr && dateStr < cutoffDate) oldMonthKeys[dateStr.slice(0,7)] = true; }
+  state.sleepLogs.forEach(function(s){ collectMk(s.date); });
+  state.bpLogs.forEach(function(b){ collectMk((b.datetime||'').slice(0,10)); });
+  state.waterLogs.forEach(function(l){ collectMk(l.date); });
+  state.foodLogs.forEach(function(l){ collectMk(l.date); });
+  state.diaryEntries.forEach(function(d){ collectMk(d.date); });
+  state.todos.forEach(function(t){ if (t.done && t.doneAt) collectMk(localDateStr(new Date(t.doneAt))); });
+  state.memos.forEach(function(m){ if (!m.pinned && m.ts) collectMk(localDateStr(new Date(m.ts))); });
+  state.habits.forEach(function(h){ Object.keys(h.logs||{}).forEach(collectMk); });
+  state.chores.forEach(function(c){ Object.keys(c.logs||{}).forEach(collectMk); });
+
+  if (!_archiveSummary.months) _archiveSummary.months = {};
+  Object.keys(oldMonthKeys).forEach(function(mk){
+    if (!_archiveSummary.months[mk]) _archiveSummary.months[mk] = computeMonthSummaryLive(mk);
+  });
+  saveArchiveSummary();
+
+  /* 2. 刪除逐筆歷史資料，只保留最近3個月（待辦只刪「已完成且完成日期較早」的，未完成的不動；
+        筆記本只刪未釘選且有 ts 可判斷日期的，釘選/沒有ts的舊筆記一律保留） */
+  state.sleepLogs     = state.sleepLogs.filter(function(s){ return !s.date || s.date >= cutoffDate; });
+  state.bpLogs        = state.bpLogs.filter(function(b){ return !b.datetime || b.datetime.slice(0,10) >= cutoffDate; });
+  state.waterLogs     = state.waterLogs.filter(function(l){ return !l.date || l.date >= cutoffDate; });
+  state.foodLogs      = state.foodLogs.filter(function(l){ return !l.date || l.date >= cutoffDate; });
+  state.diaryEntries  = state.diaryEntries.filter(function(d){ return !d.date || d.date >= cutoffDate; });
+  state.memos         = state.memos.filter(function(m){ return m.pinned || !m.ts || localDateStr(new Date(m.ts)) >= cutoffDate; });
+  state.todos         = state.todos.filter(function(t){ return !(t.done && t.doneAt && localDateStr(new Date(t.doneAt)) < cutoffDate); });
+  state.habits = state.habits.map(function(h){
+    var newLogs={}, newNotes={};
+    Object.keys(h.logs||{}).forEach(function(dk){ if (dk >= cutoffDate) newLogs[dk]=h.logs[dk]; });
+    Object.keys(h.notes||{}).forEach(function(dk){ if (dk >= cutoffDate) newNotes[dk]=h.notes[dk]; });
+    return Object.assign({}, h, { logs:newLogs, notes:newNotes });
+  });
+  state.chores = state.chores.map(function(c){
+    var newLogs={}, newNotes={};
+    Object.keys(c.logs||{}).forEach(function(dk){ if (dk >= cutoffDate) newLogs[dk]=c.logs[dk]; });
+    Object.keys(c.notes||{}).forEach(function(dk){ if (dk >= cutoffDate) newNotes[dk]=c.notes[dk]; });
+    return Object.assign({}, c, { logs:newLogs, notes:newNotes });
+  });
+
+  saveSleep(); saveBP(); saveWater(); saveFood(); saveDiary(); saveMemos(); saveTodos(); saveHabits(); saveChores();
+
+  _lastCleanupTs = Date.now();
+  saveStorage('myapp_last_cleanup', _lastCleanupTs);
+  var cleanupLbl = $('settings-cleanup-last-lbl');
+  if (cleanupLbl) cleanupLbl.textContent = '上次清理：' + localDateTimeStr(new Date(_lastCleanupTs));
+
+  showToast('✅ 已清理 ' + preview.total + ' 筆舊資料，摘要已保留於回顧功能');
+
+  /* 若目前正瀏覽受影響的頁面，重新渲染避免顯示已刪除的殘留項目 */
+  if (state.currentPage==='sleep')  renderSleep();
+  if (state.currentPage==='bp')     renderBP();
+  if (state.currentPage==='water')  renderWater();
+  if (state.currentPage==='food')   renderFood();
+  if (state.currentPage==='diary')  renderDiary();
+  if (state.currentPage==='memo')   renderMemos();
+  if (state.currentPage==='todos')  renderTodos();
+  if (state.currentPage==='habits') renderHabits();
+  if (state.currentPage==='chores') renderChores();
+}
+
+function _computeXLSXDateRange() {
+  var minD = null, maxD = null;
+  function consider(v) {
+    if (!v) return;
+    var d = String(v).slice(0,10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    if (!minD || d < minD) minD = d;
+    if (!maxD || d > maxD) maxD = d;
+  }
+  state.sleepLogs.forEach(function(x){ consider(x.date); });
+  state.bpLogs.forEach(function(x){ consider(x.datetime); });
+  state.waterLogs.forEach(function(x){ consider(x.date); });
+  state.foodLogs.forEach(function(x){ consider(x.date); });
+  state.diaryEntries.forEach(function(x){ consider(x.date); });
+  /* doneAt 實際存的是數字 timestamp（非 'YYYY-MM-DD' 字串），要先轉換才能被 consider() 認得；
+     createdAt 欄位從未實際寫入過 Todo 物件（addTodo() 沒有這個欄位），移除避免誤導 */
+  state.todos.forEach(function(x){ if(x.doneAt) consider(localDateStr(new Date(x.doneAt))); consider(x.dueDate); });
+  state.memos.forEach(function(x){ if(x.ts) consider(localDateStr(new Date(x.ts))); consider(x.dueDate); });
+  (state.habits||[]).forEach(function(h){ Object.keys(h.logs||{}).forEach(consider); });
+  (state.chores||[]).forEach(function(c){ Object.keys(c.logs||{}).forEach(consider); });
+  (_fastLogs||[]).forEach(function(x){ consider(x.date); });
+  if (!minD || !maxD) return null;
+  return { from: minD, to: maxD };
+}
+
 function exportAllXLSX() {
   if (typeof XLSX === 'undefined') { alert('Excel 函式庫載入中，請稍後再試'); return; }
   var wb = XLSX.utils.book_new();
@@ -9370,7 +10035,9 @@ function exportAllXLSX() {
   ] : [];
   add('日型巨量目標', ['日型','熱量(kcal)','蛋白質(g)','碳水(g)','脂肪(g)'], bdMacroRows, [1,2,3,4]);
 
-  _uploadOrSaveXLSX(wb, 'Nicole日誌_全部資料.xlsx');
+  var _xlsxRange = _computeXLSXDateRange();
+  var _xlsxFilename = _xlsxRange ? ('Nicole日誌_'+_xlsxRange.from+'_至_'+_xlsxRange.to+'.xlsx') : 'Nicole日誌_全部資料.xlsx';
+  _uploadOrSaveXLSX(wb, _xlsxFilename);
   /* 記錄上次匯出 Excel 的時間並即時更新設定頁標籤（2026-07-09 加入） */
   _xlsxExportLast = Date.now();
   saveStorage('myapp_xlsx_export_last', _xlsxExportLast);
@@ -9457,6 +10124,7 @@ if($('notif-test-btn')){
   });
 }
 $('csv-all-btn').addEventListener('click', exportAllXLSX);
+$('cleanup-run-btn').addEventListener('click', runDataCleanup);
 
 
 function updateTitleBadge(){
@@ -12454,6 +13122,220 @@ function renderWeekly() {
   if (prevBtn) { prevBtn.onclick = function(){ _weeklyOffset--; renderWeekly(); }; }
   if (nextBtn) { nextBtn.onclick = function(){ if(_weeklyOffset<0){_weeklyOffset++;renderWeekly();} }; }
   if (nextBtn) nextBtn.style.opacity = _weeklyOffset >= 0 ? '0.3' : '1';
+}
+
+/* ═══════════════════════════════════════════════════
+   📆 月回顧／🗓️ 年回顧（2026-08 加入，併入「週報」頁籤）
+   ═══════════════════════════════════════════════════ */
+var _weeklyPeriod = 'week'; /* 'week' | 'month' | 'year' */
+var _monthReviewOffset = 0; /* 0=本月, -1=上月, … */
+var _yearReviewOffset  = 0; /* 0=今年, -1=去年, … */
+
+function _mkAddMonths(mk, delta) {
+  var y = +mk.slice(0,4), m = +mk.slice(5,7) - 1 + delta;
+  while (m < 0) { m += 12; y--; }
+  while (m > 11) { m -= 12; y++; }
+  return y + '-' + String(m+1).padStart(2,'0');
+}
+function _currentMonthKey(offset) {
+  var now = new Date();
+  return _mkAddMonths(now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'), offset);
+}
+
+/* 產生「數值 vs 前一期」的差異徽章，供月/年回顧共用（用法同週報既有的 vsTag，獨立命名避免跟
+   renderWeekly() 內部的區域函式 vsTag 混淆）*/
+function buildPeriodVsBadge(curr, prev, unit, lowerIsBetter) {
+  if (curr===null || curr===undefined || prev===null || prev===undefined || isNaN(prev)) return '';
+  var diff = Math.round((curr-prev)*10)/10;
+  if (diff === 0) return '<span style="font-size:10px;color:var(--tx3);margin-left:4px">持平</span>';
+  var better = lowerIsBetter ? diff<0 : diff>0;
+  var arrow = diff>0 ? '▲' : '▼';
+  var color = better ? '#4caf50' : '#e57373';
+  return '<span style="font-size:10px;color:'+color+';margin-left:4px">'+arrow+' '+Math.abs(diff)+unit+'</span>';
+}
+
+function renderMonthReview() {
+  var mk = _currentMonthKey(_monthReviewOffset);
+  var prevMk = _mkAddMonths(mk, -1);
+  var rangeEl = $('month-review-range');
+  if (rangeEl) rangeEl.textContent = histMonthLabel(mk);
+
+  var sum = getMonthSummary(mk);
+  var prevSum = getMonthSummary(prevMk);
+  var content = $('month-review-content');
+  if (content) {
+    if (!sum) {
+      content.innerHTML = '<div style="text-align:center;color:var(--tx3);font-size:13px;padding:24px 16px">這個月沒有任何記錄</div>';
+    } else {
+      var html = '';
+      html += '<div class="weekly-section"><div class="weekly-section-title">🌙 睡眠</div>';
+      html += sum.sleep.avgHours!==null
+        ? ('<div class="weekly-row"><span>平均睡眠時數</span><span class="weekly-row-val">'+sum.sleep.avgHours+' h'+(prevSum?buildPeriodVsBadge(sum.sleep.avgHours,prevSum.sleep.avgHours,'h',false):'')+'</span></div>'+
+           '<div class="weekly-row"><span>有記錄天數</span><span class="weekly-row-val">'+sum.sleep.days+' 天</span></div>')
+        : '<div class="weekly-row"><span style="color:var(--tx3)">本月無睡眠記錄</span></div>';
+      html += '</div>';
+
+      html += '<div class="weekly-section"><div class="weekly-section-title">💧 飲水</div>';
+      html += sum.water.avgMl!==null
+        ? ('<div class="weekly-row"><span>平均飲水量</span><span class="weekly-row-val">'+sum.water.avgMl+' ml'+(prevSum?buildPeriodVsBadge(sum.water.avgMl,prevSum.water.avgMl,'ml',false):'')+'</span></div>'+
+           '<div class="weekly-row"><span>達標天數</span><span class="weekly-row-val">'+sum.water.goalDays+' / '+sum.water.days+' 天</span></div>')
+        : '<div class="weekly-row"><span style="color:var(--tx3)">本月無飲水記錄</span></div>';
+      html += '</div>';
+
+      html += '<div class="weekly-section"><div class="weekly-section-title">🍽 飲食</div>';
+      html += sum.food.days>0
+        ? ('<div class="weekly-row"><span>日均熱量</span><span class="weekly-row-val">'+sum.food.avgCal+' kcal'+(prevSum?buildPeriodVsBadge(sum.food.avgCal,prevSum.food.avgCal,'kcal',false):'')+'</span></div>'+
+           '<div class="weekly-row"><span>日均蛋白質</span><span class="weekly-row-val">'+sum.food.avgPro+' g'+(prevSum?buildPeriodVsBadge(sum.food.avgPro,prevSum.food.avgPro,'g',false):'')+'</span></div>'+
+           '<div class="weekly-row"><span>日均淨碳水</span><span class="weekly-row-val">'+sum.food.avgCarb+' g'+(prevSum?buildPeriodVsBadge(sum.food.avgCarb,prevSum.food.avgCarb,'g',true):'')+'</span></div>')
+        : '<div class="weekly-row"><span style="color:var(--tx3)">本月無飲食記錄</span></div>';
+      html += '</div>';
+
+      html += '<div class="weekly-section"><div class="weekly-section-title">❤️ 血壓</div>';
+      html += sum.bp.count>0
+        ? ('<div class="weekly-row"><span>平均收縮壓</span><span class="weekly-row-val">'+sum.bp.avgSys+' mmHg'+(prevSum?buildPeriodVsBadge(sum.bp.avgSys,prevSum.bp.avgSys,'',false):'')+'</span></div>'+
+           '<div class="weekly-row"><span>平均舒張壓</span><span class="weekly-row-val">'+sum.bp.avgDia+' mmHg</span></div>'+
+           '<div class="weekly-row"><span>平均脈壓差</span><span class="weekly-row-val">'+sum.bp.avgPP+' mmHg</span></div>')
+        : '<div class="weekly-row"><span style="color:var(--tx3)">本月無血壓記錄</span></div>';
+      html += '</div>';
+
+      if (state.habits.length || sum.habitRate!==null) {
+        html += '<div class="weekly-section"><div class="weekly-section-title">🔄 習慣</div>';
+        html += sum.habitRate!==null
+          ? '<div class="weekly-row"><span>平均完成率</span><span class="weekly-row-val">'+sum.habitRate+'%'+(prevSum?buildPeriodVsBadge(sum.habitRate,prevSum.habitRate,'%',false):'')+'</span></div>'
+          : '<div class="weekly-row"><span style="color:var(--tx3)">本月無習慣打卡記錄</span></div>';
+        html += '</div>';
+      }
+
+      html += '<div class="weekly-section"><div class="weekly-section-title">📖 日記</div>';
+      html += '<div class="weekly-row"><span>本月記錄天數</span><span class="weekly-row-val">'+sum.diaryDays+' 天</span></div>';
+      html += '</div>';
+
+      html += '<div class="weekly-section"><div class="weekly-section-title">✅ 待辦事項</div>';
+      html += '<div class="weekly-row"><span>本月完成任務</span><span class="weekly-row-val">'+sum.todoDone+' 項</span></div>';
+      html += '</div>';
+
+      html += '<div class="weekly-section"><div class="weekly-section-title">📝 筆記本</div>';
+      html += '<div class="weekly-row"><span>本月新增筆記</span><span class="weekly-row-val">'+sum.memoCount+' 則</span></div>';
+      html += '</div>';
+
+      content.innerHTML = html;
+    }
+  }
+
+  var prevBtn = $('month-review-prev-btn'), nextBtn = $('month-review-next-btn');
+  if (prevBtn) prevBtn.onclick = function(){ _monthReviewOffset--; renderMonthReview(); };
+  if (nextBtn) nextBtn.onclick = function(){ if (_monthReviewOffset<0) { _monthReviewOffset++; renderMonthReview(); } };
+  if (nextBtn) nextBtn.style.opacity = _monthReviewOffset >= 0 ? '0.3' : '1';
+}
+
+/* 12個月迷你趨勢長條圖，供年回顧共用；monthsArr 為 getYearSummary().months（含 mk 與 s） */
+function buildYearMiniBars(monthsArr, getter) {
+  var vals = monthsArr.map(function(x){ var v = x.s ? getter(x.s) : null; return (v===null||v===undefined) ? 0 : v; });
+  var maxV = Math.max.apply(null, vals.concat([1]));
+  var bars = monthsArr.map(function(x,i){
+    var v = x.s ? getter(x.s) : null;
+    var pct = (v!==null && v!==undefined) ? Math.max(4, Math.round(v/maxV*100)) : 2;
+    var title = (+x.mk.slice(5,7)) + '月' + (v!==null&&v!==undefined ? ' '+v : '（無記錄）');
+    return '<div class="weekly-sparkline-bar" style="height:'+pct+'%" title="'+title+'"></div>';
+  }).join('');
+  var labels = monthsArr.map(function(x){ return '<span class="weekly-sparkline-lbl">'+(+x.mk.slice(5,7))+'</span>'; }).join('');
+  return '<div class="weekly-sparkline">'+bars+'</div><div class="weekly-sparkline-labels">'+labels+'</div>';
+}
+
+function renderYearReview() {
+  var now = new Date();
+  var year = now.getFullYear() + _yearReviewOffset;
+  var rangeEl = $('year-review-range');
+  if (rangeEl) rangeEl.textContent = year + ' 年';
+
+  var sum = getYearSummary(year);
+  var prevSum = getYearSummary(year-1);
+  var content = $('year-review-content');
+  if (content) {
+    if (!sum) {
+      content.innerHTML = '<div style="text-align:center;color:var(--tx3);font-size:13px;padding:24px 16px">這一年沒有任何記錄</div>';
+    } else {
+      var html = '';
+      html += '<div class="weekly-section"><div class="weekly-section-title">🌙 睡眠</div>';
+      html += sum.sleep.avgHours!==null
+        ? ('<div class="weekly-row"><span>全年平均睡眠時數</span><span class="weekly-row-val">'+sum.sleep.avgHours+' h'+(prevSum?buildPeriodVsBadge(sum.sleep.avgHours,prevSum.sleep.avgHours,'h',false):'')+'</span></div>'+
+           buildYearMiniBars(sum.months, function(s){return s.sleep.avgHours;}))
+        : '<div class="weekly-row"><span style="color:var(--tx3)">全年無睡眠記錄</span></div>';
+      html += '</div>';
+
+      html += '<div class="weekly-section"><div class="weekly-section-title">💧 飲水</div>';
+      html += sum.water.avgMl!==null
+        ? ('<div class="weekly-row"><span>全年平均飲水量</span><span class="weekly-row-val">'+sum.water.avgMl+' ml'+(prevSum?buildPeriodVsBadge(sum.water.avgMl,prevSum.water.avgMl,'ml',false):'')+'</span></div>'+
+           '<div class="weekly-row"><span>全年達標天數</span><span class="weekly-row-val">'+sum.water.totalGoalDays+' 天</span></div>')
+        : '<div class="weekly-row"><span style="color:var(--tx3)">全年無飲水記錄</span></div>';
+      html += '</div>';
+
+      html += '<div class="weekly-section"><div class="weekly-section-title">🍽 飲食</div>';
+      html += sum.food.avgCal!==null
+        ? ('<div class="weekly-row"><span>全年日均熱量</span><span class="weekly-row-val">'+sum.food.avgCal+' kcal'+(prevSum?buildPeriodVsBadge(sum.food.avgCal,prevSum.food.avgCal,'kcal',false):'')+'</span></div>'+
+           '<div class="weekly-row"><span>全年日均蛋白質</span><span class="weekly-row-val">'+sum.food.avgPro+' g'+(prevSum?buildPeriodVsBadge(sum.food.avgPro,prevSum.food.avgPro,'g',false):'')+'</span></div>'+
+           '<div class="weekly-row"><span>全年日均淨碳水</span><span class="weekly-row-val">'+sum.food.avgCarb+' g'+(prevSum?buildPeriodVsBadge(sum.food.avgCarb,prevSum.food.avgCarb,'g',true):'')+'</span></div>')
+        : '<div class="weekly-row"><span style="color:var(--tx3)">全年無飲食記錄</span></div>';
+      html += '</div>';
+
+      html += '<div class="weekly-section"><div class="weekly-section-title">❤️ 血壓</div>';
+      html += sum.bp.totalCount>0
+        ? ('<div class="weekly-row"><span>全年平均收縮壓</span><span class="weekly-row-val">'+sum.bp.avgSys+' mmHg'+(prevSum?buildPeriodVsBadge(sum.bp.avgSys,prevSum.bp.avgSys,'',false):'')+'</span></div>'+
+           '<div class="weekly-row"><span>全年平均舒張壓</span><span class="weekly-row-val">'+sum.bp.avgDia+' mmHg</span></div>'+
+           buildYearMiniBars(sum.months, function(s){return s.bp.avgSys;}))
+        : '<div class="weekly-row"><span style="color:var(--tx3)">全年無血壓記錄</span></div>';
+      html += '</div>';
+
+      if (state.habits.length || sum.habitRate!==null) {
+        html += '<div class="weekly-section"><div class="weekly-section-title">🔄 習慣</div>';
+        html += sum.habitRate!==null
+          ? ('<div class="weekly-row"><span>全年平均完成率</span><span class="weekly-row-val">'+sum.habitRate+'%'+(prevSum?buildPeriodVsBadge(sum.habitRate,prevSum.habitRate,'%',false):'')+'</span></div>'+
+             buildYearMiniBars(sum.months, function(s){return s.habitRate;}))
+          : '<div class="weekly-row"><span style="color:var(--tx3)">全年無習慣打卡記錄</span></div>';
+        html += '</div>';
+      }
+
+      html += '<div class="weekly-section"><div class="weekly-section-title">📖 日記</div>';
+      html += '<div class="weekly-row"><span>全年記錄天數</span><span class="weekly-row-val">'+sum.diaryDays+' 天</span></div>';
+      html += '</div>';
+
+      html += '<div class="weekly-section"><div class="weekly-section-title">✅ 待辦事項</div>';
+      html += '<div class="weekly-row"><span>全年完成任務</span><span class="weekly-row-val">'+sum.todoDone+' 項</span></div>';
+      html += '</div>';
+
+      html += '<div class="weekly-section"><div class="weekly-section-title">📝 筆記本</div>';
+      html += '<div class="weekly-row"><span>全年新增筆記</span><span class="weekly-row-val">'+sum.memoCount+' 則</span></div>';
+      html += '</div>';
+
+      content.innerHTML = html;
+    }
+  }
+
+  var prevBtn = $('year-review-prev-btn'), nextBtn = $('year-review-next-btn');
+  if (prevBtn) prevBtn.onclick = function(){ _yearReviewOffset--; renderYearReview(); };
+  if (nextBtn) nextBtn.onclick = function(){ if (_yearReviewOffset<0) { _yearReviewOffset++; renderYearReview(); } };
+  if (nextBtn) nextBtn.style.opacity = _yearReviewOffset >= 0 ? '0.3' : '1';
+}
+
+/* 週報頁「週／月／年」頁籤切換 */
+function switchWeeklyPeriod(period) {
+  _weeklyPeriod = period;
+  document.querySelectorAll('#weekly-period-tabs .weekly-period-tab').forEach(function(b){ b.classList.toggle('active', b.dataset.period===period); });
+  var wv = $('weekly-view-week'), mv = $('weekly-view-month'), yv = $('weekly-view-year');
+  if (wv) wv.style.display = period==='week'  ? '' : 'none';
+  if (mv) mv.style.display = period==='month' ? '' : 'none';
+  if (yv) yv.style.display = period==='year'  ? '' : 'none';
+  if (period==='week')  renderWeekly();
+  if (period==='month') renderMonthReview();
+  if (period==='year')  renderYearReview();
+}
+document.querySelectorAll('#weekly-period-tabs .weekly-period-tab').forEach(function(b){
+  b.addEventListener('click', function(){ switchWeeklyPeriod(b.dataset.period); });
+});
+
+/* 進入「週報」頁時，依目前選擇的頁籤渲染對應內容（取代原本直接呼叫 renderWeekly()） */
+function renderWeeklyPage() {
+  switchWeeklyPeriod(_weeklyPeriod);
 }
 </script>
 </body>
