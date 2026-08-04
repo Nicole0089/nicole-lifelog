@@ -960,9 +960,11 @@ input::placeholder { color: var(--tx3); }
 .sleep-hrs-badge.ok    { background: #FEF3CD; color: #8A6500; }
 .sleep-hrs-badge.poor  { background: #FDDBD8; color: #C0392B; }
 .sleep-hrs-badge.none  { background: var(--bg2); color: var(--tx3); }
-.sleep-bed-badge { display: inline-block; padding: 1px 6px; border-radius: 8px; font-weight: 600; font-size: 12px; }
+.sleep-bed-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-weight: 600; font-size: 13px; }
 .sleep-bed-badge.warn   { background: #FEF3CD; color: #8A6500; }
 .sleep-bed-badge.severe { background: #FDDBD8; color: #C0392B; }
+.sleep-tbl-legend { font-size: 11px; color: var(--tx3); text-align: center; padding: 0 4px 8px; }
+.sleep-tbl-legend .sleep-bed-badge { padding: 1px 6px; font-size: 11px; margin: 0 2px; }
 .sleep-tbl-summary { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 0 14px; }
 .sleep-tbl-sum-item { flex: 1; background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); padding: 10px 8px; text-align: center; }
 .sleep-tbl-sum-val { font-size: 18px; font-weight: 600; color: var(--ac); }
@@ -1802,6 +1804,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
             <span class="sleep-tbl-nav-title" id="sleep-tbl-title"></span>
             <button class="sleep-tbl-nav-btn" id="sleep-tbl-next">›</button>
           </div>
+          <div class="sleep-tbl-legend">就寢欄位顏色：<span class="sleep-bed-badge warn">黃</span>＝1:30後　<span class="sleep-bed-badge severe">紅</span>＝2:30後</div>
           <div class="sleep-tbl-summary" id="sleep-tbl-summary"></div>
           <table class="sleep-tbl">
             <thead><tr>
@@ -7835,7 +7838,7 @@ function renderSleepTable() {
     if (arr.indexOf('unknown') >= 0) parts.push('?');
     return parts.length ? parts.join('/') : '─';
   }
-  /* helper：就寢時間 → 是否為凌晨過晚（1:30後/2:30後）標註 */
+  /* helper：就寢時間 → 是否為凌晨過晚（1:30後/2:30後），純色標註（說明見表格上方圖例） */
   function fmtBedtimeBadge(bedtime) {
     if (!bedtime) return '─';
     var bp = bedtime.split(':').map(Number);
@@ -7844,10 +7847,10 @@ function renderSleepTable() {
     var mins = hh * 60 + mm;
     /* 只有「凌晨」(00:00~11:59) 的就寢時間才需要比對 1:30 / 2:30 */
     if (hh < 12 && mins >= 150) {
-      return '<span class="sleep-bed-badge severe">'+bedtime+' ⚠凌晨2:30後</span>';
+      return '<span class="sleep-bed-badge severe">'+bedtime+'</span>';
     }
     if (hh < 12 && mins >= 90) {
-      return '<span class="sleep-bed-badge warn">'+bedtime+' ⚠凌晨1:30後</span>';
+      return '<span class="sleep-bed-badge warn">'+bedtime+'</span>';
     }
     return bedtime;
   }
