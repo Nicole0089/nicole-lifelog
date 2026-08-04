@@ -960,6 +960,9 @@ input::placeholder { color: var(--tx3); }
 .sleep-hrs-badge.ok    { background: #FEF3CD; color: #8A6500; }
 .sleep-hrs-badge.poor  { background: #FDDBD8; color: #C0392B; }
 .sleep-hrs-badge.none  { background: var(--bg2); color: var(--tx3); }
+.sleep-bed-badge { display: inline-block; padding: 1px 6px; border-radius: 8px; font-weight: 600; font-size: 12px; }
+.sleep-bed-badge.warn   { background: #FEF3CD; color: #8A6500; }
+.sleep-bed-badge.severe { background: #FDDBD8; color: #C0392B; }
 .sleep-tbl-summary { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 0 14px; }
 .sleep-tbl-sum-item { flex: 1; background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); padding: 10px 8px; text-align: center; }
 .sleep-tbl-sum-val { font-size: 18px; font-weight: 600; color: var(--ac); }
@@ -7832,6 +7835,22 @@ function renderSleepTable() {
     if (arr.indexOf('unknown') >= 0) parts.push('?');
     return parts.length ? parts.join('/') : '─';
   }
+  /* helper：就寢時間 → 是否為凌晨過晚（1:30後/2:30後）標註 */
+  function fmtBedtimeBadge(bedtime) {
+    if (!bedtime) return '─';
+    var bp = bedtime.split(':').map(Number);
+    var hh = bp[0], mm = bp[1];
+    if (isNaN(hh) || isNaN(mm)) return bedtime;
+    var mins = hh * 60 + mm;
+    /* 只有「凌晨」(00:00~11:59) 的就寢時間才需要比對 1:30 / 2:30 */
+    if (hh < 12 && mins >= 150) {
+      return '<span class="sleep-bed-badge severe">'+bedtime+' ⚠凌晨2:30後</span>';
+    }
+    if (hh < 12 && mins >= 90) {
+      return '<span class="sleep-bed-badge warn">'+bedtime+' ⚠凌晨1:30後</span>';
+    }
+    return bedtime;
+  }
   var rows = '', totalHrs = 0, countDays = 0, goodDays = 0;
   var napDays = 0, totalNapHrs = 0;
   var leftNumbDays = 0, rightNumbDays = 0;
@@ -7863,7 +7882,7 @@ function renderSleepTable() {
       var hnColor = (hn.length && hn.indexOf('none_numb') < 0) ? 'color:#c0392b' : 'color:var(--tx3)';
       rows += '<tr>' +
         '<td class="date-col">'+dateLabel+'</td>' +
-        '<td>'+(s.bedtime||'─')+'</td>' +
+        '<td>'+fmtBedtimeBadge(s.bedtime)+'</td>' +
         '<td>'+(s.wakeTime||'─')+'</td>' +
         '<td><span class="sleep-hrs-badge '+badgeCls+'">'+hTxt+(h>0?' h':'')+'</span></td>' +
         '<td style="font-size:11px;color:#C89A50">'+stars+'</td>' +
