@@ -10159,6 +10159,111 @@ function _computeXLSXDateRange() {
   return { from: minD, to: maxD };
 }
 
+/* 週報／月回顧／年回顧彙整成單一工作表用的資料組裝（2026-08-04 新增）：
+   Section 1 是匯出當下的本週（近7天）快照，Section 2/3 依 _computeXLSXDateRange()
+   算出的實際資料日期範圍，逐月/逐年呼叫 getMonthSummary()/getYearSummary()
+   組成歷史列表；沒有資料的月/年會被跳過（getMonthSummary/getYearSummary 回傳 null） */
+function _buildReviewSheetAOA() {
+  var aoa = [];
+
+  /* ── Section 1：本週週報快照 ── */
+  aoa.push(['📅 本週週報快照（匯出當下的近7天資料，非歷史紀錄）']);
+  aoa.push(['週期','平均睡眠時數(h)','凌晨1:30後就寢(天)','凌晨2:30後就寢(天)','平均飲水量(ml)','飲水達標天數(/7)','日均蛋白質(g)','日均碳水(g)','習慣完成率(%)','日記記錄天數(/7)','完成待辦(項)']);
+  var wr = getWeekRange(0);
+  var wdays = [];
+  for (var i=0; i<7; i++) { var d=new Date(wr.mon); d.setDate(wr.mon.getDate()+i); wdays.push(localDateStr(d)); }
+  var wSleepLogs = wdays.map(function(dk){ return state.sleepLogs.find(function(s){return s.date===dk;}); }).filter(Boolean);
+  var wSleepHours = wSleepLogs.map(function(s){ return parseFloat(s.sleepHours)||0; }).filter(function(x){return x>0;});
+  var wSleepAvg = wSleepHours.length ? r1(wSleepHours.reduce(function(a,b){return a+b;},0)/wSleepHours.length) : '';
+  var wLate = countLateBedtimeDays(wSleepLogs);
+  var WGOAL = typeof WATER_GOAL !== 'undefined' ? WATER_GOAL : 2000;
+  var wWaterByDate = {};
+  state.waterLogs.forEach(function(l){ if (wdays.indexOf(l.date)>=0) wWaterByDate[l.date]=(wWaterByDate[l.date]||0)+(+l.ml||0); });
+  var wWaterVals = wdays.map(function(dk){ return wWaterByDate[dk]||0; });
+  var wWaterFilled = wWaterVals.filter(function(x){ return x>0; });
+  var wWaterAvg = wWaterFilled.length ? r1(wWaterFilled.reduce(function(a,b){return a+b;},0)/wWaterFilled.length) : '';
+  var wWaterGoalDays = wWaterVals.filter(function(x){ return x>=WGOAL; }).length;
+  var wFoodByDate = {};
+  state.foodLogs.forEach(function(l){
+    if (wdays.indexOf(l.date)>=0) {
+      if (!wFoodByDate[l.date]) wFoodByDate[l.date] = {pro:0,carb:0};
+      wFoodByDate[l.date].pro  += (+l.protein||0);
+      wFoodByDate[l.date].carb += (+l.carbs||0);
+    }
+  });
+  var wFoodDays = Object.keys(wFoodByDate);
+  var wAvgPro  = wFoodDays.length ? r1(wFoodDays.reduce(function(s,dk){return s+wFoodByDate[dk].pro;},0)/wFoodDays.length) : '';
+  var wAvgCarb = wFoodDays.length ? r1(wFoodDays.reduce(function(s,dk){return s+wFoodByDate[dk].carb;},0)/wFoodDays.length) : '';
+  var wHabitRate = '';
+  if (state.habits.length) {
+    var doneSlots=0, totalSlots=0;
+    wdays.forEach(function(dk){ state.habits.forEach(function(h){ totalSlots++; if ((h.logs||{})[dk]) doneSlots++; }); });
+    wHabitRate = totalSlots>0 ? r1(doneSlots/totalSlots*100) : '';
+  }
+  var wDiaryDays = wdays.filter(function(dk){ return state.diaryEntries.some(function(e){return e.date===dk;}); }).length;
+  var wTodoDone = wdays.reduce(function(s,dk){
+    var start=new Date(dk).getTime(), end=start+86400000;
+    return s + state.todos.filter(function(t){ return t.done && t.doneAt && t.doneAt>=start && t.doneAt<end; }).length;
+  }, 0);
+  aoa.push([wr.start+' ～ '+wr.end, wSleepAvg, wLate.after130, wLate.after230, wWaterAvg, wWaterGoalDays, wAvgPro, wAvgCarb, wHabitRate, wDiaryDays, wTodoDone]);
+  aoa.push([]);
+
+  var xr = _computeXLSXDateRange();
+
+  /* ── Section 2：月回顧（依實際資料日期範圍逐月列出） ── */
+  aoa.push(['📆 月回顧']);
+  aoa.push(['月份','平均睡眠時數(h)','睡眠有記錄天數','凌晨1:30後就寢(天)','凌晨2:30後就寢(天)','平均飲水量(ml)','飲水達標天數','日均熱量(kcal)','日均蛋白質(g)','日均碳水(g)','平均收縮壓','平均舒張壓','習慣完成率(%)','日記天數','完成待辦(項)','新增筆記(則)','平均斷食時數(h)']);
+  if (xr) {
+    var mk = xr.from.slice(0,7), endMk = xr.to.slice(0,7);
+    while (mk <= endMk) {
+      var ms = getMonthSummary(mk);
+      if (ms) {
+        aoa.push([histMonthLabel(mk), ms.sleep.avgHours, ms.sleep.days, ms.sleep.lateAfter130||0, ms.sleep.lateAfter230||0,
+          ms.water.avgMl, ms.water.goalDays, ms.food.avgCal, ms.food.avgPro, ms.food.avgCarb,
+          ms.bp.avgSys, ms.bp.avgDia, ms.habitRate, ms.diaryDays, ms.todoDone, ms.memoCount, ms.fasting.avgHours]);
+      }
+      mk = _mkAddMonths(mk, 1);
+    }
+  }
+  aoa.push([]);
+
+  /* ── Section 3：年回顧 ── */
+  aoa.push(['🗓️ 年回顧']);
+  aoa.push(['年份','全年平均睡眠時數(h)','全年凌晨1:30後就寢(天)','全年凌晨2:30後就寢(天)','全年平均飲水量(ml)','全年飲水達標天數','全年日均熱量(kcal)','全年日均蛋白質(g)','全年日均碳水(g)','全年平均收縮壓','全年平均舒張壓','全年習慣完成率(%)','全年日記天數','全年完成待辦(項)','全年新增筆記(則)','全年平均斷食時數(h)']);
+  if (xr) {
+    var y1 = +xr.from.slice(0,4), y2 = +xr.to.slice(0,4);
+    for (var y=y1; y<=y2; y++) {
+      var ys = getYearSummary(y);
+      if (ys) {
+        aoa.push([y+'年', ys.sleep.avgHours, ys.sleep.totalLateAfter130||0, ys.sleep.totalLateAfter230||0,
+          ys.water.avgMl, ys.water.totalGoalDays, ys.food.avgCal, ys.food.avgPro, ys.food.avgCarb,
+          ys.bp.avgSys, ys.bp.avgDia, ys.habitRate, ys.diaryDays, ys.todoDone, ys.memoCount, ys.fasting.avgHours]);
+      }
+    }
+  }
+
+  return aoa;
+}
+
+/* 把 _buildReviewSheetAOA() 的三段式資料轉成有粗體標題列的工作表，並加進活頁簿（2026-08-04 新增） */
+function _addReviewSheet(wb) {
+  var aoa = _buildReviewSheetAOA();
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  var maxCols = aoa.reduce(function(m,row){ return Math.max(m, row.length); }, 1);
+  ws['!cols'] = Array.apply(null, { length: maxCols }).map(function(){ return { wch: 13 }; });
+  aoa.forEach(function(row, ri) {
+    var isSectionTitle = row.length === 1;
+    var isHeaderRow = row[0] === '週期' || row[0] === '月份' || row[0] === '年份';
+    if (!isSectionTitle && !isHeaderRow) return;
+    for (var c = 0; c < maxCols; c++) {
+      var addr = XLSX.utils.encode_cell({ r: ri, c: c });
+      if (!ws[addr]) continue;
+      ws[addr].s = { font: { bold: true }, fill: { fgColor: { rgb: 'E8D4D0' } } };
+    }
+  });
+  XLSX.utils.book_append_sheet(wb, ws, '週報月年回顧');
+}
+
 function exportAllXLSX() {
   if (typeof XLSX === 'undefined') { alert('Excel 函式庫載入中，請稍後再試'); return; }
   var wb = XLSX.utils.book_new();
@@ -10271,6 +10376,9 @@ function exportAllXLSX() {
     ['⚫ 休息日', bdMacros.rest.cal, bdMacros.rest.pro, bdMacros.rest.carb, bdMacros.rest.fat]
   ] : [];
   add('日型巨量目標', ['日型','熱量(kcal)','蛋白質(g)','碳水(g)','脂肪(g)'], bdMacroRows, [1,2,3,4]);
+
+  /* ── 週報／月回顧／年回顧彙整（2026-08-04 新增） ── */
+  _addReviewSheet(wb);
 
   var _xlsxRange = _computeXLSXDateRange();
   var _xlsxFilename = _xlsxRange ? ('Nicole日誌_'+_xlsxRange.from+'_至_'+_xlsxRange.to+'.xlsx') : 'Nicole日誌_全部資料.xlsx';
