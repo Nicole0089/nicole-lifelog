@@ -7838,20 +7838,11 @@ function renderSleepTable() {
     if (arr.indexOf('unknown') >= 0) parts.push('?');
     return parts.length ? parts.join('/') : '─';
   }
-  /* helper：就寢時間 → 是否為凌晨過晚（1:30後/2:30後），純色標註（說明見表格上方圖例） */
+  /* helper：就寢時間純色標註（說明見表格上方圖例），判斷邏輯共用全域 bedtimeLateLevel() */
   function fmtBedtimeBadge(bedtime) {
     if (!bedtime) return '─';
-    var bp = bedtime.split(':').map(Number);
-    var hh = bp[0], mm = bp[1];
-    if (isNaN(hh) || isNaN(mm)) return bedtime;
-    var mins = hh * 60 + mm;
-    /* 只有「凌晨」(00:00~11:59) 的就寢時間才需要比對 1:30 / 2:30 */
-    if (hh < 12 && mins >= 150) {
-      return '<span class="sleep-bed-badge severe">'+bedtime+'</span>';
-    }
-    if (hh < 12 && mins >= 90) {
-      return '<span class="sleep-bed-badge warn">'+bedtime+'</span>';
-    }
+    var lvl = bedtimeLateLevel(bedtime);
+    if (lvl) return '<span class="sleep-bed-badge '+lvl+'">'+bedtime+'</span>';
     return bedtime;
   }
   var rows = '', totalHrs = 0, countDays = 0, goodDays = 0;
@@ -7927,6 +7918,30 @@ if (_stblNext) _stblNext.addEventListener('click', function() {
   _sleepTblView.month++; if (_sleepTblView.month>11) { _sleepTblView.month=0; _sleepTblView.year++; }
   renderSleepTable();
 });
+
+/* 就寢時間是否為「凌晨過晚」：只有凌晨(00:00~11:59)的就寢時間才比對，
+   回傳 'severe'（≥02:30）/ 'warn'（≥01:30）/ null（正常）；
+   睡眠頁「統計表」與週報/月回顧/年回顧的過晚就寢天數統計共用此邏輯 */
+function bedtimeLateLevel(bedtime) {
+  if (!bedtime) return null;
+  var bp = bedtime.split(':').map(Number);
+  var hh = bp[0], mm = bp[1];
+  if (isNaN(hh) || isNaN(mm) || hh >= 12) return null;
+  var mins = hh * 60 + mm;
+  if (mins >= 150) return 'severe';
+  if (mins >= 90) return 'warn';
+  return null;
+}
+/* 睡眠紀錄陣列 → {after130, after230} 過晚就寢天數（after230 為 after130 的子集） */
+function countLateBedtimeDays(logs) {
+  var after130 = 0, after230 = 0;
+  (logs||[]).forEach(function(s) {
+    var lvl = bedtimeLateLevel(s.bedtime);
+    if (lvl === 'warn' || lvl === 'severe') after130++;
+    if (lvl === 'severe') after230++;
+  });
+  return { after130: after130, after230: after230 };
+}
 
 function calcSleepHoursAuto(bedtime, waketime) {
   if (!bedtime || !waketime) return null;
@@ -9865,6 +9880,7 @@ function computeMonthSummaryLive(mk) {
   var sleepArr = state.sleepLogs.filter(function(s){ return (s.date||'').indexOf(mk)===0; });
   var sleepHoursArr = sleepArr.map(function(s){ return parseFloat(s.sleepHours)||0; }).filter(function(x){return x>0;});
   var sleepQualArr  = sleepArr.map(function(s){ return s.quality||0; }).filter(function(x){return x>0;});
+  var sleepLateCounts = countLateBedtimeDays(sleepArr);
 
   var bpArr = state.bpLogs.filter(function(b){ return (b.datetime||'').indexOf(mk)===0; });
 
@@ -9920,7 +9936,7 @@ function computeMonthSummaryLive(mk) {
 
   return {
     mk: mk,
-    sleep: { avgHours: avg(sleepHoursArr), avgQuality: avg(sleepQualArr), days: sleepHoursArr.length },
+    sleep: { avgHours: avg(sleepHoursArr), avgQuality: avg(sleepQualArr), days: sleepHoursArr.length, lateAfter130: sleepLateCounts.after130, lateAfter230: sleepLateCounts.after230 },
     bp: {
       avgSys: bpArr.length ? r1(bpArr.reduce(function(s,b){return s+(+b.sys||0);},0)/bpArr.length) : null,
       avgDia: bpArr.length ? r1(bpArr.reduce(function(s,b){return s+(+b.dia||0);},0)/bpArr.length) : null,
@@ -9983,7 +9999,9 @@ function getYearSummary(year) {
     year: year,
     months: months,
     sleep: { avgHours: wavg(function(s){return s.sleep.avgHours;}, function(s){return s.sleep.days;}),
-             totalDays: withData.reduce(function(a,x){return a+x.s.sleep.days;},0) },
+             totalDays: withData.reduce(function(a,x){return a+x.s.sleep.days;},0),
+             totalLateAfter130: withData.reduce(function(a,x){return a+(x.s.sleep.lateAfter130||0);},0),
+             totalLateAfter230: withData.reduce(function(a,x){return a+(x.s.sleep.lateAfter230||0);},0) },
     bp: { avgSys: wavg(function(s){return s.bp.avgSys;}, function(s){return s.bp.count;}),
           avgDia: wavg(function(s){return s.bp.avgDia;}, function(s){return s.bp.count;}),
           totalCount: withData.reduce(function(a,x){return a+x.s.bp.count;},0) },
@@ -13171,9 +13189,17 @@ function renderWeekly() {
   var sleepMax = sleepFilled.length ? Math.max.apply(null,sleepFilled) : 8;
   var prevSleepFilled = prevDays.map(function(dk){ var l=state.sleepLogs.find(function(s){return s.date===dk;}); return l?(parseFloat(l.sleepHours)||0):null; }).filter(function(x){return x!==null;});
   var prevSleepAvg = prevSleepFilled.length ? prevSleepFilled.reduce(function(a,b){return a+b;},0)/prevSleepFilled.length : null;
+  var weekSleepLogs = days.map(function(dk){ return state.sleepLogs.find(function(s){return s.date===dk;}); }).filter(Boolean);
+  var prevWeekSleepLogs = prevDays.map(function(dk){ return state.sleepLogs.find(function(s){return s.date===dk;}); }).filter(Boolean);
+  var lateCounts = countLateBedtimeDays(weekSleepLogs);
+  var prevLateCounts = countLateBedtimeDays(prevWeekSleepLogs);
   html += '<div class="weekly-section">';
   html += '<div class="weekly-section-title">🌙 睡眠</div>';
   html += '<div class="weekly-row"><span>平均睡眠時數</span><span class="weekly-row-val">'+sleepAvg+(sleepAvg!=='─'?' h':'')+(sleepAvg!=='─'&&prevSleepAvg!==null?vsTag(parseFloat(sleepAvg),prevSleepAvg,'h',false):'')+'</span></div>';
+  if (sleepFilled.length) {
+    html += '<div class="weekly-row"><span>凌晨1:30後就寢</span><span class="weekly-row-val">'+lateCounts.after130+' / 7 天'+(prevWeekSleepLogs.length?vsTag(lateCounts.after130,prevLateCounts.after130,'天',true):'')+'</span></div>';
+    html += '<div class="weekly-row"><span>凌晨2:30後就寢</span><span class="weekly-row-val">'+lateCounts.after230+' / 7 天'+(prevWeekSleepLogs.length?vsTag(lateCounts.after230,prevLateCounts.after230,'天',true):'')+'</span></div>';
+  }
   html += '<div class="weekly-sparkline">' + days.map(function(dk,i){
     var h = sleepData[i]; var maxH = sleepMax||8;
     var pct = h!==null ? Math.max(5,Math.round(h/maxH*100)) : 5;
@@ -13390,7 +13416,9 @@ function renderMonthReview() {
       html += '<div class="weekly-section"><div class="weekly-section-title">🌙 睡眠</div>';
       html += sum.sleep.avgHours!==null
         ? ('<div class="weekly-row"><span>平均睡眠時數</span><span class="weekly-row-val">'+sum.sleep.avgHours+' h'+(prevSum?buildPeriodVsBadge(sum.sleep.avgHours,prevSum.sleep.avgHours,'h',false):'')+'</span></div>'+
-           '<div class="weekly-row"><span>有記錄天數</span><span class="weekly-row-val">'+sum.sleep.days+' 天</span></div>')
+           '<div class="weekly-row"><span>有記錄天數</span><span class="weekly-row-val">'+sum.sleep.days+' 天</span></div>'+
+           '<div class="weekly-row"><span>凌晨1:30後就寢</span><span class="weekly-row-val">'+(sum.sleep.lateAfter130||0)+' 天'+(prevSum?buildPeriodVsBadge(sum.sleep.lateAfter130||0,prevSum.sleep.lateAfter130||0,'天',true):'')+'</span></div>'+
+           '<div class="weekly-row"><span>凌晨2:30後就寢</span><span class="weekly-row-val">'+(sum.sleep.lateAfter230||0)+' 天'+(prevSum?buildPeriodVsBadge(sum.sleep.lateAfter230||0,prevSum.sleep.lateAfter230||0,'天',true):'')+'</span></div>')
         : '<div class="weekly-row"><span style="color:var(--tx3)">本月無睡眠記錄</span></div>';
       html += '</div>';
 
@@ -13486,6 +13514,8 @@ function renderYearReview() {
       html += '<div class="weekly-section"><div class="weekly-section-title">🌙 睡眠</div>';
       html += sum.sleep.avgHours!==null
         ? ('<div class="weekly-row"><span>全年平均睡眠時數</span><span class="weekly-row-val">'+sum.sleep.avgHours+' h'+(prevSum?buildPeriodVsBadge(sum.sleep.avgHours,prevSum.sleep.avgHours,'h',false):'')+'</span></div>'+
+           '<div class="weekly-row"><span>全年凌晨1:30後就寢</span><span class="weekly-row-val">'+(sum.sleep.totalLateAfter130||0)+' 天'+(prevSum?buildPeriodVsBadge(sum.sleep.totalLateAfter130||0,prevSum.sleep.totalLateAfter130||0,'天',true):'')+'</span></div>'+
+           '<div class="weekly-row"><span>全年凌晨2:30後就寢</span><span class="weekly-row-val">'+(sum.sleep.totalLateAfter230||0)+' 天'+(prevSum?buildPeriodVsBadge(sum.sleep.totalLateAfter230||0,prevSum.sleep.totalLateAfter230||0,'天',true):'')+'</span></div>'+
            buildYearMiniBars(sum.months, function(s){return s.sleep.avgHours;}))
         : '<div class="weekly-row"><span style="color:var(--tx3)">全年無睡眠記錄</span></div>';
       html += '</div>';
