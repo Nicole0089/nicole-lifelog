@@ -941,8 +941,9 @@ input::placeholder { color: var(--tx3); }
 /* 睡眠趨勢頁「睡眠備註記錄」（2026-08-06 加入） */
 .sleep-note-item { padding: 8px 4px; border-bottom: 0.5px solid var(--bd); }
 .sleep-note-item:last-child { border-bottom: none; }
-.sleep-note-date { font-size: 12px; color: var(--tx2); margin-bottom: 3px; }
-.sleep-note-times { color: var(--tx3); }
+.sleep-note-date { font-size: 12px; color: var(--tx2); margin-bottom: 3px; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.sleep-note-day { flex-shrink: 0; }
+.sleep-note-meta { color: var(--tx3); font-size: 11px; text-align: right; }
 .sleep-note-text { font-size: 13px; color: var(--tx); line-height: 1.5; white-space: pre-wrap; }
 /* Sleep tabs */
 .sleep-tabs { display: flex; border-bottom: 0.5px solid var(--bd); background: var(--bg); position: sticky; top: 0; z-index: 4; }
@@ -12842,8 +12843,9 @@ function renderSleepTrend() {
     });
     function sleepNoteItemHTML(s) {
       var times = (s.bedtime || '─') + (s.wakeTime ? ' → ' + s.wakeTime : '');
+      var meta = times + '　睡眠' + (s.sleepHours || '─') + 'h　夜尿' + (s.nocturia || 0) + '次　手麻' + _fmtHandNumbXlsx(s.handNumb);
       return '<div class="sleep-note-item">' +
-        '<div class="sleep-note-date">' + s.date + '　<span class="sleep-note-times">' + times + '</span></div>' +
+        '<div class="sleep-note-date"><span class="sleep-note-day">' + s.date + '</span><span class="sleep-note-meta">' + meta + '</span></div>' +
         '<div class="sleep-note-text">' + esc(s.note) + '</div>' +
       '</div>';
     }
