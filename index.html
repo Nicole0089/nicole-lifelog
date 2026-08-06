@@ -938,6 +938,12 @@ input::placeholder { color: var(--tx3); }
 .sleep-log-main { font-size: 14px; color: var(--tx); margin-bottom: 2px; }
 .sleep-log-sub  { font-size: 12px; color: var(--tx3); }
 .sleep-log-del  { background: none; border: none; font-size: 16px; color: var(--tx3); cursor: pointer; flex-shrink: 0; }
+/* 睡眠趨勢頁「睡眠備註記錄」（2026-08-06 加入） */
+.sleep-note-item { padding: 8px 4px; border-bottom: 0.5px solid var(--bd); }
+.sleep-note-item:last-child { border-bottom: none; }
+.sleep-note-date { font-size: 12px; color: var(--tx2); margin-bottom: 3px; }
+.sleep-note-times { color: var(--tx3); }
+.sleep-note-text { font-size: 13px; color: var(--tx); line-height: 1.5; white-space: pre-wrap; }
 /* Sleep tabs */
 .sleep-tabs { display: flex; border-bottom: 0.5px solid var(--bd); background: var(--bg); position: sticky; top: 0; z-index: 4; }
 .sleep-tab { flex: 1; padding: 9px 6px 8px; font-size: 14px; color: var(--tx3); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
@@ -12822,6 +12828,38 @@ function renderSleepTrend() {
         return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
       }
     });
+  }
+
+  /* ── 睡眠備註記錄（依月份分組，2026-08-06 加入；預設全部收起，點擊月份標題展開查看當月備註） ── */
+  var notedLogs = state.sleepLogs.filter(function(s) { return s.note && s.note.trim(); });
+  if (notedLogs.length) {
+    var sortedNotes = notedLogs.slice().sort(function(a, b) { return b.date < a.date ? -1 : 1; });
+    var noteMonthMap = {}, noteMonthOrder = [];
+    sortedNotes.forEach(function(s) {
+      var mk = (s.date || '').slice(0, 7);
+      if (!noteMonthMap[mk]) { noteMonthMap[mk] = []; noteMonthOrder.push(mk); }
+      noteMonthMap[mk].push(s);
+    });
+    function sleepNoteItemHTML(s) {
+      var times = (s.bedtime || '─') + (s.wakeTime ? ' → ' + s.wakeTime : '');
+      return '<div class="sleep-note-item">' +
+        '<div class="sleep-note-date">' + s.date + '　<span class="sleep-note-times">' + times + '</span></div>' +
+        '<div class="sleep-note-text">' + esc(s.note) + '</div>' +
+      '</div>';
+    }
+    var noteHtml = '<div class="trend-section">';
+    noteHtml += '<div class="trend-title">📝 睡眠備註記錄</div>';
+    noteHtml += noteMonthOrder.map(function(mk) {
+      var recs = noteMonthMap[mk];
+      var summaryTxt = recs.length + '筆';
+      return buildHistMonthHeaderHTML(mk, summaryTxt, false) +
+        '<div class="hist-month-body" style="display:none">' +
+          recs.map(sleepNoteItemHTML).join('') +
+        '</div>';
+    }).join('');
+    noteHtml += '</div>';
+    sec.insertAdjacentHTML('beforeend', noteHtml);
+    bindHistMonthToggle(sec);
   }
 }
 
