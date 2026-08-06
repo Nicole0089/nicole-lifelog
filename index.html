@@ -12843,7 +12843,8 @@ function renderSleepTrend() {
     });
     function sleepNoteItemHTML(s) {
       var times = (s.bedtime || '─') + (s.wakeTime ? ' → ' + s.wakeTime : '');
-      var meta = times + '　睡眠' + (s.sleepHours || '─') + 'h　夜尿' + (s.nocturia || 0) + '次　手麻' + _fmtHandNumbXlsx(s.handNumb);
+      var napTxt = s.napHad === 'yes' ? '午睡' + (s.napHours ? s.napHours + 'h' : '有') : '午睡無';
+      var meta = times + '　睡眠' + (s.sleepHours || '─') + 'h·' + napTxt + '　夜尿' + (s.nocturia || 0) + '次　手麻' + _fmtHandNumbXlsx(s.handNumb);
       return '<div class="sleep-note-item">' +
         '<div class="sleep-note-date"><span class="sleep-note-day">' + s.date + '</span><span class="sleep-note-meta">' + meta + '</span></div>' +
         '<div class="sleep-note-text">' + esc(s.note) + '</div>' +
