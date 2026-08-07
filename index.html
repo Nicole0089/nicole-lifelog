@@ -1992,6 +1992,39 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
             </div>
           </div>
         </div>
+        <div class="bd-section-lbl">身體組成</div>
+        <div class="bd-row-2">
+          <div class="bd-field">
+            <label class="bd-lbl">腰圍</label>
+            <div class="bd-input-row">
+              <input type="number" class="bd-num" id="bd-waist" min="30" max="200" step="0.1" placeholder="—">
+              <span class="bd-unit">cm</span>
+            </div>
+          </div>
+          <div class="bd-field">
+            <label class="bd-lbl">臀圍</label>
+            <div class="bd-input-row">
+              <input type="number" class="bd-num" id="bd-hip" min="30" max="200" step="0.1" placeholder="—">
+              <span class="bd-unit">cm</span>
+            </div>
+          </div>
+        </div>
+        <div class="bd-row-2">
+          <div class="bd-field">
+            <label class="bd-lbl">體脂率</label>
+            <div class="bd-input-row">
+              <input type="number" class="bd-num" id="bd-bodyfat" min="1" max="70" step="0.1" placeholder="—">
+              <span class="bd-unit">%</span>
+            </div>
+          </div>
+          <div class="bd-field">
+            <label class="bd-lbl">骨骼肌重</label>
+            <div class="bd-input-row">
+              <input type="number" class="bd-num" id="bd-muscle" min="5" max="100" step="0.1" placeholder="—">
+              <span class="bd-unit">kg</span>
+            </div>
+          </div>
+        </div>
         <div class="bd-section-lbl">活動量</div>
         <div class="bd-chips" id="bd-activity-chips">
           <button class="bd-chip" data-val="sedentary">久坐</button>
@@ -5560,10 +5593,12 @@ function renderBodySettings() {
   syncChips('bd-gender-chips',_bodyData.gender||'female','bd-gender-btn');
   syncChips('bd-activity-chips',_bodyData.activity||'light');
   syncChips('bd-goal-chips',_bodyData.goal||'cut');
-  var ageEl=$('bd-age'), htEl=$('bd-height'), wtEl=$('bd-weight');
-  if(ageEl){ ageEl.value=_bodyData.age||''; }
-  if(htEl){ htEl.value=_bodyData.height||''; }
-  if(wtEl){ wtEl.value=_bodyData.weight||''; }
+  /* 身體數據所有數值統一顯示到小數點第1位（2026-08 加入） */
+  function bdFmt1(v){ return (v===null||v===undefined||v==='') ? '' : (Math.round(v*10)/10).toFixed(1); }
+  ['bd-age','bd-height','bd-weight','bd-waist','bd-hip','bd-bodyfat','bd-muscle'].forEach(function(id){
+    var field = id.replace(/^bd-/,'');
+    var el=$(id); if(el){ el.value = bdFmt1(_bodyData[field]); }
+  });
   var macros=calcDayMacros(_bodyData);
   var tdeeBox=$('bd-tdee-box'), macroBox=$('bd-macros-box');
   if(!macros){
@@ -5601,7 +5636,7 @@ function renderBodySettings() {
       var bmi = Math.round(bd.weight / (h * h) * 10) / 10;
       var bmiLabel = bmi < 18.5 ? '過輕' : bmi < 24 ? '正常' : bmi < 27 ? '過重' : bmi < 30 ? '輕度肥胖' : '肥胖';
       var bmiColor = bmi < 18.5 ? '#5A9888' : bmi < 24 ? 'var(--ac)' : bmi < 27 ? '#C87A30' : '#C04030';
-      bmiValEl.textContent = bmi;
+      bmiValEl.textContent = bmi.toFixed(1);
       bmiValEl.style.color = bmiColor;
       if (bmiLblEl) { bmiLblEl.textContent = bmiLabel; bmiLblEl.style.color = bmiColor; }
       if (bmiBox) bmiBox.style.borderColor = bmiColor;
@@ -6357,14 +6392,15 @@ document.querySelectorAll('#bd-activity-chips .bd-chip').forEach(function(btn){
 document.querySelectorAll('#bd-goal-chips .bd-chip').forEach(function(btn){
   btn.addEventListener('click',function(){ _bodyData.goal=btn.dataset.val; saveStorage('myapp_body_data',_bodyData); recordBodyDataSnapshot(); renderBodySettings(); renderFoodDayType(); });
 });
-['bd-age','bd-height','bd-weight'].forEach(function(id){
+['bd-age','bd-height','bd-weight','bd-waist','bd-hip','bd-bodyfat','bd-muscle'].forEach(function(id){
   var el=$(id); if(!el) return;
+  var field = id.replace(/^bd-/,'');
   el.addEventListener('input',function(){
     var v=parseFloat(el.value);
     if(!isNaN(v)&&v>0){
-      if(id==='bd-age') _bodyData.age=Math.round(v);
-      else if(id==='bd-height') _bodyData.height=Math.round(v);
-      else if(id==='bd-weight') _bodyData.weight=v;
+      _bodyData[field]=Math.round(v*10)/10; /* 統一到小數點第1位 */
+    } else if(el.value===''){
+      _bodyData[field]=null;
     }
     saveStorage('myapp_body_data',_bodyData); recordBodyDataSnapshot(); renderBodySettings();
   });
@@ -7038,7 +7074,7 @@ function foodDaySkipStatus(dateKey){
   if(meals.length>=FOOD_MEALS.length) return {full:true, meals:meals};
   return {partial:true, meals:meals};
 }
-var _bodyData     = loadStorage('myapp_body_data', {gender:'female',age:30,height:165,weight:55,activity:'light',goal:'cut'});
+var _bodyData     = loadStorage('myapp_body_data', {gender:'female',age:30,height:165,weight:55,activity:'light',goal:'cut',waist:null,hip:null,bodyfat:null,muscle:null});
 
 /* ── 身體數據歷史紀錄（2026-08 加入）──
    原本 _bodyData 只是單一物件、每次編輯直接覆蓋，完全沒有歷史可查。
@@ -7058,7 +7094,11 @@ function recordBodyDataSnapshot() {
     age: _bodyData.age || null,
     gender: _bodyData.gender || '',
     activity: _bodyData.activity || '',
-    goal: _bodyData.goal || ''
+    goal: _bodyData.goal || '',
+    waist: _bodyData.waist || null,
+    hip: _bodyData.hip || null,
+    bodyfat: _bodyData.bodyfat || null,
+    muscle: _bodyData.muscle || null
   };
   var idx = _bodyDataLogs.findIndex(function(l){ return l.date === dk; });
   if (idx >= 0) _bodyDataLogs[idx] = snap; else _bodyDataLogs.push(snap);
@@ -7070,6 +7110,9 @@ function deleteBodyDataLog(dk) {
   renderBodyDataHistory();
 }
 var _bodyHistMonthsShown = 1;
+/* 2026-08 加入：目前正在編輯中的歷史紀錄日期（null=沒有任何一筆在編輯） */
+var _bodyHistEditingDate = null;
+function _bhFmt1(v) { return (v===null||v===undefined||v==='') ? null : (Math.round(v*10)/10).toFixed(1); }
 function renderBodyDataHistory() {
   var box = $('body-data-history');
   if (!box) return;
@@ -7081,14 +7124,55 @@ function renderBodyDataHistory() {
   function bmiOf(l) {
     if (!l.weight || !l.height) return null;
     var h = l.height/100;
-    return Math.round(l.weight/(h*h)*10)/10;
+    return (Math.round(l.weight/(h*h)*10)/10).toFixed(1);
+  }
+  /* 編輯模式下的輸入欄位（沿用 bd-field/bd-input-row/bd-num 樣式，統一小數點第1位） */
+  function editFieldHTML(id,label,val,unit) {
+    return '<div class="bd-field">'+
+      '<label class="bd-lbl" style="font-size:11px;margin-bottom:3px">'+label+'</label>'+
+      '<div class="bd-input-row">'+
+        '<input type="number" class="bd-num" id="'+id+'" step="0.1" value="'+(val!=null?val:'')+'" style="padding:5px 4px;font-size:13px">'+
+        '<span class="bd-unit">'+unit+'</span>'+
+      '</div>'+
+    '</div>';
+  }
+  function editRowHTML(l) {
+    var d = l.date, p = 'bhe-';
+    return '<div class="weekly-row body-hist-edit-row" data-date="'+d+'" style="flex-direction:column;align-items:stretch;gap:8px;padding:10px 8px">'+
+      '<div style="font-size:12px;color:var(--tx2);font-weight:600">✏️ '+d+' 編輯紀錄</div>'+
+      '<div class="bd-row-2" style="margin-bottom:0">'+
+        editFieldHTML(p+'weight-'+d,'體重',l.weight,'kg')+
+        editFieldHTML(p+'height-'+d,'身高',l.height,'cm')+
+      '</div>'+
+      '<div class="bd-row-2" style="margin-bottom:0">'+
+        editFieldHTML(p+'waist-'+d,'腰圍',l.waist,'cm')+
+        editFieldHTML(p+'hip-'+d,'臀圍',l.hip,'cm')+
+      '</div>'+
+      '<div class="bd-row-2" style="margin-bottom:0">'+
+        editFieldHTML(p+'bodyfat-'+d,'體脂率',l.bodyfat,'%')+
+        editFieldHTML(p+'muscle-'+d,'骨骼肌',l.muscle,'kg')+
+      '</div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:2px">'+
+        '<button class="food-hist-action-btn body-hist-cancel-btn" data-date="'+d+'" style="padding:4px 14px">取消</button>'+
+        '<button class="food-hist-action-btn body-hist-save-btn" data-date="'+d+'" style="padding:4px 14px;background:var(--ac);color:#fff">💾 儲存</button>'+
+      '</div>'+
+    '</div>';
   }
   function rowHTML(l) {
+    if (_bodyHistEditingDate === l.date) return editRowHTML(l);
     var bmi = bmiOf(l);
+    var parts = [];
+    parts.push(l.weight!=null ? _bhFmt1(l.weight)+'kg' : '—');
+    if (bmi) parts.push('BMI '+bmi);
+    if (l.waist!=null) parts.push('腰'+_bhFmt1(l.waist));
+    if (l.hip!=null) parts.push('臀'+_bhFmt1(l.hip));
+    if (l.bodyfat!=null) parts.push('體脂'+_bhFmt1(l.bodyfat)+'%');
+    if (l.muscle!=null) parts.push('肌'+_bhFmt1(l.muscle)+'kg');
     return '<div class="weekly-row" data-date="'+l.date+'">'+
       '<span>'+l.date+'</span>'+
-      '<span class="weekly-row-val">'+(l.weight?l.weight+' kg':'—')+(bmi?'　BMI '+bmi:'')+
-      '　<button class="food-hist-action-btn body-hist-del-btn" data-date="'+l.date+'" title="刪除">×</button></span>'+
+      '<span class="weekly-row-val">'+parts.join('　')+
+      '　<button class="food-hist-action-btn body-hist-edit-btn" data-date="'+l.date+'" title="修改">✏️</button>'+
+      '<button class="food-hist-action-btn body-hist-del-btn" data-date="'+l.date+'" title="刪除">×</button></span>'+
     '</div>';
   }
   /* 最新一筆 vs 前一筆的體重變化，一眼看出方向 */
@@ -7097,7 +7181,7 @@ function renderBodyDataHistory() {
     var diff = Math.round((sorted[0].weight - sorted[1].weight)*10)/10;
     if (diff !== 0) {
       var arrow = diff>0 ? '▲' : '▼';
-      latestBadge = '<span style="font-size:11px;color:var(--tx3);margin-left:6px">'+arrow+' '+Math.abs(diff)+'kg（vs 上次記錄）</span>';
+      latestBadge = '<span style="font-size:11px;color:var(--tx3);margin-left:6px">'+arrow+' '+Math.abs(diff).toFixed(1)+'kg（vs 上次記錄）</span>';
     }
   }
   var groups = groupKeysByMonth(sorted.map(function(l){ return l.date; }));
@@ -7125,6 +7209,42 @@ function renderBodyDataHistory() {
       deleteBodyDataLog(btn.dataset.date);
     });
   });
+  box.querySelectorAll('.body-hist-edit-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      _bodyHistEditingDate = btn.dataset.date;
+      renderBodyDataHistory();
+    });
+  });
+  box.querySelectorAll('.body-hist-cancel-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      _bodyHistEditingDate = null;
+      renderBodyDataHistory();
+    });
+  });
+  box.querySelectorAll('.body-hist-save-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      saveBodyDataLogEdit(btn.dataset.date);
+    });
+  });
+}
+/* 2026-08 加入：儲存體重歷史單筆紀錄的編輯結果（直接改該日期的快照，不影響上方目前的身體數據輸入框） */
+function saveBodyDataLogEdit(dk) {
+  var idx = _bodyDataLogs.findIndex(function(l){ return l.date === dk; });
+  if (idx < 0) return;
+  var l = _bodyDataLogs[idx];
+  ['weight','height','waist','hip','bodyfat','muscle'].forEach(function(field){
+    var el = $('bhe-'+field+'-'+dk);
+    if (!el) return;
+    var v = parseFloat(el.value);
+    l[field] = (!isNaN(v) && v>0) ? Math.round(v*10)/10 : null;
+  });
+  _bodyDataLogs[idx] = l;
+  saveBodyDataLogs();
+  _bodyHistEditingDate = null;
+  renderBodyDataHistory();
 }
 var _foodDayType  = loadStorage('myapp_food_day_type', {});
 var _calcCatOpen = {};
@@ -10373,10 +10493,11 @@ function exportAllXLSX() {
   var bdMacros = calcDayMacros(bd);
   var bdInfoRows = [[
     bd.gender==='male'?'男':'女', bd.age||'', bd.height||'', bd.weight||'',
+    bd.waist||'', bd.hip||'', bd.bodyfat||'', bd.muscle||'',
     actLabel[bd.activity]||'', goalLabel[bd.goal]||'',
     bdMacros?bdMacros.tdee:'', bdMacros?bdMacros.goalCal:''
   ]];
-  add('身體數據 & TDEE', ['性別','年齡','身高(cm)','體重(kg)','活動量','目標','TDEE(kcal)','目標熱量(kcal)'], bdInfoRows, [6,7]);
+  add('身體數據 & TDEE', ['性別','年齡','身高(cm)','體重(kg)','腰圍(cm)','臀圍(cm)','體脂率(%)','骨骼肌重(kg)','活動量','目標','TDEE(kcal)','目標熱量(kcal)'], bdInfoRows, [10,11]);
   var bdMacroRows = bdMacros ? [
     ['🔴 高碳日', bdMacros.high.cal, bdMacros.high.pro, bdMacros.high.carb, bdMacros.high.fat],
     ['🟡 低碳日', bdMacros.low.cal,  bdMacros.low.pro,  bdMacros.low.carb,  bdMacros.low.fat],
