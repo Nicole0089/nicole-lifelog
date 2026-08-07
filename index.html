@@ -747,6 +747,15 @@ input::placeholder { color: var(--tx3); }
 .hist-month-arrow.open { transform:rotate(90deg); }
 .hist-month-body { margin-bottom:10px; }
 .hist-load-more-btn { display:block; width:100%; margin-top:6px; padding:10px; text-align:center; font-size:13px; color:var(--ac); background:var(--bg3); border:0.5px dashed var(--bd); border-radius:var(--rr); cursor:pointer; font-family:var(--font); }
+/* 體重歷史列表（2026-08 重新設計排版，取代直接沿用 .weekly-row 造成字太大/擠成一排的問題）：
+   第一排是日期＋操作按鈕，第二排是數據小標籤，字級明顯縮小 */
+.body-hist-row { padding: 9px 0; border-bottom: 0.5px solid var(--bd); }
+.body-hist-row:last-child { border-bottom: none; }
+.body-hist-row-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.body-hist-date { font-size: 13px; font-weight: 600; color: var(--tx2); }
+.body-hist-actions { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+.body-hist-data { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; font-size: 12px; color: var(--tx3); }
+.body-hist-data strong { color: var(--tx); font-weight: 600; }
 .food-hist-day-note { font-size: 12px; color: var(--tx3); padding: 7px 0 4px; border-bottom: 0.5px solid var(--bd); line-height: 1.5; word-break: break-all; }
 /* Food edit overlay */
 .food-edit-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 190; display: flex; align-items: flex-end; justify-content: center; }
@@ -5593,11 +5602,16 @@ function renderBodySettings() {
   syncChips('bd-gender-chips',_bodyData.gender||'female','bd-gender-btn');
   syncChips('bd-activity-chips',_bodyData.activity||'light');
   syncChips('bd-goal-chips',_bodyData.goal||'cut');
-  /* 身體數據所有數值統一顯示到小數點第1位（2026-08 加入） */
+  /* 身體數據所有數值統一顯示到小數點第1位（2026-08 加入）
+     ⚠ 修正（2026-08）：原本每次 render 都無條件覆寫 el.value，但這個函式
+     會在每次 'input' 事件時被呼叫，導致使用者打字打到一半（例如正要輸入
+     "15.5"）就被立刻格式化成 "15.0" 蓋掉，變成只能靠上下箭頭一下一下點、
+     打字打不出多位數、也刪不掉重打。修法：正在輸入中的那個欄位（= 目前
+     focus 的元素）跳過覆寫，只有失焦（blur）時才補上小數點第1位格式化。 */
   function bdFmt1(v){ return (v===null||v===undefined||v==='') ? '' : (Math.round(v*10)/10).toFixed(1); }
   ['bd-age','bd-height','bd-weight','bd-waist','bd-hip','bd-bodyfat','bd-muscle'].forEach(function(id){
     var field = id.replace(/^bd-/,'');
-    var el=$(id); if(el){ el.value = bdFmt1(_bodyData[field]); }
+    var el=$(id); if(el && el!==document.activeElement){ el.value = bdFmt1(_bodyData[field]); }
   });
   var macros=calcDayMacros(_bodyData);
   var tdeeBox=$('bd-tdee-box'), macroBox=$('bd-macros-box');
@@ -6404,6 +6418,11 @@ document.querySelectorAll('#bd-goal-chips .bd-chip').forEach(function(btn){
     }
     saveStorage('myapp_body_data',_bodyData); recordBodyDataSnapshot(); renderBodySettings();
   });
+  /* ⚠ 修正（2026-08）：離開欄位（blur）時才強制補上小數點第1位格式化
+     （例如打完 "15" 沒有再打小數點，離開後顯示成 "15.0"），
+     因為 renderBodySettings() 現在會跳過目前 focus 的欄位不覆寫，
+     所以打字打到一半时不會被格式化蓋掉，但失焦後需要補這一次 */
+  el.addEventListener('blur',function(){ renderBodySettings(); });
 });
 
 /* Food day type event listeners */
@@ -7138,8 +7157,8 @@ function renderBodyDataHistory() {
   }
   function editRowHTML(l) {
     var d = l.date, p = 'bhe-';
-    return '<div class="weekly-row body-hist-edit-row" data-date="'+d+'" style="flex-direction:column;align-items:stretch;gap:8px;padding:10px 8px">'+
-      '<div style="font-size:12px;color:var(--tx2);font-weight:600">✏️ '+d+' 編輯紀錄</div>'+
+    return '<div class="body-hist-row body-hist-edit-row" data-date="'+d+'" style="display:flex;flex-direction:column;gap:8px">'+
+      '<div class="body-hist-date">✏️ '+d+' 編輯紀錄</div>'+
       '<div class="bd-row-2" style="margin-bottom:0">'+
         editFieldHTML(p+'weight-'+d,'體重',l.weight,'kg')+
         editFieldHTML(p+'height-'+d,'身高',l.height,'cm')+
@@ -7161,18 +7180,22 @@ function renderBodyDataHistory() {
   function rowHTML(l) {
     if (_bodyHistEditingDate === l.date) return editRowHTML(l);
     var bmi = bmiOf(l);
-    var parts = [];
-    parts.push(l.weight!=null ? _bhFmt1(l.weight)+'kg' : '—');
-    if (bmi) parts.push('BMI '+bmi);
-    if (l.waist!=null) parts.push('腰'+_bhFmt1(l.waist));
-    if (l.hip!=null) parts.push('臀'+_bhFmt1(l.hip));
-    if (l.bodyfat!=null) parts.push('體脂'+_bhFmt1(l.bodyfat)+'%');
-    if (l.muscle!=null) parts.push('肌'+_bhFmt1(l.muscle)+'kg');
-    return '<div class="weekly-row" data-date="'+l.date+'">'+
-      '<span>'+l.date+'</span>'+
-      '<span class="weekly-row-val">'+parts.join('　')+
-      '　<button class="food-hist-action-btn body-hist-edit-btn" data-date="'+l.date+'" title="修改">✏️</button>'+
-      '<button class="food-hist-action-btn body-hist-del-btn" data-date="'+l.date+'" title="刪除">×</button></span>'+
+    var dataParts = [];
+    dataParts.push('<span>'+(l.weight!=null ? '<strong>'+_bhFmt1(l.weight)+'</strong>kg' : '—')+'</span>');
+    if (bmi) dataParts.push('<span>BMI <strong>'+bmi+'</strong></span>');
+    if (l.waist!=null) dataParts.push('<span>腰圍 <strong>'+_bhFmt1(l.waist)+'</strong></span>');
+    if (l.hip!=null) dataParts.push('<span>臀圍 <strong>'+_bhFmt1(l.hip)+'</strong></span>');
+    if (l.bodyfat!=null) dataParts.push('<span>體脂 <strong>'+_bhFmt1(l.bodyfat)+'</strong>%</span>');
+    if (l.muscle!=null) dataParts.push('<span>骨骼肌 <strong>'+_bhFmt1(l.muscle)+'</strong>kg</span>');
+    return '<div class="body-hist-row" data-date="'+l.date+'">'+
+      '<div class="body-hist-row-top">'+
+        '<span class="body-hist-date">'+l.date+'</span>'+
+        '<span class="body-hist-actions">'+
+          '<button class="food-hist-action-btn body-hist-edit-btn" data-date="'+l.date+'" title="修改">✏️</button>'+
+          '<button class="food-hist-action-btn body-hist-del-btn" data-date="'+l.date+'" title="刪除">×</button>'+
+        '</span>'+
+      '</div>'+
+      '<div class="body-hist-data">'+dataParts.join('')+'</div>'+
     '</div>';
   }
   /* 最新一筆 vs 前一筆的體重變化，一眼看出方向 */
