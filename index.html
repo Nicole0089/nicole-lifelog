@@ -5906,7 +5906,7 @@ function renderFoodHistory() {
       g.keys.forEach(function(dk){ monthLogs = monthLogs.concat(grouped[dk]); });
       var mCal = monthLogs.reduce(function(a,x){return a+(+x.calories||0);},0);
       var summaryTxt = g.keys.length+'天 · 平均'+(g.keys.length?r1(mCal/g.keys.length):0)+'kcal/天';
-      var open = idx===0; /* 最新月份預設展開，其餘收合 */
+      var open = false; /* 2026-08-10 起改為全部月份預設收起，需要時再點開 */
       return buildHistMonthHeaderHTML(g.mk, summaryTxt, open)+
         '<div class="hist-month-body"'+(open?'':' style="display:none"')+'>'+
           g.keys.map(function(dk){ return dayGroupHTML(dk, false); }).join('')+
@@ -5999,7 +5999,7 @@ function renderFoodNoteHistory() {
   var groups = groupKeysByMonth(notedDates);
   box.innerHTML = groups.map(function(g, idx){
     var summaryTxt = g.keys.length+'筆';
-    var open = idx===0; /* 最新月份預設展開，其餘收合 */
+    var open = false; /* 2026-08-10 起改為全部月份預設收起，需要時再點開 */
     return buildHistMonthHeaderHTML(g.mk, summaryTxt, open)+
       '<div class="hist-month-body"'+(open?'':' style="display:none"')+'>'+
         g.keys.map(foodNoteItemHTML).join('')+
