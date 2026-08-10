@@ -1764,6 +1764,11 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         <div class="page-search-bar" style="padding:0 0 8px"><input class="page-search-input" id="food-history-search-input" type="text" placeholder="🔍 搜尋歷史飲食記錄..."><div class="note-date-row"><span class="note-date-label">📅 日期範圍</span><input type="date" id="food-history-date-from" class="note-date-input"><span class="note-date-sep">～</span><input type="date" id="food-history-date-to" class="note-date-input"><button id="food-history-date-clear" class="note-date-clear-btn">清除</button></div></div>
         <div id="food-history-list"></div>
       </div>
+      <!-- 飲食備註記錄（僅列出有備註的日期，不受限於當天是否有飲食記錄項目，2026-08-10 加入，比照睡眠備註記錄） -->
+      <div class="food-history-section" id="food-note-history-section">
+        <div class="food-history-title">📝 飲食備註記錄</div>
+        <div id="food-note-history-list"></div>
+      </div>
     </div>
 
     <!-- 📝 備忘錄頁面 -->
@@ -5951,6 +5956,56 @@ function renderFoodHistory() {
       openFoodEdit();
     });
   });
+  renderFoodNoteHistory();
+}
+
+/* ── 飲食備註記錄（依月份分組；列出所有 _foodDayNotes 中有內容的日期，
+   不論當天 foodLogs 是否有項目——修正原本「歷史飲食記錄」只有當天有飲食
+   記錄項目才會顯示備註、單純寫備註沒記飲食的日期會被遺漏的問題。
+   2026-08-10 加入，比照睡眠趨勢頁「📝 睡眠備註記錄」的分月摺疊寫法，
+   共用 groupKeysByMonth()/buildHistMonthHeaderHTML()/bindHistMonthToggle()，
+   卡片樣式沿用既有 .sleep-note-item/-date/-day/-meta/-text；
+   純讀取既有 _foodDayNotes/state.foodLogs/foodDaySkipStatus()，
+   未新增資料結構或表單欄位 ── */
+function renderFoodNoteHistory() {
+  var box = $('food-note-history-list'); if (!box) return;
+  var notedDates = Object.keys(_foodDayNotes||{}).filter(function(dk){
+    return _foodDayNotes[dk] && _foodDayNotes[dk].trim();
+  });
+  if(!notedDates.length){
+    box.innerHTML='<div style="text-align:center;color:var(--tx3);font-size:12px;padding:16px">無備註記錄</div>';
+    return;
+  }
+  notedDates.sort(function(a,b){ return a<b?1:-1; });
+
+  function foodNoteItemHTML(dk){
+    var lbl=foodDateLabel(dk);
+    var st=foodDaySkipStatus(dk);
+    var skipTxt = st.none ? '' : (st.full?'🍽️ 外食':'🍽️ '+st.meals.join('/')+'外食');
+    var logs=state.foodLogs.filter(function(l){return l.date===dk;});
+    var cal=logs.reduce(function(a,x){return a+(+x.calories||0);},0);
+    var metaParts=[];
+    if(cal>0) metaParts.push(r1(cal)+'kcal');
+    if(skipTxt) metaParts.push(skipTxt);
+    var meta=metaParts.join('　');
+    return '<div class="sleep-note-item">'+
+      '<div class="sleep-note-date"><span class="sleep-note-day">'+lbl.main+'</span>'+
+        (meta?'<span class="sleep-note-meta">'+meta+'</span>':'')+
+      '</div>'+
+      '<div class="sleep-note-text">'+esc(_foodDayNotes[dk].trim())+'</div>'+
+    '</div>';
+  }
+
+  var groups = groupKeysByMonth(notedDates);
+  box.innerHTML = groups.map(function(g, idx){
+    var summaryTxt = g.keys.length+'筆';
+    var open = idx===0; /* 最新月份預設展開，其餘收合 */
+    return buildHistMonthHeaderHTML(g.mk, summaryTxt, open)+
+      '<div class="hist-month-body"'+(open?'':' style="display:none"')+'>'+
+        g.keys.map(foodNoteItemHTML).join('')+
+      '</div>';
+  }).join('');
+  bindHistMonthToggle(box);
 }
 
 /* ── main render ── */
