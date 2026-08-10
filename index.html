@@ -262,12 +262,12 @@ input::placeholder { color: var(--tx3); }
 .todo-item { display: flex; align-items: flex-start; gap: 6px; padding: 10px 12px 10px 10px; border-bottom: 0.5px solid var(--bd); position: relative; border-left: 3px solid transparent; }
 .todo-item:last-child { border-bottom: none; }
 .todo-item.pri-urgent    { border-left-color: #C0392B; background: rgba(192,57,43,0.05); padding-left: 7px; }
-.todo-item.pri-important { border-left-color: #D68A30; background: rgba(214,138,48,0.05); padding-left: 7px; }
+.todo-item.pri-important { border-left-color: #E0AE72; padding-left: 7px; }
 
 /* 優先圓點 */
 .priority-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 8px; }
 .priority-dot.urgent    { background: #C0392B; box-shadow: 0 0 0 3px rgba(192,57,43,0.22); }
-.priority-dot.important { background: #D68A30; box-shadow: 0 0 0 3px rgba(214,138,48,0.18); }
+.priority-dot.important { background: #D68A30; box-shadow: 0 0 0 2px rgba(214,138,48,0.12); }
 .priority-dot.normal    { background: transparent; }
 
 /* 圓形勾選 */
@@ -289,7 +289,7 @@ input::placeholder { color: var(--tx3); }
 /* 優先/分類 badge */
 .priority-badge { font-size: 11px; padding: 2px 7px; border-radius: 8px; font-weight: 700; letter-spacing: 0.3px; }
 .priority-badge.urgent    { background: #C0392B; color: #fff; }
-.priority-badge.important { background: #D68A30; color: #fff; }
+.priority-badge.important { background: #FCEBD4; color: #B87333; font-weight: 600; }
 .category-badge { font-size: 11px; padding: 1px 6px; border-radius: 8px; }
 .category-badge.personal { background: var(--acl); color: var(--acd); }
 .category-badge.work     { background: #E0E8F0; color: #4A6A80; }
