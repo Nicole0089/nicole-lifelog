@@ -255,8 +255,8 @@ input::placeholder { color: var(--tx3); }
 .todo-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 28px; height: 2px; background: var(--ac); border-radius: 1px; }
 
 /* 日期分組標題 */
-.todo-group-header { font-size: 14px; font-weight: 600; color: var(--ac); padding: 14px 16px 6px; letter-spacing: 0.5px; }
-.todo-group-header.overdue { color: #B07878; }
+.todo-group-header { font-size: 15px; font-weight: 700; color: var(--acd); padding: 14px 16px 6px; letter-spacing: 0.8px; }
+.todo-group-header.overdue { color: #A03838; }
 
 /* 待辦事項列 */
 .todo-item { display: flex; align-items: flex-start; gap: 6px; padding: 10px 12px 10px 10px; border-bottom: 0.5px solid var(--bd); position: relative; border-left: 3px solid transparent; }
@@ -1961,7 +1961,11 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
       </div>
       <!-- 🧬 身體數據 & TDEE -->
       <div class="settings-section" style="margin-top:8px">
-        <div class="settings-section-title">🧬 身體數據 & TDEE</div>
+        <div class="settings-section-title bd-collapse-hdr" id="bd-main-toggle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+          <span>🧬 身體數據 & TDEE</span>
+          <span class="hist-month-arrow" id="bd-main-arrow">▶</span>
+        </div>
+        <div id="bd-main-fields" style="display:none">
         <!-- 第一排：性別 + 年齡（各佔 1/2） -->
         <div class="bd-row-2">
           <div class="bd-field">
@@ -2052,8 +2056,14 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
         </div>
         <div class="bd-tdee-box" id="bd-tdee-box"><div class="bd-hint">請填入身體數據以計算 TDEE</div></div>
         <div class="bd-macros-box" id="bd-macros-box"></div>
-        <div class="bd-section-lbl">📈 體重歷史</div>
-        <div id="body-data-history"></div>
+        </div>
+        <div class="bd-section-lbl bd-collapse-hdr" id="bd-hist-toggle" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+          <span>📈 體重歷史</span>
+          <span class="hist-month-arrow" id="bd-hist-arrow">▶</span>
+        </div>
+        <div id="body-data-history-wrap" style="display:none">
+          <div id="body-data-history"></div>
+        </div>
       </div>
             <div class="settings-section" style="margin-top:8px">
         <div class="settings-section-title">☁️ 雲端備份（Google Drive）</div>
@@ -6403,6 +6413,26 @@ if(_foodCollapseBtn)_foodCollapseBtn.addEventListener('click',function(){
   if(dt)dt.style.display=_foodCollapsed?'none':'';
   _foodCollapseBtn.textContent=_foodCollapsed?'▼ 展開':'▲ 收起';
 });
+
+/* 身體數據 & 體重歷史 摺疊區塊（2026-08 加入，預設合起，點標題展開／收合）
+   純記憶體狀態（不寫入 localStorage），每次重新整理網頁都會回到預設合起；
+   但同一次使用過程中（renderBodySettings 反覆重繪）維持使用者展開/收合的選擇 */
+var _bdMainOpen = false;
+var _bdHistOpen = false;
+(function(){
+  var mainHdr=$('bd-main-toggle'), mainBody=$('bd-main-fields'), mainArrow=$('bd-main-arrow');
+  var histHdr=$('bd-hist-toggle'), histBody=$('body-data-history-wrap'), histArrow=$('bd-hist-arrow');
+  if(mainHdr) mainHdr.addEventListener('click',function(){
+    _bdMainOpen=!_bdMainOpen;
+    if(mainBody) mainBody.style.display=_bdMainOpen?'':'none';
+    if(mainArrow) mainArrow.classList.toggle('open',_bdMainOpen);
+  });
+  if(histHdr) histHdr.addEventListener('click',function(){
+    _bdHistOpen=!_bdHistOpen;
+    if(histBody) histBody.style.display=_bdHistOpen?'':'none';
+    if(histArrow) histArrow.classList.toggle('open',_bdHistOpen);
+  });
+})();
 
 /* Body data event listeners */
 document.querySelectorAll('#bd-gender-chips .bd-gender-btn').forEach(function(btn){
@@ -13449,6 +13479,21 @@ function getWeekRange(offset) {
   return { start: fmt(mon), end: fmt(sun), mon: mon, sun: sun };
 }
 
+/* 體重升降的「好壞」取決於使用者目前設定的目標（減脂/增肌/維持），跟其他
+   固定方向（越低/越高越好）的指標不同，所以獨立寫一個會讀取 _bodyData.goal
+   動態判斷方向的徽章函式；goal 為 maintain/recomp 時方向中性，不做好壞判斷
+   （灰色顯示，不套用綠/紅），供週報/月回顧/年回顧的「⚖️ 體重」區塊共用 */
+function buildWeightVsBadge(curr, prev, unit) {
+  if (curr===null||curr===undefined||prev===null||prev===undefined||isNaN(prev)) return '';
+  var diff = Math.round((curr-prev)*10)/10;
+  if (diff === 0) return '<span style="font-size:10px;color:var(--tx3);margin-left:4px">持平</span>';
+  var arrow = diff>0 ? '▲' : '▼';
+  var goal = _bodyData.goal;
+  var lowerIsBetter = goal==='cut' ? true : (goal==='bulk' ? false : null);
+  var color = lowerIsBetter===null ? 'var(--tx3)' : ((lowerIsBetter ? diff<0 : diff>0) ? '#4caf50' : '#e57373');
+  return '<span style="font-size:10px;color:'+color+';margin-left:4px">'+arrow+' '+Math.abs(diff)+unit+'</span>';
+}
+
 function renderWeekly() {
   var range = getWeekRange(_weeklyOffset);
   var rangeEl = $('weekly-range');
@@ -13508,6 +13553,34 @@ function renderWeekly() {
     return '<div class="weekly-sparkline-bar'+(isToday?' today':'')+'" style="height:'+pct+'%" title="'+dk+(h!==null?' '+h+'h':'')+'"></div>';
   }).join('') + '</div>';
   html += '<div class="weekly-sparkline-labels">'+wd.map(function(w){return '<span class="weekly-sparkline-lbl">'+w+'</span>';}).join('')+'</div>';
+  html += '</div>';
+
+  /* ── 體重（2026-08 加入；資料來源 _bodyDataLogs，不是每天都有記錄，
+     sparkline 用該週實際記錄值的最大/最小值做相對範圍縮放，而非從0開始，
+     否則體重通常只在小範圍內波動，長條圖看起來會幾乎一樣高） ── */
+  var weekWeightLogs = _bodyDataLogs.filter(function(l){ return l.weight!=null && days.indexOf(l.date)>=0; });
+  var prevWeekWeightLogs = _bodyDataLogs.filter(function(l){ return l.weight!=null && prevDays.indexOf(l.date)>=0; });
+  var weekWeightAvg = weekWeightLogs.length ? r1(weekWeightLogs.reduce(function(s,l){return s+l.weight;},0)/weekWeightLogs.length) : null;
+  var prevWeekWeightAvg = prevWeekWeightLogs.length ? r1(prevWeekWeightLogs.reduce(function(s,l){return s+l.weight;},0)/prevWeekWeightLogs.length) : null;
+  html += '<div class="weekly-section">';
+  html += '<div class="weekly-section-title">⚖️ 體重</div>';
+  if (weekWeightLogs.length) {
+    html += '<div class="weekly-row"><span>本週平均體重</span><span class="weekly-row-val">'+weekWeightAvg+' kg'+(prevWeekWeightAvg!==null?buildWeightVsBadge(weekWeightAvg,prevWeekWeightAvg,'kg'):'')+'</span></div>';
+    html += '<div class="weekly-row"><span>本週記錄天數</span><span class="weekly-row-val">'+weekWeightLogs.length+' / 7 天</span></div>';
+    var wVals = weekWeightLogs.map(function(l){return l.weight;});
+    var wMax = Math.max.apply(null, wVals), wMin = Math.min.apply(null, wVals);
+    var wRange = (wMax - wMin) || 1;
+    html += '<div class="weekly-sparkline">' + days.map(function(dk,i){
+      var log = weekWeightLogs.find(function(l){return l.date===dk;});
+      var wv = log ? log.weight : null;
+      var pct = wv!==null ? (Math.round((wv-wMin)/wRange*80)+15) : 5;
+      var isToday = dk===todayKey();
+      return '<div class="weekly-sparkline-bar'+(isToday?' today':'')+'" style="height:'+pct+'%" title="'+dk+(wv!==null?' '+wv+'kg':'')+'"></div>';
+    }).join('') + '</div>';
+    html += '<div class="weekly-sparkline-labels">'+wd.map(function(w){return '<span class="weekly-sparkline-lbl">'+w+'</span>';}).join('')+'</div>';
+  } else {
+    html += '<div class="weekly-row"><span style="color:var(--tx3)">本週無體重記錄</span></div>';
+  }
   html += '</div>';
 
   /* ── 飲水 ── */
@@ -13723,6 +13796,19 @@ function renderMonthReview() {
         : '<div class="weekly-row"><span style="color:var(--tx3)">本月無睡眠記錄</span></div>';
       html += '</div>';
 
+      /* ── 體重（2026-08 加入；資料來源 _bodyDataLogs，月回顧不做每日 sparkline，
+         比照月回顧其他區塊只顯示彙總數字＋vs上月徽章） ── */
+      var monthWeightLogs = _bodyDataLogs.filter(function(l){ return l.weight!=null && l.date.slice(0,7)===mk; });
+      var prevMonthWeightLogs = _bodyDataLogs.filter(function(l){ return l.weight!=null && l.date.slice(0,7)===prevMk; });
+      var monthWeightAvg = monthWeightLogs.length ? r1(monthWeightLogs.reduce(function(s,l){return s+l.weight;},0)/monthWeightLogs.length) : null;
+      var prevMonthWeightAvg = prevMonthWeightLogs.length ? r1(prevMonthWeightLogs.reduce(function(s,l){return s+l.weight;},0)/prevMonthWeightLogs.length) : null;
+      html += '<div class="weekly-section"><div class="weekly-section-title">⚖️ 體重</div>';
+      html += monthWeightLogs.length
+        ? ('<div class="weekly-row"><span>平均體重</span><span class="weekly-row-val">'+monthWeightAvg+' kg'+(prevMonthWeightAvg!==null?buildWeightVsBadge(monthWeightAvg,prevMonthWeightAvg,'kg'):'')+'</span></div>'+
+           '<div class="weekly-row"><span>本月記錄天數</span><span class="weekly-row-val">'+monthWeightLogs.length+' 天</span></div>')
+        : '<div class="weekly-row"><span style="color:var(--tx3)">本月無體重記錄</span></div>';
+      html += '</div>';
+
       html += '<div class="weekly-section"><div class="weekly-section-title">💧 飲水</div>';
       html += sum.water.avgMl!==null
         ? ('<div class="weekly-row"><span>平均飲水量</span><span class="weekly-row-val">'+sum.water.avgMl+' ml'+(prevSum?buildPeriodVsBadge(sum.water.avgMl,prevSum.water.avgMl,'ml',false):'')+'</span></div>'+
@@ -13820,6 +13906,31 @@ function renderYearReview() {
            buildYearMiniBars(sum.months, function(s){return s.sleep.avgHours;}))
         : '<div class="weekly-row"><span style="color:var(--tx3)">全年無睡眠記錄</span></div>';
       html += '</div>';
+
+      /* ── 體重（2026-08 加入；資料來源 _bodyDataLogs，獨立算12個月各月平均，
+         再包成 buildYearMiniBars() 需要的 {mk,s} 格式重用既有迷你趨勢圖工具；
+         只有本年或去年有體重記錄時才顯示這個區塊，避免完全沒填過身體數據的
+         使用者看到一整排空的體重統計） ── */
+      var yearWeightLogs = _bodyDataLogs.filter(function(l){ return l.weight!=null && l.date.slice(0,4)===String(year); });
+      var prevYearWeightLogs = _bodyDataLogs.filter(function(l){ return l.weight!=null && l.date.slice(0,4)===String(year-1); });
+      if (yearWeightLogs.length || prevYearWeightLogs.length) {
+        var yearWeightAvg = yearWeightLogs.length ? r1(yearWeightLogs.reduce(function(s,l){return s+l.weight;},0)/yearWeightLogs.length) : null;
+        var prevYearWeightAvg = prevYearWeightLogs.length ? r1(prevYearWeightLogs.reduce(function(s,l){return s+l.weight;},0)/prevYearWeightLogs.length) : null;
+        var weightMonths = [];
+        for (var wm=1; wm<=12; wm++) {
+          var wmk = year + '-' + String(wm).padStart(2,'0');
+          var mLogs = _bodyDataLogs.filter(function(l){ return l.weight!=null && l.date.slice(0,7)===wmk; });
+          var mAvg = mLogs.length ? r1(mLogs.reduce(function(s,l){return s+l.weight;},0)/mLogs.length) : null;
+          weightMonths.push({mk:wmk, s: mAvg!==null ? {avg:mAvg} : null});
+        }
+        html += '<div class="weekly-section"><div class="weekly-section-title">⚖️ 體重</div>';
+        html += yearWeightLogs.length
+          ? ('<div class="weekly-row"><span>全年平均體重</span><span class="weekly-row-val">'+yearWeightAvg+' kg'+(prevYearWeightAvg!==null?buildWeightVsBadge(yearWeightAvg,prevYearWeightAvg,'kg'):'')+'</span></div>'+
+             '<div class="weekly-row"><span>全年記錄天數</span><span class="weekly-row-val">'+yearWeightLogs.length+' 天</span></div>'+
+             buildYearMiniBars(weightMonths, function(s){return s.avg;}))
+          : '<div class="weekly-row"><span style="color:var(--tx3)">全年無體重記錄</span></div>';
+        html += '</div>';
+      }
 
       html += '<div class="weekly-section"><div class="weekly-section-title">💧 飲水</div>';
       html += sum.water.avgMl!==null
