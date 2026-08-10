@@ -1140,7 +1140,9 @@ input::placeholder { color: var(--tx3); }
    ⚙️ 設定頁面
    ════════════════════════════════ */
 .settings-section { padding: 16px 16px 0; }
-.settings-section-title { font-size: 11px; color: var(--ac); letter-spacing: 2px; margin-bottom: 12px; }
+.settings-section-title { font-size: 14px; font-weight: 700; color: var(--acd); letter-spacing: 1px; margin-bottom: 12px; }
+.settings-subsection-title { font-size: 13px; font-weight: 700; color: var(--acd); letter-spacing: 0.5px; margin-bottom: 6px; }
+.bd-section-lbl.bd-collapse-hdr { font-size: 14px; font-weight: 700; color: var(--acd); letter-spacing: 1px; margin-top: 16px; }
 /* ── 全域備註搜尋 ── */
 .note-search-box { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
 .note-search-input { flex: 1; padding: 9px 12px; font-size: 14px; border: 1px solid var(--bd); border-radius: var(--rr); background: var(--bg3); color: var(--tx); font-family: var(--font); }
@@ -2125,7 +2127,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 
         <!-- 本機備份（備用） -->
         <div style="border-top:0.5px solid var(--bd);margin-top:6px;padding-top:10px">
-          <div style="font-size:10px;color:var(--tx3);margin-bottom:6px">本機備份（備用）</div>
+          <div class="settings-subsection-title">本機備份（備用）</div>
           <div class="gdrive-local-row">
             <button class="btn-ghost" id="settings-export-btn">📤 匯出 JSON</button>
             <button class="btn-ghost" id="settings-import-btn">📥 匯入 JSON</button>
