@@ -259,13 +259,15 @@ input::placeholder { color: var(--tx3); }
 .todo-group-header.overdue { color: #B07878; }
 
 /* 待辦事項列 */
-.todo-item { display: flex; align-items: flex-start; gap: 6px; padding: 10px 12px 10px 10px; border-bottom: 0.5px solid var(--bd); position: relative; }
+.todo-item { display: flex; align-items: flex-start; gap: 6px; padding: 10px 12px 10px 10px; border-bottom: 0.5px solid var(--bd); position: relative; border-left: 3px solid transparent; }
 .todo-item:last-child { border-bottom: none; }
+.todo-item.pri-urgent    { border-left-color: #C0392B; background: rgba(192,57,43,0.05); padding-left: 7px; }
+.todo-item.pri-important { border-left-color: #D68A30; background: rgba(214,138,48,0.05); padding-left: 7px; }
 
 /* 優先圓點 */
-.priority-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 8px; }
-.priority-dot.urgent    { background: #C0392B; }
-.priority-dot.important { background: #D68A30; }
+.priority-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 8px; }
+.priority-dot.urgent    { background: #C0392B; box-shadow: 0 0 0 3px rgba(192,57,43,0.22); }
+.priority-dot.important { background: #D68A30; box-shadow: 0 0 0 3px rgba(214,138,48,0.18); }
 .priority-dot.normal    { background: transparent; }
 
 /* 圓形勾選 */
@@ -285,9 +287,9 @@ input::placeholder { color: var(--tx3); }
 .todo-due-chip.today   { color: var(--ac); font-weight: 500; }
 
 /* 優先/分類 badge */
-.priority-badge { font-size: 11px; padding: 1px 6px; border-radius: 8px; font-weight: 500; }
-.priority-badge.urgent    { background: #FDDBD8; color: #C0392B; }
-.priority-badge.important { background: #FDEBD0; color: #D68A30; }
+.priority-badge { font-size: 11px; padding: 2px 7px; border-radius: 8px; font-weight: 700; letter-spacing: 0.3px; }
+.priority-badge.urgent    { background: #C0392B; color: #fff; }
+.priority-badge.important { background: #D68A30; color: #fff; }
 .category-badge { font-size: 11px; padding: 1px 6px; border-radius: 8px; }
 .category-badge.personal { background: var(--acl); color: var(--acd); }
 .category-badge.work     { background: #E0E8F0; color: #4A6A80; }
@@ -3580,6 +3582,7 @@ function renderTodos() {
   var noDate  = [];
   var overdue = [];
   var priOrder = { urgent: 1, important: 2, normal: 3 };
+  var catOrder = { work: 1, personal: 2, private: 3 };
 
   pending.forEach(function(t) {
     if (!t.dueDate) { noDate.push(t); return; }
@@ -3588,11 +3591,15 @@ function renderTodos() {
     groups[t.dueDate].push(t);
   });
 
+  /* 排序規則（由高到低）：🏷️分類(工作優先) > 🚩優先權(緊急>重要>一般) > ⭐加星
+     （優先權高於加星；若同時緊急+加星，因緊急本身已排最前，自然最優先） */
   function sortGroup(arr) {
     return arr.slice().sort(function(a, b) {
-      var sd = (b.starred?1:0) - (a.starred?1:0);
-      if (sd !== 0) return sd;
-      return (priOrder[a.priority||'normal']||3) - (priOrder[b.priority||'normal']||3);
+      var cd = (catOrder[a.category||'personal']||2) - (catOrder[b.category||'personal']||2);
+      if (cd !== 0) return cd;
+      var pd = (priOrder[a.priority||'normal']||3) - (priOrder[b.priority||'normal']||3);
+      if (pd !== 0) return pd;
+      return (b.starred?1:0) - (a.starred?1:0);
     });
   }
 
@@ -3742,13 +3749,14 @@ function buildTodoHTML(t) {
     }
   }
   if (pri !== 'normal') {
-    metaHtml += '<span class="priority-badge ' + pri + '">' + (pri === 'urgent' ? '緊急' : '重要') + '</span>';
+    var priIcon = pri === 'urgent' ? '🔴' : '🟠';
+    metaHtml += '<span class="priority-badge ' + pri + '">' + priIcon + ' ' + (pri === 'urgent' ? '緊急' : '重要') + '</span>';
   }
   if (cat === 'work') {
     metaHtml += '<span class="category-badge work">工作</span>';
   }
 
-  return '<div class="todo-item" data-id="' + t.id + '">' +
+  return '<div class="todo-item pri-' + pri + '" data-id="' + t.id + '">' +
     '<div class="priority-dot ' + pri + '"></div>' +
     '<button class="todo-check ' + (t.done?'done':'') + '" onclick="toggleTodo(\'' + t.id + '\')"> ' + (t.done?'●':'○') + '</button>' +
     '<div class="todo-body">' +
