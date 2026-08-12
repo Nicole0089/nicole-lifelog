@@ -1240,12 +1240,18 @@ input::placeholder { color: var(--tx3); }
 .sleep-chart-title { font-size: 12px; color: var(--tx3); margin-bottom: 8px; }
 .sleep-chart-svg { display: block; width: 100%; }
 /* diary lightbox */
-.diary-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 300; display: flex; align-items: center; justify-content: center; }
+.diary-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 300; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
 .diary-lightbox.hidden { display: none; }
-.diary-lightbox img { max-width: 95vw; max-height: 92vh; border-radius: 6px; }
+.diary-lightbox-imgwrap { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
+.diary-lightbox img { max-width: 95vw; max-height: 92vh; border-radius: 6px; touch-action: none; user-select: none; -webkit-user-drag: none; transform-origin: center center; will-change: transform; transition: transform .06s linear; }
 .diary-lightbox-close { position: fixed; top: 14px; right: 18px; background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; line-height: 1; z-index: 301; }
+.diary-lightbox-zoom-controls { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 301; background: rgba(255,255,255,0.12); border-radius: 999px; padding: 6px; }
+.diary-lightbox-zoom-btn { min-width: 44px; min-height: 44px; border-radius: 50%; border: none; background: rgba(255,255,255,0.18); color: #fff; font-size: 18px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.diary-lightbox-zoom-btn:active { background: rgba(255,255,255,0.32); }
 .diary-attach-img { cursor: pointer; border-radius: 4px; }
 .diary-attach-img:hover { opacity: 0.85; }
+.diary-attach-file-link { font-size: 10px; background: var(--bg2); padding: 2px 6px; border-radius: 4px; color: var(--tx3); text-decoration: none; display: inline-flex; align-items: center; gap: 2px; cursor: pointer; }
+.diary-attach-file-link:hover { opacity: 0.85; }
 
 
 /* taller date/time inputs */
@@ -3095,8 +3101,15 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 
 <!-- diary lightbox -->
 <div class="diary-lightbox hidden" id="diary-lightbox" onclick="closeDiaryLightbox(event)">
-  <button class="diary-lightbox-close" onclick="$('diary-lightbox').classList.add('hidden')">✕</button>
-  <img id="diary-lightbox-img" src="" alt="">
+  <button class="diary-lightbox-close" onclick="closeDiaryLightbox()">✕</button>
+  <div class="diary-lightbox-zoom-controls" onclick="event.stopPropagation()">
+    <button class="diary-lightbox-zoom-btn" id="diary-lightbox-zoomout" aria-label="縮小" type="button">－</button>
+    <button class="diary-lightbox-zoom-btn" id="diary-lightbox-zoomreset" aria-label="還原" type="button">1:1</button>
+    <button class="diary-lightbox-zoom-btn" id="diary-lightbox-zoomin" aria-label="放大" type="button">＋</button>
+  </div>
+  <div class="diary-lightbox-imgwrap">
+    <img id="diary-lightbox-img" src="" alt="">
+  </div>
 </div>
 
 <!-- 🍱 私人菜單 modal -->
@@ -9147,12 +9160,103 @@ function openDiaryLightbox(src){
   var lb=$('diary-lightbox'),img=$('diary-lightbox-img');
   if(!lb||!img)return;
   img.src=src;
+  resetDiaryLightboxZoom();
   lb.classList.remove('hidden');
 }
 function closeDiaryLightbox(e){
   if(e && e.target && e.target.tagName==='IMG')return; /* don't close on img click */
   $('diary-lightbox').classList.add('hidden');
+  resetDiaryLightboxZoom();
 }
+
+/* ── 日記照片放大鏡：支援雙指縮放／雙擊縮放／拖曳移動／按鈕縮放 ── */
+var _dlZoom = { scale:1, x:0, y:0 };
+function resetDiaryLightboxZoom(){
+  _dlZoom.scale = 1; _dlZoom.x = 0; _dlZoom.y = 0;
+  applyDiaryLightboxTransform();
+}
+function applyDiaryLightboxTransform(){
+  var img = $('diary-lightbox-img');
+  if(!img) return;
+  img.style.transform = 'translate('+_dlZoom.x+'px,'+_dlZoom.y+'px) scale('+_dlZoom.scale+')';
+}
+function setDiaryLightboxScale(newScale, focalX, focalY){
+  newScale = Math.min(5, Math.max(1, newScale));
+  if(newScale === 1){ _dlZoom.x = 0; _dlZoom.y = 0; }
+  _dlZoom.scale = newScale;
+  applyDiaryLightboxTransform();
+}
+(function(){
+  var img = document.getElementById('diary-lightbox-img');
+  if(!img) return;
+  var pointers = {};
+  var lastDist = 0, lastPinchScale = 1;
+  var panning = false, panStartX = 0, panStartY = 0, startTX = 0, startTY = 0;
+  var lastTapTime = 0;
+
+  function dist(p1, p2){ return Math.hypot(p1.x-p2.x, p1.y-p2.y); }
+  function activeIds(){ return Object.keys(pointers); }
+
+  img.addEventListener('pointerdown', function(e){
+    try{ img.setPointerCapture(e.pointerId); }catch(err){}
+    pointers[e.pointerId] = { x:e.clientX, y:e.clientY };
+    var ids = activeIds();
+    if(ids.length === 1){
+      panning = true;
+      panStartX = e.clientX; panStartY = e.clientY;
+      startTX = _dlZoom.x; startTY = _dlZoom.y;
+      var now = Date.now();
+      if(now - lastTapTime < 300){
+        if(_dlZoom.scale > 1){ resetDiaryLightboxZoom(); }
+        else { setDiaryLightboxScale(2.5); }
+        lastTapTime = 0;
+      } else {
+        lastTapTime = now;
+      }
+    } else if(ids.length === 2){
+      panning = false;
+      var p1 = pointers[ids[0]], p2 = pointers[ids[1]];
+      lastDist = dist(p1, p2);
+      lastPinchScale = _dlZoom.scale;
+    }
+  });
+  img.addEventListener('pointermove', function(e){
+    if(!pointers[e.pointerId]) return;
+    pointers[e.pointerId] = { x:e.clientX, y:e.clientY };
+    var ids = activeIds();
+    if(ids.length === 2){
+      var p1 = pointers[ids[0]], p2 = pointers[ids[1]];
+      var d = dist(p1, p2);
+      if(lastDist > 0){ setDiaryLightboxScale(lastPinchScale * (d / lastDist)); }
+    } else if(ids.length === 1 && panning && _dlZoom.scale > 1){
+      _dlZoom.x = startTX + (e.clientX - panStartX);
+      _dlZoom.y = startTY + (e.clientY - panStartY);
+      applyDiaryLightboxTransform();
+    }
+  });
+  function endPointer(e){
+    delete pointers[e.pointerId];
+    var ids = activeIds();
+    if(ids.length < 2) lastDist = 0;
+    if(ids.length === 0) panning = false;
+  }
+  img.addEventListener('pointerup', endPointer);
+  img.addEventListener('pointercancel', endPointer);
+  img.addEventListener('pointerleave', endPointer);
+
+  /* 滑鼠滾輪縮放（桌面測試用） */
+  img.addEventListener('wheel', function(e){
+    e.preventDefault();
+    setDiaryLightboxScale(_dlZoom.scale + (e.deltaY > 0 ? -0.15 : 0.15));
+  }, { passive:false });
+
+  var zoomInBtn = document.getElementById('diary-lightbox-zoomin');
+  var zoomOutBtn = document.getElementById('diary-lightbox-zoomout');
+  var zoomResetBtn = document.getElementById('diary-lightbox-zoomreset');
+  if(zoomInBtn) zoomInBtn.addEventListener('click', function(){ setDiaryLightboxScale(_dlZoom.scale + 0.5); });
+  if(zoomOutBtn) zoomOutBtn.addEventListener('click', function(){ setDiaryLightboxScale(_dlZoom.scale - 0.5); });
+  if(zoomResetBtn) zoomResetBtn.addEventListener('click', resetDiaryLightboxZoom);
+})();
 var _diaryMonthsShown = 1;
 
 function renderDiaryList() {
@@ -9192,7 +9296,7 @@ function renderDiaryList() {
       attHtml = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">' +
         d.attachments.map(function(a){
           if (a.type==='image' || (a.data && a.data.startsWith('data:image/'))) return '<img src="'+a.data+'" class="diary-attach-img" style="height:40px;width:40px;object-fit:cover;cursor:pointer;">';
-          if (a.data) return '<a href="'+a.data+'" download="'+esc(a.name)+'" style="font-size:10px;background:var(--bg2);padding:2px 6px;border-radius:4px;color:var(--tx3);text-decoration:none;display:inline-flex;align-items:center;gap:2px" onclick="event.stopPropagation()">📎'+esc(a.name)+'</a>';
+          if (a.data) return '<a href="'+a.data+'" target="_blank" rel="noopener" class="diary-attach-file-link" onclick="event.stopPropagation()">📎'+esc(a.name)+'</a>';
           return '<span style="font-size:10px;background:var(--bg2);padding:2px 6px;border-radius:4px;color:var(--tx3)">📎'+esc(a.name)+'</span>';
         }).join('')+'</div>';
     }
