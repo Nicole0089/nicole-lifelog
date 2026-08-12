@@ -62,8 +62,8 @@ body { background: #F0E8E6; background: var(--bg); color: #3D2828; color: var(--
 .trend-empty { text-align: center; padding: 40px 16px; color: var(--tx3); font-size: 14px; }
 .dash-header { padding: 16px 16px 8px; }
 .habit-tabs { display: flex; border-bottom: 0.5px solid var(--bd); background: var(--bg); position: sticky; top: 44px; z-index: 4; }
-.habit-tab-btn { flex: 1; padding: 9px 6px 8px; font-size: 14px; color: var(--tx3); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
-.habit-tab-btn.active { color: var(--acd); font-weight: 600; }
+.habit-tab-btn { flex: 1; padding: 9px 6px 8px; font-size: 15px; font-weight: 500; color: var(--tx2); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
+.habit-tab-btn.active { color: var(--acd); font-weight: 700; }
 .habit-tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 2px; background: var(--ac); border-radius: 2px; }
 .checkin-section { padding: 0 14px 24px; }
 .checkin-section-hdr { font-size: 14px; font-weight: 700; color: var(--tx); margin: 4px 0 12px; letter-spacing: 0.3px; }
@@ -104,7 +104,7 @@ body { background: #F0E8E6; background: var(--bg); color: #3D2828; color: var(--
 /* water date nav */
 .water-date-nav { display: flex; align-items: center; justify-content: space-between; padding: 6px 16px 4px; }
 .water-date-nav-btn { background: none; border: none; font-size: 22px; color: var(--ac); cursor: pointer; padding: 4px 8px; }
-.water-date-nav-label { font-size: 14px; font-weight: 600; color: var(--tx); }
+.water-date-nav-label { font-size: 15px; font-weight: 700; color: var(--acd); }
 /* sleep date nav */
 .sleep-date-nav { display: flex; align-items: center; justify-content: space-between; padding: 4px 16px 4px; background: var(--bg2); }
 .sleep-date-nav-btn { background: none; border: none; font-size: 20px; color: var(--ac); cursor: pointer; padding: 3px 8px; }
@@ -242,7 +242,8 @@ input::placeholder { color: var(--tx3); }
 /* ── 營養 % ── */
 .food-nut-pct { font-size: 12px; color: var(--tx3); margin-top: 1px; }
 .todo-progress-bar-wrap { padding: 10px 16px 4px; }
-.todo-progress-info { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--tx3); margin-bottom: 5px; }
+.todo-progress-info { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--tx2); margin-bottom: 5px; }
+.todo-progress-info span:first-child { font-weight: 700; color: var(--acd); }
 .todo-progress-info .done-count { color: var(--ac); font-weight: 600; }
 .todo-progress-track { height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
 .todo-progress-fill { height: 100%; background: var(--ac); border-radius: 3px; transition: width .4s; }
@@ -250,8 +251,8 @@ input::placeholder { color: var(--tx3); }
 
 /* ── 分類 Tab ── */
 .todo-tabs { display: flex; border-bottom: 0.5px solid var(--bd); background: var(--bg); position: sticky; top: 0; z-index: 4; }
-.todo-tab { flex: 1; padding: 10px 6px 8px; font-size: 14px; color: var(--tx3); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
-.todo-tab.active { color: var(--ac); font-weight: 600; }
+.todo-tab { flex: 1; padding: 10px 6px 8px; font-size: 15px; font-weight: 500; color: var(--tx2); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
+.todo-tab.active { color: var(--acd); font-weight: 700; }
 .todo-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 28px; height: 2px; background: var(--ac); border-radius: 1px; }
 
 /* 日期分組標題 */
@@ -430,7 +431,7 @@ input::placeholder { color: var(--tx3); }
    🔄 習慣追蹤 — 工具列
    ════════════════════════════════ */
 .habit-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; }
-.habit-toolbar-title { font-size: 11px; color: var(--ac); letter-spacing: 2px; }
+.habit-toolbar-title { font-size: 13px; color: var(--acd); font-weight: 700; letter-spacing: 1.5px; }
 .habit-add-top-btn { background: none; border: none; font-size: 24px; color: var(--ac); cursor: pointer; padding: 2px 4px; line-height: 1; }
 .habit-add-top-btn:active { color: var(--acd); }
 
@@ -443,8 +444,8 @@ input::placeholder { color: var(--tx3); }
 .ws-day-cols { display: flex; gap: 2px; width: max-content; }
 .ws-del-spacer { width: 32px; flex-shrink: 0; }
 .ws-day-col { width: 48px; text-align: center; flex-shrink: 0; }
-.ws-weekday { font-size: 12px; color: var(--tx3); margin-bottom: 2px; }
-.ws-date { font-size: 14px; color: var(--tx2); width: 26px; height: 26px; line-height: 26px; margin: 0 auto; border-radius: 50%; }
+.ws-weekday { font-size: 12px; font-weight: 600; color: var(--tx2); margin-bottom: 2px; }
+.ws-date { font-size: 14px; font-weight: 600; color: var(--tx); width: 26px; height: 26px; line-height: 26px; margin: 0 auto; border-radius: 50%; }
 .ws-day-col.today .ws-weekday { color: var(--ac); font-weight: 600; }
 .ws-day-col.today .ws-date { background: var(--ac); color: #fff; font-weight: 600; }
 
@@ -610,8 +611,8 @@ input::placeholder { color: var(--tx3); }
 .water-goal-quick-btn { background: var(--bg3); border: 1px solid var(--bd); border-radius: 50%; width: 22px; height: 22px; font-size: 14px; line-height: 1; color: var(--ac); cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: var(--font); padding: 0; }
 /* 飲水頁籤 */
 .water-tabs { display: flex; border-bottom: 0.5px solid var(--bd); margin: 0 16px 0; }
-.water-tab { flex: 1; padding: 9px 6px 8px; font-size: 14px; color: var(--tx3); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
-.water-tab.active { color: var(--ac); font-weight: 600; }
+.water-tab { flex: 1; padding: 9px 6px 8px; font-size: 15px; font-weight: 500; color: var(--tx2); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
+.water-tab.active { color: var(--acd); font-weight: 700; }
 .water-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 28px; height: 2px; background: var(--ac); border-radius: 1px; }
 /* 飲水月曆 */
 .water-cal-wrap { padding: 10px 14px 80px; }
@@ -641,7 +642,7 @@ input::placeholder { color: var(--tx3); }
 /* Fasting card */
 .fast-card { margin: 10px 12px 0; background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); overflow: hidden; }
 .fast-card-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; cursor: pointer; }
-.fast-label { font-size: 11px; color: var(--ac); letter-spacing: 2px; }
+.fast-label { font-size: 13px; color: var(--acd); font-weight: 700; letter-spacing: 1.5px; }
 .fast-card-toggle { font-size: 14px; color: var(--tx3); background: none; border: none; cursor: pointer; }
 .fast-card-body { padding: 0 16px 16px; }
 .fast-timer { font-size: 32px; font-weight: 300; color: var(--tx); letter-spacing: 2px; text-align: center; padding: 6px 0 12px; }
@@ -711,8 +712,8 @@ input::placeholder { color: var(--tx3); }
 /* Today food section */
 .food-today-section { margin: 0 12px; background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); }
 .food-today-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 0.5px solid var(--bd); }
-.food-today-title { font-size: 14px; color: var(--tx2); font-weight: 500; }
-.food-today-add-btn { background: none; border: none; font-size: 14px; color: var(--ac); cursor: pointer; font-family: var(--font); padding: 2px 6px; }
+.food-today-title { font-size: 15px; color: var(--acd); font-weight: 700; }
+.food-today-add-btn { background: none; border: none; font-size: 15px; font-weight: 700; color: var(--acd); cursor: pointer; font-family: var(--font); padding: 2px 6px; }
 .food-today-add-btn.fasting { color: var(--tx3); pointer-events: none; }
 .food-today-recipe-btn { background: none; border: 1px solid var(--bd); border-radius: var(--rr); font-size: 12px; color: var(--tx2); cursor: pointer; font-family: var(--font); padding: 3px 9px; white-space: nowrap; }
 .food-today-recipe-btn:active { background: var(--bg3); }
@@ -893,7 +894,7 @@ input::placeholder { color: var(--tx3); }
    📝 備忘錄頁面
    ════════════════════════════════ */
 .memo-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; }
-.memo-toolbar-title { font-size: 11px; color: var(--ac); letter-spacing: 2px; }
+.memo-toolbar-title { font-size: 13px; color: var(--acd); font-weight: 700; letter-spacing: 1.5px; }
 .memo-add-btn { background: none; border: none; font-size: 24px; color: var(--ac); cursor: pointer; padding: 2px 4px; line-height: 1; }
 .memo-list { padding: 0 12px 80px; }
 .memo-item { background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); padding: 14px 16px; margin-bottom: 10px; cursor: pointer; position: relative; }
@@ -923,14 +924,14 @@ input::placeholder { color: var(--tx3); }
 /* ════════════════════════════════
    🏠 家務頁面
    ════════════════════════════════ */
-#page-chores .habit-toolbar-title { font-size: 11px; color: var(--ac); letter-spacing: 2px; }
+#page-chores .habit-toolbar-title { font-size: 13px; color: var(--acd); font-weight: 700; letter-spacing: 1.5px; }
 .chore-more-btn { background: none; border: none; font-size: 18px; color: var(--tx3); cursor: pointer; padding: 4px 6px; flex-shrink: 0; line-height: 1; width: 32px; text-align: center; letter-spacing: -2px; }
 
 /* ════════════════════════════════
    🌙 睡眠頁面
    ════════════════════════════════ */
 .sleep-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; }
-.sleep-toolbar-title { font-size: 11px; color: var(--ac); letter-spacing: 2px; }
+.sleep-toolbar-title { font-size: 13px; color: var(--acd); font-weight: 700; letter-spacing: 1.5px; }
 .sleep-add-btn { background: none; border: none; font-size: 24px; color: var(--ac); cursor: pointer; padding: 2px 4px; line-height: 1; }
 .sleep-stats-card { margin: 0 12px 8px; background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); padding: 14px 16px; display: none; }
 .sleep-stats-row { display: flex; gap: 8px; margin-bottom: 10px; }
@@ -958,8 +959,8 @@ input::placeholder { color: var(--tx3); }
 .sleep-note-text { font-size: 13px; color: var(--tx); line-height: 1.5; white-space: pre-wrap; }
 /* Sleep tabs */
 .sleep-tabs { display: flex; border-bottom: 0.5px solid var(--bd); background: var(--bg); position: sticky; top: 0; z-index: 4; }
-.sleep-tab { flex: 1; padding: 9px 6px 8px; font-size: 14px; color: var(--tx3); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
-.sleep-tab.active { color: var(--ac); font-weight: 600; }
+.sleep-tab { flex: 1; padding: 9px 6px 8px; font-size: 15px; font-weight: 500; color: var(--tx2); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
+.sleep-tab.active { color: var(--acd); font-weight: 700; }
 .sleep-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 28px; height: 2px; background: var(--ac); border-radius: 1px; }
 /* Sleep stats table */
 .sleep-tbl-wrap { padding: 0 12px 80px; }
@@ -1008,19 +1009,19 @@ input::placeholder { color: var(--tx3); }
    ❤️ 血壓頁面
    ════════════════════════════════ */
 .bp-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; }
-.bp-toolbar-title { font-size: 11px; color: var(--ac); letter-spacing: 2px; }
+.bp-toolbar-title { font-size: 13px; color: var(--acd); font-weight: 700; letter-spacing: 1.5px; }
 .bp-add-btn { background: none; border: none; font-size: 24px; color: var(--ac); cursor: pointer; padding: 2px 4px; line-height: 1; }
 /* BP tabs */
 .bp-tabs { display: flex; border-bottom: 0.5px solid var(--bd); background: var(--bg); position: sticky; top: 0; z-index: 4; }
-.bp-tab { flex: 1; padding: 9px 6px 8px; font-size: 14px; color: var(--tx3); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
-.bp-tab.active { color: var(--ac); font-weight: 600; }
+.bp-tab { flex: 1; padding: 9px 6px 8px; font-size: 15px; font-weight: 500; color: var(--tx2); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
+.bp-tab.active { color: var(--acd); font-weight: 700; }
 .bp-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 28px; height: 2px; background: var(--ac); border-radius: 1px; }
 .bp-list { padding: 0 12px 80px; }
 /* 週報頁「週/月/年」頁籤（2026-08 加入）：外觀比照 .bp-tabs/.bp-tab，但用獨立 class 名稱，
    避免跟 switchBPTab() 裡未限定範圍的 document.querySelectorAll('.bp-tab') 互相影響 */
 .weekly-period-tabs { display: flex; border-bottom: 0.5px solid var(--bd); background: var(--bg); position: sticky; top: 0; z-index: 4; }
-.weekly-period-tab { flex: 1; padding: 9px 6px 8px; font-size: 14px; color: var(--tx3); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
-.weekly-period-tab.active { color: var(--ac); font-weight: 600; }
+.weekly-period-tab { flex: 1; padding: 9px 6px 8px; font-size: 15px; font-weight: 500; color: var(--tx2); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
+.weekly-period-tab.active { color: var(--acd); font-weight: 700; }
 .weekly-period-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 28px; height: 2px; background: var(--ac); border-radius: 1px; }
 .bp-log-item { background: var(--bg3); border-radius: var(--r); border: 0.5px solid var(--bd); padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
 .bp-log-date { font-size: 12px; color: var(--tx3); flex-shrink: 0; min-width: 80px; }
@@ -1098,11 +1099,11 @@ input::placeholder { color: var(--tx3); }
    📖 日記頁面
    ════════════════════════════════ */
 .diary-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 8px; }
-.diary-toolbar-title { font-size: 11px; color: var(--ac); letter-spacing: 2px; }
+.diary-toolbar-title { font-size: 13px; color: var(--acd); font-weight: 700; letter-spacing: 1.5px; }
 .diary-add-btn { background: none; border: none; font-size: 24px; color: var(--ac); cursor: pointer; padding: 2px 4px; line-height: 1; }
 .diary-tabs { display: flex; border-bottom: 0.5px solid var(--bd); background: var(--bg); position: sticky; top: 0; z-index: 4; }
-.diary-tab { flex: 1; padding: 9px 6px 8px; font-size: 14px; color: var(--tx3); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
-.diary-tab.active { color: var(--ac); font-weight: 600; }
+.diary-tab { flex: 1; padding: 9px 6px 8px; font-size: 15px; font-weight: 500; color: var(--tx2); background: none; border: none; font-family: var(--font); cursor: pointer; position: relative; }
+.diary-tab.active { color: var(--acd); font-weight: 700; }
 .diary-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 28px; height: 2px; background: var(--ac); border-radius: 1px; }
 .diary-list { padding: 0 12px 80px; }
 .page-search-bar { padding: 8px 12px 4px; }
@@ -1264,8 +1265,8 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 .bp-bar-legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
 /* diary type tabs */
 .diary-type-tabs { display: flex; padding: 8px 12px 4px; gap: 8px; }
-.diary-type-tab { flex: 1; padding: 8px 6px; border: 1.5px solid var(--bd); border-radius: var(--r); background: var(--bg3); font-family: var(--font); font-size: 14px; color: var(--tx2); cursor: pointer; text-align: center; }
-.diary-type-tab.active { border-color: var(--ac); background: var(--acl); color: var(--acd); font-weight: 600; }
+.diary-type-tab { flex: 1; padding: 8px 6px; border: 1.5px solid var(--bd); border-radius: var(--r); background: var(--bg3); font-family: var(--font); font-size: 15px; font-weight: 500; color: var(--tx2); cursor: pointer; text-align: center; }
+.diary-type-tab.active { border-color: var(--ac); background: var(--acl); color: var(--acd); font-weight: 700; }
 /* diary entry type badge */
 .diary-type-badge { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 10px; margin-right: 4px; }
 .diary-type-badge.life { background: var(--acl); color: var(--acd); }
@@ -1473,7 +1474,7 @@ input[type="date"], input[type="time"], input[type="datetime-local"] {
 /* 各頁籤（記錄/統計表/曲線圖/趨勢…）增加觸控高度與字級 */
 .bp-tab, .sleep-tab, .habit-tab-btn, .water-tab, .food-tab,
 .bp-hand-filter-btn, .bp-chart-hand-filter .bp-hand-filter-btn {
-  min-height: 44px; font-size: 14px;
+  min-height: 44px; font-size: 15px;
 }
 
 /* 主要/次要按鈕：統一最小觸控高度 44px */
@@ -5726,7 +5727,7 @@ function renderFoodDayType() {
   var html = buildMacroProgressHTML(_foodViewDate);
   if(!html){ tbar.style.display='none'; return; }
   tbar.style.display='';
-  tbar.innerHTML = '<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">🎯 目標進度</div>' + html;
+  tbar.innerHTML = '<div style="font-size:13px;font-weight:700;color:var(--acd);margin-bottom:6px">🎯 目標進度</div>' + html;
 }
 
 /* ── protein 7-day chart ── */
